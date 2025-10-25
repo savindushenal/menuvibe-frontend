@@ -1,0 +1,262 @@
+'use client';
+
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Plus, Search, Filter } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { CategoryCard } from '@/components/menu/category-card';
+import { MenuItemCard } from '@/components/menu/menu-item-card';
+import { MenuCategory, MenuItem } from '@/lib/types';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+
+const mockCategories: MenuCategory[] = [
+  {
+    id: '1',
+    name: 'Appetizers',
+    description: 'Start your meal right',
+    order: 0,
+    restaurant_id: '1',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: '2',
+    name: 'Main Courses',
+    description: 'Our signature dishes',
+    order: 1,
+    restaurant_id: '1',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+const mockItems: MenuItem[] = [
+  {
+    id: '1',
+    name: 'Caesar Salad',
+    description: 'Fresh romaine lettuce with parmesan and croutons',
+    price: 12.99,
+    category_id: '1',
+    available: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: '2',
+    name: 'Bruschetta',
+    description: 'Toasted bread with tomatoes, basil, and olive oil',
+    price: 9.99,
+    category_id: '1',
+    available: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: '3',
+    name: 'Grilled Salmon',
+    description: 'Fresh Atlantic salmon with seasonal vegetables',
+    price: 24.99,
+    category_id: '2',
+    available: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+export default function MenuManagementPage() {
+  const [categories] = useState<MenuCategory[]>(mockCategories);
+  const [items] = useState<MenuItem[]>(mockItems);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
+  const [isAddItemOpen, setIsAddItemOpen] = useState(false);
+  const { toast } = useToast();
+
+  const [newCategory, setNewCategory] = useState({ name: '', description: '' });
+  const [newItem, setNewItem] = useState({
+    name: '',
+    description: '',
+    price: '',
+    category_id: '',
+  });
+
+  const filteredItems = selectedCategory
+    ? items.filter((item) => item.category_id === selectedCategory)
+    : items;
+
+  const handleAddCategory = () => {
+    toast({
+      title: 'Category added',
+      description: `${newCategory.name} has been added successfully.`,
+    });
+    setIsAddCategoryOpen(false);
+    setNewCategory({ name: '', description: '' });
+  };
+
+  const handleAddItem = () => {
+    toast({
+      title: 'Menu item added',
+      description: `${newItem.name} has been added successfully.`,
+    });
+    setIsAddItemOpen(false);
+    setNewItem({ name: '', description: '', price: '', category_id: '' });
+  };
+
+  return (
+    <div className="p-8 space-y-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-neutral-900">Menu Management</h1>
+          <p className="text-neutral-600 mt-1">Manage your restaurant menu items and categories</p>
+        </div>
+        <Dialog open={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/30">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Category
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Category</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="category-name">Category Name</Label>
+                <Input
+                  id="category-name"
+                  placeholder="e.g., Appetizers"
+                  value={newCategory.name}
+                  onChange={(e) =>
+                    setNewCategory({ ...newCategory, name: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category-description">Description</Label>
+                <Textarea
+                  id="category-description"
+                  placeholder="Brief description..."
+                  value={newCategory.description}
+                  onChange={(e) =>
+                    setNewCategory({ ...newCategory, description: e.target.value })
+                  }
+                />
+              </div>
+              <Button onClick={handleAddCategory} className="w-full">
+                Create Category
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+            <Input
+              placeholder="Search menu items..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-white border-neutral-200"
+            />
+          </div>
+        </div>
+        <Button variant="outline" className="border-neutral-200">
+          <Filter className="w-4 h-4 mr-2" />
+          Filter
+        </Button>
+      </div>
+
+      <div className="space-y-8">
+        {categories.map((category) => {
+          const categoryItems = items.filter((item) => item.category_id === category.id);
+          return (
+            <div key={category.id} className="space-y-4">
+              <CategoryCard
+                category={category}
+                itemCount={categoryItems.length}
+                onEdit={() => toast({ title: 'Edit category' })}
+                onDelete={() => toast({ title: 'Delete category' })}
+                onAddItem={() => {
+                  setNewItem({ ...newItem, category_id: category.id });
+                  setIsAddItemOpen(true);
+                }}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ml-8">
+                {categoryItems.map((item) => (
+                  <MenuItemCard
+                    key={item.id}
+                    item={item}
+                    onEdit={() => toast({ title: 'Edit item' })}
+                    onDelete={() => toast({ title: 'Delete item' })}
+                    onToggleAvailability={(available) =>
+                      toast({
+                        title: available ? 'Item available' : 'Item unavailable',
+                      })
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <Dialog open={isAddItemOpen} onOpenChange={setIsAddItemOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Menu Item</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="item-name">Item Name</Label>
+              <Input
+                id="item-name"
+                placeholder="e.g., Caesar Salad"
+                value={newItem.name}
+                onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="item-description">Description</Label>
+              <Textarea
+                id="item-description"
+                placeholder="Describe the item..."
+                value={newItem.description}
+                onChange={(e) =>
+                  setNewItem({ ...newItem, description: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="item-price">Price</Label>
+              <Input
+                id="item-price"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={newItem.price}
+                onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
+              />
+            </div>
+            <Button onClick={handleAddItem} className="w-full">
+              Add Menu Item
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
