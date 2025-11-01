@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Lock, CreditCard, Users, Bell, Shield, Save } from 'lucide-react';
+import { User, Lock, CreditCard, Users, Bell, Shield, Save, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,35 +11,222 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { apiClient } from '@/lib/api';
+
+interface SettingsData {
+  account: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  notifications: {
+    email_notifications: boolean;
+    push_notifications: boolean;
+    sms_notifications: boolean;
+    marketing_emails: boolean;
+    order_updates: boolean;
+    menu_updates: boolean;
+    customer_feedback_notifications: boolean;
+    inventory_alerts: boolean;
+    daily_reports: boolean;
+    weekly_reports: boolean;
+    monthly_reports: boolean;
+  };
+  security: {
+    two_factor_enabled: boolean;
+    session_timeout: number;
+    login_alerts: boolean;
+    password_expiry_days: number | null;
+  };
+  privacy: {
+    profile_visibility: string;
+    show_online_status: boolean;
+    allow_search_engines: boolean;
+    data_collection: boolean;
+    analytics_tracking: boolean;
+  };
+  display: {
+    theme: string;
+    language: string;
+    timezone: string;
+    date_format: string;
+    time_format: string;
+    items_per_page: number;
+  };
+  business: {
+    business_hours_display: boolean;
+    auto_accept_orders: boolean;
+    order_confirmation_required: boolean;
+    menu_availability_alerts: boolean;
+  };
+}
 
 export default function SettingsPage() {
   const { toast } = useToast();
-  const [accountData, setAccountData] = useState({
-    name: 'John Doe',
-    email: 'john@restaurant.com',
-    phone: '+1 (555) 123-4567',
-  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [settings, setSettings] = useState<SettingsData | null>(null);
 
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: true,
-    weekly: false,
-    marketing: false,
-  });
+  useEffect(() => {
+    fetchSettings();
+  }, []);
 
-  const handleSaveAccount = () => {
-    toast({
-      title: 'Account updated',
-      description: 'Your account information has been saved.',
+  const fetchSettings = async () => {
+    try {
+      setLoading(true);
+      const response = await apiClient.getSettings();
+      
+      if (response.success && response.data) {
+        setSettings(response.data);
+      } else {
+        throw new Error(response.message || 'Failed to fetch settings');
+      }
+    } catch (error: any) {
+      console.error('Error fetching settings:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to load settings. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveAccount = async () => {
+    if (!settings) return;
+    
+    try {
+      setSaving('account');
+      const response = await apiClient.updateAccountSettings(settings.account);
+      
+      if (response.success) {
+        toast({
+          title: 'Account updated',
+          description: 'Your account information has been saved.',
+        });
+      } else {
+        throw new Error(response.message || 'Failed to update account');
+      }
+    } catch (error: any) {
+      console.error('Error updating account:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update account. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    if (!settings) return;
+    
+    try {
+      setSaving('notifications');
+      const response = await apiClient.updateNotificationSettings(settings.notifications);
+      
+      if (response.success) {
+        toast({
+          title: 'Preferences saved',
+          description: 'Your notification preferences have been updated.',
+        });
+      } else {
+        throw new Error(response.message || 'Failed to update notifications');
+      }
+    } catch (error: any) {
+      console.error('Error updating notifications:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update notifications. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleSaveSecurity = async () => {
+    if (!settings) return;
+    
+    try {
+      setSaving('security');
+      const response = await apiClient.updateSecuritySettings(settings.security);
+      
+      if (response.success) {
+        toast({
+          title: 'Security updated',
+          description: 'Your security settings have been saved.',
+        });
+      } else {
+        throw new Error(response.message || 'Failed to update security');
+      }
+    } catch (error: any) {
+      console.error('Error updating security:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update security settings. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const updateAccountField = (field: keyof SettingsData['account'], value: string) => {
+    if (!settings) return;
+    setSettings({
+      ...settings,
+      account: {
+        ...settings.account,
+        [field]: value,
+      },
     });
   };
 
-  const handleSaveNotifications = () => {
-    toast({
-      title: 'Preferences saved',
-      description: 'Your notification preferences have been updated.',
+  const updateNotificationField = (field: keyof SettingsData['notifications'], value: boolean) => {
+    if (!settings) return;
+    setSettings({
+      ...settings,
+      notifications: {
+        ...settings.notifications,
+        [field]: value,
+      },
     });
   };
+
+  const updateSecurityField = (field: keyof SettingsData['security'], value: boolean | number | null) => {
+    if (!settings) return;
+    setSettings({
+      ...settings,
+      security: {
+        ...settings.security,
+        [field]: value,
+      },
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+          <span className="ml-2 text-neutral-600">Loading settings...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!settings) {
+    return (
+      <div className="p-8">
+        <div className="text-center py-12">
+          <p className="text-neutral-600">Failed to load settings. Please refresh the page.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-8">
@@ -56,6 +243,10 @@ export default function SettingsPage() {
             <User className="w-4 h-4 mr-2" />
             Account
           </TabsTrigger>
+          <TabsTrigger value="notifications" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+            <Bell className="w-4 h-4 mr-2" />
+            Notifications
+          </TabsTrigger>
           <TabsTrigger value="security" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
             <Shield className="w-4 h-4 mr-2" />
             Security
@@ -63,14 +254,6 @@ export default function SettingsPage() {
           <TabsTrigger value="subscription" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
             <CreditCard className="w-4 h-4 mr-2" />
             Subscription
-          </TabsTrigger>
-          <TabsTrigger value="team" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
-            <Users className="w-4 h-4 mr-2" />
-            Team
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
-            <Bell className="w-4 h-4 mr-2" />
-            Notifications
           </TabsTrigger>
         </TabsList>
 
@@ -82,20 +265,16 @@ export default function SettingsPage() {
           >
             <Card className="border-neutral-200">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold text-neutral-900">
-                  Account Information
-                </CardTitle>
+                <CardTitle className="text-xl text-neutral-900">Personal Information</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name</Label>
                     <Input
                       id="name"
-                      value={accountData.name}
-                      onChange={(e) =>
-                        setAccountData({ ...accountData, name: e.target.value })
-                      }
+                      value={settings.account.name}
+                      onChange={(e) => updateAccountField('name', e.target.value)}
                       className="border-neutral-300"
                     />
                   </div>
@@ -103,11 +282,10 @@ export default function SettingsPage() {
                     <Label htmlFor="phone">Phone Number</Label>
                     <Input
                       id="phone"
-                      value={accountData.phone}
-                      onChange={(e) =>
-                        setAccountData({ ...accountData, phone: e.target.value })
-                      }
+                      value={settings.account.phone || ''}
+                      onChange={(e) => updateAccountField('phone', e.target.value)}
                       className="border-neutral-300"
+                      placeholder="e.g., +1 (555) 123-4567"
                     />
                   </div>
                 </div>
@@ -116,20 +294,169 @@ export default function SettingsPage() {
                   <Input
                     id="email"
                     type="email"
-                    value={accountData.email}
-                    onChange={(e) =>
-                      setAccountData({ ...accountData, email: e.target.value })
-                    }
+                    value={settings.account.email}
+                    onChange={(e) => updateAccountField('email', e.target.value)}
                     className="border-neutral-300"
                   />
                 </div>
                 <div className="flex justify-end pt-4 border-t border-neutral-200">
                   <Button
                     onClick={handleSaveAccount}
+                    disabled={saving === 'account'}
                     className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/30"
                   >
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
+                    {saving === 'account' ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Save Changes
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="border-neutral-200">
+              <CardHeader>
+                <CardTitle className="text-xl text-neutral-900">Notification Preferences</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-neutral-800">General Notifications</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="email-notifications">Email Notifications</Label>
+                        <p className="text-sm text-neutral-600">Receive notifications via email</p>
+                      </div>
+                      <Switch
+                        id="email-notifications"
+                        checked={settings.notifications.email_notifications}
+                        onCheckedChange={(checked) => updateNotificationField('email_notifications', checked)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="push-notifications">Push Notifications</Label>
+                        <p className="text-sm text-neutral-600">Receive browser push notifications</p>
+                      </div>
+                      <Switch
+                        id="push-notifications"
+                        checked={settings.notifications.push_notifications}
+                        onCheckedChange={(checked) => updateNotificationField('push_notifications', checked)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="sms-notifications">SMS Notifications</Label>
+                        <p className="text-sm text-neutral-600">Receive notifications via text message</p>
+                      </div>
+                      <Switch
+                        id="sms-notifications"
+                        checked={settings.notifications.sms_notifications}
+                        onCheckedChange={(checked) => updateNotificationField('sms_notifications', checked)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-neutral-800">Business Notifications</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="order-updates">Order Updates</Label>
+                        <p className="text-sm text-neutral-600">Get notified about new orders</p>
+                      </div>
+                      <Switch
+                        id="order-updates"
+                        checked={settings.notifications.order_updates}
+                        onCheckedChange={(checked) => updateNotificationField('order_updates', checked)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="customer-feedback">Customer Feedback</Label>
+                        <p className="text-sm text-neutral-600">Get notified about customer reviews and feedback</p>
+                      </div>
+                      <Switch
+                        id="customer-feedback"
+                        checked={settings.notifications.customer_feedback_notifications}
+                        onCheckedChange={(checked) => updateNotificationField('customer_feedback_notifications', checked)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="inventory-alerts">Inventory Alerts</Label>
+                        <p className="text-sm text-neutral-600">Get notified about low inventory</p>
+                      </div>
+                      <Switch
+                        id="inventory-alerts"
+                        checked={settings.notifications.inventory_alerts}
+                        onCheckedChange={(checked) => updateNotificationField('inventory_alerts', checked)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-neutral-800">Reports & Marketing</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="weekly-reports">Weekly Reports</Label>
+                        <p className="text-sm text-neutral-600">Receive weekly business performance reports</p>
+                      </div>
+                      <Switch
+                        id="weekly-reports"
+                        checked={settings.notifications.weekly_reports}
+                        onCheckedChange={(checked) => updateNotificationField('weekly_reports', checked)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="marketing-emails">Marketing Emails</Label>
+                        <p className="text-sm text-neutral-600">Receive promotional emails and updates</p>
+                      </div>
+                      <Switch
+                        id="marketing-emails"
+                        checked={settings.notifications.marketing_emails}
+                        onCheckedChange={(checked) => updateNotificationField('marketing_emails', checked)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4 border-t border-neutral-200">
+                  <Button
+                    onClick={handleSaveNotifications}
+                    disabled={saving === 'notifications'}
+                    className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/30"
+                  >
+                    {saving === 'notifications' ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Save Preferences
+                      </>
+                    )}
                   </Button>
                 </div>
               </CardContent>
@@ -145,39 +472,73 @@ export default function SettingsPage() {
           >
             <Card className="border-neutral-200">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold text-neutral-900">
-                  Change Password
-                </CardTitle>
+                <CardTitle className="text-xl text-neutral-900">Security Settings</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="current-password">Current Password</Label>
-                  <Input
-                    id="current-password"
-                    type="password"
-                    className="border-neutral-300"
-                  />
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="two-factor">Two-Factor Authentication</Label>
+                      <p className="text-sm text-neutral-600">Add an extra layer of security to your account</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="two-factor"
+                        checked={settings.security.two_factor_enabled}
+                        onCheckedChange={(checked) => updateSecurityField('two_factor_enabled', checked)}
+                      />
+                      {settings.security.two_factor_enabled && (
+                        <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">
+                          Enabled
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="login-alerts">Login Alerts</Label>
+                      <p className="text-sm text-neutral-600">Get notified when someone logs into your account</p>
+                    </div>
+                    <Switch
+                      id="login-alerts"
+                      checked={settings.security.login_alerts}
+                      onCheckedChange={(checked) => updateSecurityField('login_alerts', checked)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="session-timeout">Session Timeout (minutes)</Label>
+                    <p className="text-sm text-neutral-600">Automatically log out after period of inactivity</p>
+                    <Input
+                      id="session-timeout"
+                      type="number"
+                      min="5"
+                      max="1440"
+                      value={settings.security.session_timeout}
+                      onChange={(e) => updateSecurityField('session_timeout', parseInt(e.target.value))}
+                      className="border-neutral-300 w-32"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="new-password">New Password</Label>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    className="border-neutral-300"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm New Password</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    className="border-neutral-300"
-                  />
-                </div>
+
                 <div className="flex justify-end pt-4 border-t border-neutral-200">
-                  <Button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/30">
-                    <Lock className="w-4 h-4 mr-2" />
-                    Update Password
+                  <Button
+                    onClick={handleSaveSecurity}
+                    disabled={saving === 'security'}
+                    className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/30"
+                  >
+                    {saving === 'security' ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Save Security Settings
+                      </>
+                    )}
                   </Button>
                 </div>
               </CardContent>
@@ -193,189 +554,24 @@ export default function SettingsPage() {
           >
             <Card className="border-neutral-200">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold text-neutral-900">
-                  Current Plan
-                </CardTitle>
+                <CardTitle className="text-xl text-neutral-900">Subscription & Billing</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between p-6 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl border border-emerald-200">
-                  <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-2xl font-bold text-neutral-900">Professional Plan</h3>
-                      <Badge className="bg-emerald-500">Active</Badge>
-                    </div>
-                    <p className="text-neutral-600">Billed monthly</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-4xl font-bold text-emerald-600">$49</p>
-                    <p className="text-sm text-neutral-600">/month</p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-neutral-900">Plan Features</h4>
-                  <ul className="space-y-2">
-                    {[
-                      'Unlimited menu items',
-                      'QR code generation',
-                      'Advanced analytics',
-                      'Team collaboration',
-                      'Priority support',
-                    ].map((feature) => (
-                      <li key={feature} className="flex items-center gap-2 text-neutral-600">
-                        <div className="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center">
-                          <div className="w-2 h-2 bg-emerald-600 rounded-full"></div>
-                        </div>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="flex gap-4 pt-4 border-t border-neutral-200">
-                  <Button variant="outline" className="flex-1 border-neutral-300">
-                    Change Plan
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1 border-red-300 text-red-600 hover:bg-red-50"
-                  >
-                    Cancel Subscription
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </TabsContent>
-
-        <TabsContent value="team">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Card className="border-neutral-200">
-              <CardHeader>
+              <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold text-neutral-900">
-                    Team Members
-                  </CardTitle>
-                  <Button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white">
-                    Invite Member
-                  </Button>
+                  <div>
+                    <h3 className="font-semibold text-neutral-800">Current Plan</h3>
+                    <p className="text-sm text-neutral-600">Free Plan</p>
+                  </div>
+                  <Badge variant="outline" className="border-emerald-300 text-emerald-700">
+                    Active
+                  </Badge>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {[
-                    { name: 'John Doe', email: 'john@restaurant.com', role: 'Owner' },
-                    { name: 'Jane Smith', email: 'jane@restaurant.com', role: 'Admin' },
-                    { name: 'Mike Johnson', email: 'mike@restaurant.com', role: 'Staff' },
-                  ].map((member, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg hover:bg-neutral-100 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center text-white font-semibold">
-                          {member.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-medium text-neutral-900">{member.name}</p>
-                          <p className="text-sm text-neutral-500">{member.email}</p>
-                        </div>
-                      </div>
-                      <Badge variant="outline">{member.role}</Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </TabsContent>
-
-        <TabsContent value="notifications">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Card className="border-neutral-200">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-neutral-900">
-                  Notification Preferences
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-neutral-900">Email Notifications</p>
-                      <p className="text-sm text-neutral-500">
-                        Receive updates via email
-                      </p>
-                    </div>
-                    <Switch
-                      checked={notifications.email}
-                      onCheckedChange={(checked) =>
-                        setNotifications({ ...notifications, email: checked })
-                      }
-                      className="data-[state=checked]:bg-emerald-500"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-neutral-900">Push Notifications</p>
-                      <p className="text-sm text-neutral-500">
-                        Receive push notifications
-                      </p>
-                    </div>
-                    <Switch
-                      checked={notifications.push}
-                      onCheckedChange={(checked) =>
-                        setNotifications({ ...notifications, push: checked })
-                      }
-                      className="data-[state=checked]:bg-emerald-500"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-neutral-900">Weekly Reports</p>
-                      <p className="text-sm text-neutral-500">
-                        Get weekly analytics summaries
-                      </p>
-                    </div>
-                    <Switch
-                      checked={notifications.weekly}
-                      onCheckedChange={(checked) =>
-                        setNotifications({ ...notifications, weekly: checked })
-                      }
-                      className="data-[state=checked]:bg-emerald-500"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-neutral-900">Marketing Emails</p>
-                      <p className="text-sm text-neutral-500">
-                        Receive tips and product updates
-                      </p>
-                    </div>
-                    <Switch
-                      checked={notifications.marketing}
-                      onCheckedChange={(checked) =>
-                        setNotifications({ ...notifications, marketing: checked })
-                      }
-                      className="data-[state=checked]:bg-emerald-500"
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end pt-4 border-t border-neutral-200">
-                  <Button
-                    onClick={handleSaveNotifications}
-                    className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/30"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Preferences
+                <div className="pt-4 border-t border-neutral-200">
+                  <p className="text-neutral-600">
+                    Upgrade to a premium plan to unlock more features and remove limitations.
+                  </p>
+                  <Button variant="outline" className="mt-3">
+                    View Plans
                   </Button>
                 </div>
               </CardContent>

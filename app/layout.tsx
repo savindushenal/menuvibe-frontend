@@ -1,6 +1,10 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { AuthProvider } from '@/contexts/auth-context';
+import { LocationProvider } from '@/contexts/location-context';
+import { Toaster } from '@/components/ui/toaster';
+import { ConsoleCleanup } from '@/components/console-cleanup';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -15,8 +19,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className} suppressHydrationWarning>
+        <ConsoleCleanup />
+        <AuthProvider>
+          <LocationProvider>
+            {children}
+            <Toaster />
+          </LocationProvider>
+        </AuthProvider>
+      </body>
     </html>
   );
 }

@@ -29,9 +29,9 @@ export function MenuItemCard({
     >
       <Card className="border-neutral-200 hover:shadow-lg transition-shadow duration-300 overflow-hidden">
         <div className="relative h-48 bg-neutral-100">
-          {item.image ? (
+          {item.image_url ? (
             <img
-              src={item.image}
+              src={item.image_url}
               alt={item.name}
               className="w-full h-full object-cover"
             />
@@ -74,7 +74,7 @@ export function MenuItemCard({
               <div className="flex items-center gap-2">
                 <span className="text-sm text-neutral-600">Available</span>
                 <Switch
-                  checked={item.available}
+                  checked={item.is_available}
                   onCheckedChange={onToggleAvailability}
                   className="data-[state=checked]:bg-emerald-500"
                 />

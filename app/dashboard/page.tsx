@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { Eye, Scan, TrendingUp, Users, ArrowUp, ArrowDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ProtectedRoute } from '@/components/protected-route';
 
 const stats = [
   {
@@ -56,11 +57,12 @@ const item = {
 
 export default function DashboardPage() {
   return (
-    <div className="p-8 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-neutral-900">Dashboard</h1>
-        <p className="text-neutral-600 mt-1">Welcome back! Here's your restaurant overview.</p>
-      </div>
+    <ProtectedRoute requireOnboarding={true}>
+      <div className="p-8 space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold text-neutral-900">Dashboard</h1>
+          <p className="text-neutral-600 mt-1">Welcome back! Here's your restaurant overview.</p>
+        </div>
 
       <motion.div
         variants={container}
@@ -190,5 +192,6 @@ export default function DashboardPage() {
         </Card>
       </div>
     </div>
+    </ProtectedRoute>
   );
 }

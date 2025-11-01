@@ -8,30 +8,45 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth-context';
+import { GoogleAuthButton } from '@/components/auth/google-auth-button';
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
+    confirmPassword: '',
     restaurantName: '',
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { register } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        title: 'Error',
+        description: 'Passwords do not match.',
+        variant: 'destructive',
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
+      await register(formData.name, formData.email, formData.password, formData.confirmPassword);
       toast({
         title: 'Account created',
         description: 'Welcome to MenuVibe! Setting up your dashboard...',
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'Something went wrong. Please try again.',
+        description: error.message || 'Something went wrong. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -134,6 +149,24 @@ export default function SignupPage() {
               <p className="text-xs text-neutral-500">At least 8 characters</p>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="text-neutral-700">
+                Confirm Password
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  className="pl-10 h-12 border-neutral-300 focus:border-emerald-500 focus:ring-emerald-500"
+                  required
+                />
+              </div>
+            </div>
+
             <Button
               type="submit"
               disabled={loading}
@@ -149,6 +182,20 @@ export default function SignupPage() {
               )}
             </Button>
           </form>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-neutral-500">Or continue with</span>
+              </div>
+            </div>
+            <div className="mt-6">
+              <GoogleAuthButton />
+            </div>
+          </div>
 
           <div className="mt-6 text-center">
             <p className="text-neutral-600">

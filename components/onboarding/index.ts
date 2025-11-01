@@ -1,0 +1,1 @@
+export { MagicOnboardingForm } from './magic-onboarding-form';

@@ -1,6 +1,7 @@
 import { Sidebar } from '@/components/dashboard/sidebar';
 import { DashboardHeader } from '@/components/dashboard/header';
-import { Toaster } from '@/components/ui/toaster';
+import { ProtectedRoute } from '@/components/auth/protected-route';
+import { SubscriptionProvider } from '@/contexts/subscription-context';
 
 export default function DashboardLayout({
   children,
@@ -8,15 +9,18 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-neutral-100">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardHeader />
-        <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
-      </div>
-      <Toaster />
-    </div>
+    <ProtectedRoute>
+      <SubscriptionProvider>
+        <div className="flex h-screen overflow-hidden bg-neutral-100">
+          <Sidebar />
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <DashboardHeader />
+            <main className="flex-1 overflow-y-auto">
+              {children}
+            </main>
+          </div>
+        </div>
+      </SubscriptionProvider>
+    </ProtectedRoute>
   );
 }
