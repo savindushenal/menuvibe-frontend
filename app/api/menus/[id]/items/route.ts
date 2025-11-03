@@ -127,8 +127,9 @@ export async function POST(
     }, { status: 201 });
   } catch (error) {
     console.error('Error creating menu item:', error);
+    console.error('Error details:', error instanceof Error ? error.message : String(error));
     return NextResponse.json(
-      { success: false, message: 'Failed to create menu item' },
+      { success: false, message: 'Failed to create menu item', error: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

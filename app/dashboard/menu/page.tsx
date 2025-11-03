@@ -1158,12 +1158,12 @@ export default function MenuManagementPage() {
 
       {/* Add Menu Dialog */}
       <Dialog open={isAddMenuOpen} onOpenChange={setIsAddMenuOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
           <DialogHeader>
             <DialogTitle>Create Menu</DialogTitle>
             <DialogDescription>Create a new menu for your restaurant</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <div>
               <Label htmlFor="menu-name">Menu Name <span className="text-red-500">*</span></Label>
               <Input
@@ -1181,6 +1181,7 @@ export default function MenuManagementPage() {
                 value={menuForm.description}
                 onChange={(e) => setMenuForm({ ...menuForm, description: e.target.value })}
                 placeholder="Describe this menu..."
+                rows={3}
               />
             </div>
             <div>
@@ -1200,7 +1201,7 @@ export default function MenuManagementPage() {
             </div>
             <div>
               <Label>Menu Design Template</Label>
-              <div className="grid grid-cols-2 gap-3 mt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                 {menuDesigns.map((design) => (
                   <button
                     key={design.value}
@@ -1238,12 +1239,12 @@ export default function MenuManagementPage() {
 
       {/* Edit Menu Dialog */}
       <Dialog open={isEditMenuOpen} onOpenChange={setIsEditMenuOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Menu</DialogTitle>
             <DialogDescription>Update menu details</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <div>
               <Label htmlFor="edit-menu-name">Menu Name <span className="text-red-500">*</span></Label>
               <Input
@@ -1642,12 +1643,12 @@ export default function MenuManagementPage() {
 
       {/* Add Category Dialog */}
       <Dialog open={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Add Category</DialogTitle>
             <DialogDescription>Create a new menu category</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <div>
               <Label htmlFor="category-name">Name</Label>
               <Input
@@ -1685,12 +1686,12 @@ export default function MenuManagementPage() {
 
       {/* Edit Category Dialog */}
       <Dialog open={isEditCategoryOpen} onOpenChange={setIsEditCategoryOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit Category</DialogTitle>
             <DialogDescription>Update category details</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <div>
               <Label htmlFor="edit-category-name">Name</Label>
               <Input
@@ -1726,14 +1727,14 @@ export default function MenuManagementPage() {
 
       {/* Add Item Dialog */}
       <Dialog open={isAddItemOpen} onOpenChange={setIsAddItemOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
           <DialogHeader>
             <DialogTitle>Add Menu Item</DialogTitle>
             <DialogDescription>
               Create a new menu item {selectedMenu && `for ${selectedMenu.name}`}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <div>
               <Label htmlFor="item-name">
                 Name <span className="text-red-500">*</span>
@@ -1840,12 +1841,12 @@ export default function MenuManagementPage() {
 
       {/* Edit Item Dialog */}
       <Dialog open={isEditItemOpen} onOpenChange={setIsEditItemOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Menu Item</DialogTitle>
             <DialogDescription>Update item details</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <div>
               <Label htmlFor="edit-item-name">Name</Label>
               <Input
