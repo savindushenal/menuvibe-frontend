@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
 
 export async function GET(request: NextRequest) {
   // Validate environment variables
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   // Build redirect URI dynamically from current host
   const protocol = request.headers.get('x-forwarded-proto') || 'http';
-  const host = request.headers.get('host') || 'localhost:3000';
+  const host = request.headers.get('host') || new URL(FRONTEND_URL).host;
   const redirectUri = `${protocol}://${host}/api/auth/google/callback`;
 
   // Generate Google OAuth URL

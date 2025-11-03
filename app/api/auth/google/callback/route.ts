@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
     // Build redirect URI dynamically from current host
     const protocol = request.headers.get('x-forwarded-proto') || 'http';
-    const host = request.headers.get('host') || 'localhost:3000';
+    const host = request.headers.get('host') || new URL(FRONTEND_URL).host;
     const redirectUri = `${protocol}://${host}/api/auth/google/callback`;
 
     // Exchange code for tokens
