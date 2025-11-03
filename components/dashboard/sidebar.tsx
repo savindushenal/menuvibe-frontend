@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  Menu,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -28,34 +29,30 @@ const menuItems = [
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const pathname = usePathname();
 
-  // Detect screen size and auto-collapse on mobile
+  // Auto-collapse on mobile on initial load
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
       if (mobile) {
         setCollapsed(true);
       }
     };
 
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   return (
     <motion.aside
       animate={{ width: collapsed ? 80 : 280 }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className={cn(
-        "bg-white border-r border-neutral-200 h-screen sticky top-0 flex flex-col shadow-sm",
-        isMobile && collapsed && "hidden md:flex"
-      )}
+      className="bg-white border-r border-neutral-200 h-screen sticky top-0 flex flex-col shadow-sm"
     >
-      <div className="p-6 border-b border-neutral-200 flex items-center justify-between">
+      <div className={cn(
+        "p-6 border-b border-neutral-200 flex items-center",
+        collapsed ? "justify-center" : "justify-between"
+      )}>
         <AnimatePresence mode="wait">
           {!collapsed && (
             <motion.div
@@ -74,18 +71,28 @@ export function Sidebar() {
             </motion.div>
           )}
         </AnimatePresence>
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
-        >
-          {collapsed ? (
-            <ChevronRight className="w-5 h-5 text-neutral-600" />
-          ) : (
+        
+        {collapsed ? (
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+            title="Expand sidebar"
+          >
+            <Menu className="w-5 h-5 text-neutral-600" />
+          </motion.button>
+        ) : (
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+            title="Collapse sidebar"
+          >
             <ChevronLeft className="w-5 h-5 text-neutral-600" />
-          )}
-        </motion.button>
+          </motion.button>
+        )}
       </div>
 
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
