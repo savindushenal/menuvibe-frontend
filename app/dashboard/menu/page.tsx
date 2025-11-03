@@ -666,15 +666,22 @@ export default function MenuManagementPage() {
       return;
     }
 
+    if (!itemForm.category_id || itemForm.category_id === 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a category.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       setSubmitting(true);
       const formData = new FormData();
       formData.append('name', itemForm.name.trim());
       formData.append('description', itemForm.description.trim());
       formData.append('price', itemForm.price);
-      if (itemForm.category_id) {
-        formData.append('category_id', itemForm.category_id.toString());
-      }
+      formData.append('category_id', itemForm.category_id.toString());
       formData.append('is_available', itemForm.is_available ? '1' : '0');
       formData.append('is_spicy', itemForm.is_spicy ? '1' : '0');
 
@@ -702,15 +709,23 @@ export default function MenuManagementPage() {
 
   const handleEditItem = async () => {
     if (!selectedMenu || !itemForm.id) return;
+
+    if (!itemForm.category_id || itemForm.category_id === 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a category.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       setSubmitting(true);
       const formData = new FormData();
       formData.append('name', itemForm.name);
       formData.append('description', itemForm.description);
       formData.append('price', itemForm.price);
-      if (itemForm.category_id) {
-        formData.append('category_id', itemForm.category_id.toString());
-      }
+      formData.append('category_id', itemForm.category_id.toString());
       formData.append('is_available', itemForm.is_available ? '1' : '0');
       formData.append('is_spicy', itemForm.is_spicy ? '1' : '0');
 
@@ -1779,14 +1794,15 @@ export default function MenuManagementPage() {
               </div>
             </div>
             <div>
-              <Label htmlFor="item-category">Category</Label>
+              <Label htmlFor="item-category">Category *</Label>
               <select
                 id="item-category"
                 className="w-full border border-gray-300 rounded-md p-2"
                 value={itemForm.category_id}
                 onChange={(e) => setItemForm({ ...itemForm, category_id: parseInt(e.target.value) })}
+                required
               >
-                <option value={0}>No Category</option>
+                <option value={0}>Select a category...</option>
                 {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}

@@ -87,6 +87,24 @@ export async function POST(
       sort_order,
     } = body;
 
+    console.log('Menu item data to insert:', {
+      menu_id: params.id,
+      name,
+      description,
+      price,
+      currency: currency || menu.currency || 'USD',
+      category_id,
+      is_available,
+      is_featured,
+      allergens,
+      dietary_info,
+      image_url,
+      card_color,
+      heading_color,
+      text_color,
+      sort_order
+    });
+
     // Insert menu item
     const [result]: any = await query(
       `INSERT INTO menu_items (
