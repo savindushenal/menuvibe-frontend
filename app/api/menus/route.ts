@@ -90,8 +90,16 @@ export async function POST(request: NextRequest) {
   if (!user) return unauthorized();
 
   try {
-    const body = await request.json();
-    const { name, description, style, currency, is_active, is_featured, sort_order } = body;
+    // Parse FormData instead of JSON
+    const formData = await request.formData();
+    const name = formData.get('name') as string;
+    const description = formData.get('description') as string;
+    const style = formData.get('style') as string;
+    const currency = formData.get('currency') as string;
+    const is_active = formData.get('is_active') === '1';
+    const is_featured = formData.get('is_featured') === '1';
+    const sortOrderValue = formData.get('sort_order') as string;
+    const sort_order = sortOrderValue ? parseInt(sortOrderValue) : 0;
 
     // Get user's default location
     const location = await queryOne<any>(
