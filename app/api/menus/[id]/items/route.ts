@@ -79,11 +79,11 @@ export async function POST(
       is_available,
       is_featured,
       allergens,
-      dietary_tags,
-      customization_options,
-      background_color,
+      dietary_info,
+      image_url,
+      card_color,
+      heading_color,
       text_color,
-      border_color,
       sort_order,
     } = body;
 
@@ -91,9 +91,9 @@ export async function POST(
     const [result]: any = await query(
       `INSERT INTO menu_items (
         menu_id, name, description, price, currency, category_id,
-        is_available, is_featured, allergens, dietary_tags,
-        customization_options, background_color, text_color,
-        border_color, sort_order, created_at, updated_at
+        is_available, is_featured, allergens, dietary_info,
+        image_url, card_color, heading_color, text_color,
+        sort_order, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [
         params.id,
@@ -105,11 +105,11 @@ export async function POST(
         is_available !== undefined ? is_available : true,
         is_featured !== undefined ? is_featured : false,
         allergens ? JSON.stringify(allergens) : null,
-        dietary_tags ? JSON.stringify(dietary_tags) : null,
-        customization_options ? JSON.stringify(customization_options) : null,
-        background_color || null,
+        dietary_info ? JSON.stringify(dietary_info) : null,
+        image_url || null,
+        card_color || null,
+        heading_color || null,
         text_color || null,
-        border_color || null,
         sort_order || 0,
       ]
     );

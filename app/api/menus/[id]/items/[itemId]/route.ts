@@ -74,11 +74,11 @@ export async function PUT(
       is_available,
       is_featured,
       allergens,
-      dietary_tags,
-      customization_options,
-      background_color,
+      dietary_info,
+      image_url,
+      card_color,
+      heading_color,
       text_color,
-      border_color,
       sort_order,
     } = body;
 
@@ -118,25 +118,25 @@ export async function PUT(
       updates.push('allergens = ?');
       values.push(allergens ? JSON.stringify(allergens) : null);
     }
-    if (dietary_tags !== undefined) {
-      updates.push('dietary_tags = ?');
-      values.push(dietary_tags ? JSON.stringify(dietary_tags) : null);
+    if (dietary_info !== undefined) {
+      updates.push('dietary_info = ?');
+      values.push(dietary_info ? JSON.stringify(dietary_info) : null);
     }
-    if (customization_options !== undefined) {
-      updates.push('customization_options = ?');
-      values.push(customization_options ? JSON.stringify(customization_options) : null);
+    if (image_url !== undefined) {
+      updates.push('image_url = ?');
+      values.push(image_url);
     }
-    if (background_color !== undefined) {
-      updates.push('background_color = ?');
-      values.push(background_color);
+    if (card_color !== undefined) {
+      updates.push('card_color = ?');
+      values.push(card_color);
+    }
+    if (heading_color !== undefined) {
+      updates.push('heading_color = ?');
+      values.push(heading_color);
     }
     if (text_color !== undefined) {
       updates.push('text_color = ?');
       values.push(text_color);
-    }
-    if (border_color !== undefined) {
-      updates.push('border_color = ?');
-      values.push(border_color);
     }
     if (sort_order !== undefined) {
       updates.push('sort_order = ?');

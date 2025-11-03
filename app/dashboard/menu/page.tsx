@@ -852,14 +852,14 @@ export default function MenuManagementPage() {
         <TabsContent value="menus" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
                   <CardTitle>Your Menus</CardTitle>
-                  <CardDescription>Create and manage your restaurant menus</CardDescription>
+                  <CardDescription className="hidden sm:block">Create and manage your restaurant menus</CardDescription>
                 </div>
-                <Button onClick={() => setIsAddMenuOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Menu
+                <Button onClick={() => setIsAddMenuOpen(true)} className="flex-shrink-0">
+                  <Plus className="w-4 h-4 md:mr-2" />
+                  <span className="hidden md:inline">Create Menu</span>
                 </Button>
               </div>
             </CardHeader>
@@ -905,13 +905,19 @@ export default function MenuManagementPage() {
             <>
               <Card className="bg-muted/50">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm text-muted-foreground">Managing categories for:</p>
-                      <p className="font-semibold">{selectedMenu.name}</p>
+                      <p className="font-semibold truncate">{selectedMenu.name}</p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => setActiveTab('menus')}>
-                      Change Menu
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setActiveTab('menus')}
+                      className="whitespace-nowrap flex-shrink-0"
+                    >
+                      <List className="w-4 h-4 md:mr-2" />
+                      <span className="hidden md:inline">Change Menu</span>
                     </Button>
                   </div>
                 </CardContent>
@@ -919,14 +925,14 @@ export default function MenuManagementPage() {
 
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0 flex-1">
                       <CardTitle>Categories</CardTitle>
-                      <CardDescription>Organize your menu items by category</CardDescription>
+                      <CardDescription className="hidden sm:block">Organize your menu items by category</CardDescription>
                     </div>
-                    <Button onClick={() => setIsAddCategoryOpen(true)}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Category
+                    <Button onClick={() => setIsAddCategoryOpen(true)} className="flex-shrink-0">
+                      <Plus className="w-4 h-4 md:mr-2" />
+                      <span className="hidden md:inline">Add Category</span>
                     </Button>
                   </div>
                 </CardHeader>
@@ -986,17 +992,29 @@ export default function MenuManagementPage() {
             <>
               <Card className="bg-muted/50">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm text-muted-foreground">Managing items for:</p>
-                      <p className="font-semibold">{selectedMenu.name}</p>
+                      <p className="font-semibold truncate">{selectedMenu.name}</p>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setActiveTab('categories')}>
-                        Manage Categories
+                    <div className="flex gap-2 flex-shrink-0">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setActiveTab('categories')}
+                        className="whitespace-nowrap"
+                      >
+                        <FolderOpen className="w-4 h-4 md:mr-2" />
+                        <span className="hidden md:inline">Manage Categories</span>
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => setActiveTab('menus')}>
-                        Change Menu
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setActiveTab('menus')}
+                        className="whitespace-nowrap"
+                      >
+                        <List className="w-4 h-4 md:mr-2" />
+                        <span className="hidden md:inline">Change Menu</span>
                       </Button>
                     </div>
                   </div>
@@ -1048,22 +1066,23 @@ export default function MenuManagementPage() {
                 {/* Items List */}
                 <Card>
                   <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0 flex-1">
                         <CardTitle>Menu Items</CardTitle>
-                        <CardDescription>
+                        <CardDescription className="hidden sm:block truncate">
                           {selectedCategory === null
                             ? 'All menu items'
                             : categories.find(c => c.id === selectedCategory)?.name || 'Category items'}
                         </CardDescription>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-shrink-0">
                         <Button variant="outline" size="sm" onClick={() => loadItems()}>
-                          Refresh
+                          <Search className="w-4 h-4 md:mr-2" />
+                          <span className="hidden md:inline">Refresh</span>
                         </Button>
                         <Button onClick={() => setIsAddItemOpen(true)}>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add Item
+                          <Plus className="w-4 h-4 md:mr-2" />
+                          <span className="hidden md:inline">Add Item</span>
                         </Button>
                       </div>
                     </div>
@@ -1090,8 +1109,8 @@ export default function MenuManagementPage() {
                         </p>
                         {!searchQuery && items.length === 0 && (
                           <Button onClick={() => setIsAddItemOpen(true)}>
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add Item
+                            <Plus className="w-4 h-4 md:mr-2" />
+                            <span className="hidden md:inline">Add Item</span>
                           </Button>
                         )}
                       </div>
