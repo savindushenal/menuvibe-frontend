@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Search, Trash2, Edit2, GripVertical } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, GripVertical, List, FolderOpen, Utensils } from 'lucide-react';
 import { MenuCategory, MenuItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/lib/api';
@@ -277,7 +277,7 @@ function SortableMenuItem({ item, onEdit, onDelete }: {
 }
 
 export default function MenuManagementPage() {
-  const { currentLocation } = useLocation();
+  const { currentLocation, isLoading: locationLoading } = useLocation();
   const [menus, setMenus] = useState<any[]>([]);
   const [selectedMenu, setSelectedMenu] = useState<any | null>(null);
   const [categories, setCategories] = useState<MenuCategory[]>([]);
@@ -287,6 +287,7 @@ export default function MenuManagementPage() {
   const [loading, setLoading] = useState(true);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [loadingItems, setLoadingItems] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('menus');
   
   // Dialog states
@@ -341,6 +342,10 @@ export default function MenuManagementPage() {
   useEffect(() => {
     if (currentLocation) {
       loadMenus();
+    } else {
+      // If no location, set loading to false and show empty state
+      setLoading(false);
+      setMenus([]);
     }
   }, [currentLocation]);
 
@@ -358,11 +363,12 @@ export default function MenuManagementPage() {
   const loadMenus = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.getMenus();
-      if (response.success && response.data?.menus) {
-        setMenus(response.data.menus);
-        if (response.data.menus.length > 0 && !selectedMenu) {
-          setSelectedMenu(response.data.menus[0]);
+      const response = await apiClient.getMenus(currentLocation?.id);
+      if (response.success) {
+        const menusList = response.data?.menus || [];
+        setMenus(menusList);
+        if (menusList.length > 0 && !selectedMenu) {
+          setSelectedMenu(menusList[0]);
         }
       }
     } catch (error) {
@@ -372,6 +378,7 @@ export default function MenuManagementPage() {
         description: 'Failed to load menus',
         variant: 'destructive',
       });
+      setMenus([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -429,6 +436,7 @@ export default function MenuManagementPage() {
     }
 
     try {
+      setSubmitting(true);
       const formData = new FormData();
       formData.append('name', menuForm.name);
       formData.append('description', menuForm.description);
@@ -452,6 +460,8 @@ export default function MenuManagementPage() {
         description: error.message || 'Failed to create menu',
         variant: 'destructive',
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -468,6 +478,7 @@ export default function MenuManagementPage() {
     }
 
     try {
+      setSubmitting(true);
       const formData = new FormData();
       formData.append('name', menuForm.name);
       formData.append('description', menuForm.description);
@@ -501,6 +512,8 @@ export default function MenuManagementPage() {
         description: error.message || 'Failed to update menu',
         variant: 'destructive',
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -541,6 +554,7 @@ export default function MenuManagementPage() {
   const handleAddCategory = async () => {
     if (!selectedMenu) return;
     try {
+      setSubmitting(true);
       const response = await apiClient.createMenuCategory(selectedMenu.id, {
         name: categoryForm.name,
         description: categoryForm.description,
@@ -564,12 +578,15 @@ export default function MenuManagementPage() {
         description: error.message || 'Failed to add category',
         variant: 'destructive',
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleEditCategory = async () => {
     if (!selectedMenu || !categoryForm.id) return;
     try {
+      setSubmitting(true);
       const response = await apiClient.updateMenuCategory(selectedMenu.id, categoryForm.id, {
         name: categoryForm.name,
         description: categoryForm.description,
@@ -592,6 +609,8 @@ export default function MenuManagementPage() {
         description: error.message || 'Failed to update category',
         variant: 'destructive',
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -648,6 +667,7 @@ export default function MenuManagementPage() {
     }
 
     try {
+      setSubmitting(true);
       const formData = new FormData();
       formData.append('name', itemForm.name.trim());
       formData.append('description', itemForm.description.trim());
@@ -675,12 +695,15 @@ export default function MenuManagementPage() {
         description: error.message || 'Failed to add menu item',
         variant: 'destructive',
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleEditItem = async () => {
     if (!selectedMenu || !itemForm.id) return;
     try {
+      setSubmitting(true);
       const formData = new FormData();
       formData.append('name', itemForm.name);
       formData.append('description', itemForm.description);
@@ -707,6 +730,8 @@ export default function MenuManagementPage() {
         description: error.message || 'Failed to update menu item',
         variant: 'destructive',
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -780,7 +805,7 @@ export default function MenuManagementPage() {
     return matchesSearch && matchesCategory;
   });
 
-  if (loading) {
+  if (loading || locationLoading) {
     return (
       <div className="p-8">
         <LoadingSpinner text="Loading menus..." />
@@ -809,9 +834,18 @@ export default function MenuManagementPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3 max-w-md">
-          <TabsTrigger value="menus">Menus</TabsTrigger>
-          <TabsTrigger value="categories" disabled={!selectedMenu}>Categories</TabsTrigger>
-          <TabsTrigger value="items" disabled={!selectedMenu}>Items</TabsTrigger>
+          <TabsTrigger value="menus">
+            <List className="w-4 h-4 md:mr-2" />
+            <span className="hidden md:inline">Menus</span>
+          </TabsTrigger>
+          <TabsTrigger value="categories" disabled={!selectedMenu}>
+            <FolderOpen className="w-4 h-4 md:mr-2" />
+            <span className="hidden md:inline">Categories</span>
+          </TabsTrigger>
+          <TabsTrigger value="items" disabled={!selectedMenu}>
+            <Utensils className="w-4 h-4 md:mr-2" />
+            <span className="hidden md:inline">Items</span>
+          </TabsTrigger>
         </TabsList>
 
         {/* Menus Tab */}
@@ -830,9 +864,7 @@ export default function MenuManagementPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <LoadingSpinner text="Loading menus..." />
-              ) : menus.length === 0 ? (
+              {menus.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground mb-4">No menus yet. Create your first menu to get started!</p>
                   <Button onClick={() => setIsAddMenuOpen(true)}>
@@ -1170,8 +1202,17 @@ export default function MenuManagementPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddMenuOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddMenu} disabled={!menuForm.name.trim()}>Create Menu</Button>
+            <Button variant="outline" onClick={() => setIsAddMenuOpen(false)} disabled={submitting}>Cancel</Button>
+            <Button onClick={handleAddMenu} disabled={!menuForm.name.trim() || submitting}>
+              {submitting ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  <span className="ml-2">Creating...</span>
+                </>
+              ) : (
+                'Create Menu'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1239,8 +1280,17 @@ export default function MenuManagementPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditMenuOpen(false)}>Cancel</Button>
-            <Button onClick={handleEditMenu} disabled={!menuForm.name.trim()}>Update Menu</Button>
+            <Button variant="outline" onClick={() => setIsEditMenuOpen(false)} disabled={submitting}>Cancel</Button>
+            <Button onClick={handleEditMenu} disabled={!menuForm.name.trim() || submitting}>
+              {submitting ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  <span className="ml-2">Updating...</span>
+                </>
+              ) : (
+                'Update Menu'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1428,26 +1478,39 @@ export default function MenuManagementPage() {
                 </div>
               ) : (
                 /* View Mode */
-                <div className="overflow-y-auto h-full">
+                <div className="overflow-y-auto h-full" style={{
+                  backgroundColor: menuDesigns.find(d => d.value === selectedMenu.style)?.colors.bg || '#FFFFFF'
+                }}>
                   <div className="max-w-4xl mx-auto">
                     {/* Restaurant Header */}
-                    <div className="text-center border-b-2 pb-6 mb-6">
+                    <div className="text-center border-b-2 pb-6 mb-6" style={{
+                      borderColor: menuDesigns.find(d => d.value === selectedMenu.style)?.colors.accent || '#000000'
+                    }}>
                       {currentLocation?.logo_url && (
                         <img 
                           src={currentLocation.logo_url} 
                           alt={currentLocation.name}
-                          className="w-32 h-32 mx-auto rounded-full object-cover mb-4 border-4 border-primary"
+                          className="w-32 h-32 mx-auto rounded-full object-cover mb-4 border-4"
+                          style={{
+                            borderColor: menuDesigns.find(d => d.value === selectedMenu.style)?.colors.accent || '#000000'
+                          }}
                         />
                       )}
-                      <h1 className="text-4xl font-bold mb-2">{currentLocation?.name || 'Restaurant Name'}</h1>
+                      <h1 className="text-4xl font-bold mb-2" style={{
+                        color: menuDesigns.find(d => d.value === selectedMenu.style)?.colors.text || '#000000'
+                      }}>{currentLocation?.name || 'Restaurant Name'}</h1>
                       <p className="text-muted-foreground mb-4">
                         {currentLocation?.description || 'Welcome to our restaurant'}
                       </p>
                     </div>
 
                     {/* Menu Header */}
-                    <div className="text-center border-b pb-4 mb-6">
-                      <h2 className="text-3xl font-bold">{selectedMenu.name}</h2>
+                    <div className="text-center border-b pb-4 mb-6" style={{
+                      borderColor: menuDesigns.find(d => d.value === selectedMenu.style)?.colors.accent || '#000000'
+                    }}>
+                      <h2 className="text-3xl font-bold" style={{
+                        color: menuDesigns.find(d => d.value === selectedMenu.style)?.colors.text || '#000000'
+                      }}>{selectedMenu.name}</h2>
                       {selectedMenu.description && (
                         <p className="text-muted-foreground mt-2">{selectedMenu.description}</p>
                       )}
@@ -1474,19 +1537,29 @@ export default function MenuManagementPage() {
                         {categories.map((category) => {
                           const categoryItems = items.filter(item => item.category_id === category.id);
                           if (categoryItems.length === 0) return null;
+                          const designColors = menuDesigns.find(d => d.value === selectedMenu.style)?.colors || { bg: '#FFFFFF', text: '#000000', accent: '#000000' };
                           
                           return (
-                            <div key={category.id} className="border rounded-lg p-4">
-                              <h3 className="text-xl font-semibold mb-3">{category.name}</h3>
+                            <div key={category.id} className="border rounded-lg p-4" style={{
+                              borderColor: designColors.accent,
+                              backgroundColor: designColors.bg
+                            }}>
+                              <h3 className="text-xl font-semibold mb-3" style={{
+                                color: designColors.text
+                              }}>{category.name}</h3>
                               {category.description && (
                                 <p className="text-sm text-muted-foreground mb-4">{category.description}</p>
                               )}
                               <div className="space-y-3">
                                 {categoryItems.map((item) => (
-                                  <div key={item.id} className="flex justify-between items-start border-b pb-3 last:border-0">
+                                  <div key={item.id} className="flex justify-between items-start border-b pb-3 last:border-0" style={{
+                                    borderColor: designColors.accent + '40'
+                                  }}>
                                     <div className="flex-1">
                                       <div className="flex items-center gap-2">
-                                        <h4 className="font-medium">{item.name}</h4>
+                                        <h4 className="font-medium" style={{
+                                          color: designColors.text
+                                        }}>{item.name}</h4>
                                         {item.is_spicy && <span className="text-red-500">🌶️</span>}
                                         {!item.is_available && (
                                           <Badge variant="secondary" className="text-xs">Unavailable</Badge>
@@ -1496,7 +1569,11 @@ export default function MenuManagementPage() {
                                         <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
                                       )}
                                     </div>
-                                    <div className="font-semibold ml-4">${Number(item.price).toFixed(2)}</div>
+                                    <div className="font-semibold ml-4" style={{
+                                      color: designColors.accent
+                                    }}>
+                                      {currencies.find(c => c.code === selectedMenu.currency)?.symbol || '$'}{Number(item.price).toFixed(2)}
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -1513,8 +1590,17 @@ export default function MenuManagementPage() {
           <DialogFooter className="flex-shrink-0">
             {isViewMenuEditMode ? (
               <>
-                <Button variant="outline" onClick={() => setIsViewMenuEditMode(false)}>Cancel</Button>
-                <Button onClick={handleEditMenu}>Save Changes</Button>
+                <Button variant="outline" onClick={() => setIsViewMenuEditMode(false)} disabled={submitting}>Cancel</Button>
+                <Button onClick={handleEditMenu} disabled={submitting}>
+                  {submitting ? (
+                    <>
+                      <LoadingSpinner size="sm" />
+                      <span className="ml-2">Saving...</span>
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </Button>
               </>
             ) : (
               <>
@@ -1563,8 +1649,17 @@ export default function MenuManagementPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddCategoryOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddCategory}>Add Category</Button>
+            <Button variant="outline" onClick={() => setIsAddCategoryOpen(false)} disabled={submitting}>Cancel</Button>
+            <Button onClick={handleAddCategory} disabled={submitting}>
+              {submitting ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  <span className="ml-2">Adding...</span>
+                </>
+              ) : (
+                'Add Category'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1595,8 +1690,17 @@ export default function MenuManagementPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditCategoryOpen(false)}>Cancel</Button>
-            <Button onClick={handleEditCategory}>Update Category</Button>
+            <Button variant="outline" onClick={() => setIsEditCategoryOpen(false)} disabled={submitting}>Cancel</Button>
+            <Button onClick={handleEditCategory} disabled={submitting}>
+              {submitting ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  <span className="ml-2">Updating...</span>
+                </>
+              ) : (
+                'Update Category'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1698,10 +1802,19 @@ export default function MenuManagementPage() {
             <Button variant="outline" onClick={() => {
               setIsAddItemOpen(false);
               setItemForm({ id: 0, name: '', description: '', price: '', category_id: 0, is_available: true, is_spicy: false });
-            }}>
+            }} disabled={submitting}>
               Cancel
             </Button>
-            <Button onClick={handleAddItem}>Add Item</Button>
+            <Button onClick={handleAddItem} disabled={submitting}>
+              {submitting ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  <span className="ml-2">Adding...</span>
+                </>
+              ) : (
+                'Add Item'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1774,8 +1887,17 @@ export default function MenuManagementPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditItemOpen(false)}>Cancel</Button>
-            <Button onClick={handleEditItem}>Update Item</Button>
+            <Button variant="outline" onClick={() => setIsEditItemOpen(false)} disabled={submitting}>Cancel</Button>
+            <Button onClick={handleEditItem} disabled={submitting}>
+              {submitting ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  <span className="ml-2">Updating...</span>
+                </>
+              ) : (
+                'Update Item'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

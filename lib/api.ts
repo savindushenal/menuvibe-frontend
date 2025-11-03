@@ -104,21 +104,21 @@ class ApiClient {
 
   // Auth endpoints
   async register(data: { name: string; email: string; password: string; password_confirmation: string }): Promise<ApiResponse<AuthData>> {
-    return this.request<AuthData>('/register', {
+    return this.request<AuthData>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async login(data: { email: string; password: string }): Promise<ApiResponse<AuthData>> {
-    return this.request<AuthData>('/login', {
+    return this.request<AuthData>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async logout(): Promise<ApiResponse> {
-    return this.request('/logout', {
+    return this.request('/auth/logout', {
       method: 'POST',
     });
   }
@@ -200,6 +200,12 @@ class ApiClient {
     }
   }
 
+  async completeOnboarding(): Promise<ApiResponse> {
+    return this.request('/business-profile/complete-onboarding', {
+      method: 'POST',
+    });
+  }
+
   // Location endpoints
   async getLocations(): Promise<ApiResponse> {
     try {
@@ -256,9 +262,10 @@ class ApiClient {
     }
   }
 
-  async getMenus(): Promise<ApiResponse> {
+  async getMenus(locationId?: string): Promise<ApiResponse> {
     try {
-      return await this.request('/menus');
+      const url = locationId ? `/menus?location_id=${locationId}` : '/menus';
+      return await this.request(url);
     } catch (error: any) {
       console.error('Error fetching menus:', error);
       throw error;

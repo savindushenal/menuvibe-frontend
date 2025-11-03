@@ -60,8 +60,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await apiClient.getBusinessProfile();
       
-      // If no business profile exists or explicitly needs onboarding
-      if (!response.success || response.data?.needs_onboarding) {
+      // If no business profile exists or onboarding not completed
+      if (!response.success || !response.data || !response.data.onboarding_completed) {
         setNeedsOnboarding(true);
         return true;
       }

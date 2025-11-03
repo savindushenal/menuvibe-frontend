@@ -60,6 +60,7 @@ export default function RestaurantProfilePage() {
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null);
   const [logo, setLogo] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoError, setLogoError] = useState(false);
   
   // Form state for editing
   const [formData, setFormData] = useState({
@@ -81,8 +82,8 @@ export default function RestaurantProfilePage() {
       setLoading(true);
       const response = await apiClient.getBusinessProfile();
       
-      if (response.success && response.data?.business_profile) {
-        const profile = response.data.business_profile;
+      if (response.success && response.data) {
+        const profile = response.data;
         setBusinessProfile(profile);
         
         // Initialize form data
@@ -97,7 +98,9 @@ export default function RestaurantProfilePage() {
         });
         
         if (profile.logo_url) {
+          console.log('Loading logo from URL:', profile.logo_url);
           setLogo(profile.logo_url);
+          setLogoError(false);
         }
       }
     } catch (error) {
@@ -115,9 +118,12 @@ export default function RestaurantProfilePage() {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log('Logo file selected:', file.name, file.type, file.size);
       setLogoFile(file);
+      setLogoError(false);
       const reader = new FileReader();
       reader.onloadend = () => {
+        console.log('Logo preview created');
         setLogo(reader.result as string);
       };
       reader.readAsDataURL(file);
@@ -148,13 +154,14 @@ export default function RestaurantProfilePage() {
       // Call API to update business profile
       const response = await apiClient.updateBusinessProfile(formDataToSend);
       
-      if (response.success && response.data?.business_profile) {
+      if (response.success && response.data) {
         // Update local state with fresh data from API
-        setBusinessProfile(response.data.business_profile);
+        setBusinessProfile(response.data);
         
         // Update logo URL if changed
-        if (response.data.business_profile.logo_url) {
-          setLogo(response.data.business_profile.logo_url);
+        if (response.data.logo_url) {
+          console.log('Logo saved, new URL:', response.data.logo_url);
+          setLogo(response.data.logo_url);
         }
         
         setIsEditing(false);
@@ -284,13 +291,30 @@ export default function RestaurantProfilePage() {
               <div>
                 <Label className="text-sm font-medium text-neutral-900 mb-3 block">Restaurant Logo</Label>
                 <div className="relative w-full aspect-square bg-neutral-100 rounded-xl flex items-center justify-center overflow-hidden border-2 border-dashed border-neutral-300 hover:border-emerald-500 transition-colors">
-                  {logo ? (
-                    <img src={logo} alt="Restaurant logo" className="w-full h-full object-cover" />
+                  {logo && !logoError ? (
+                    <img 
+                      src={logo} 
+                      alt="Restaurant logo" 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.error('Failed to load logo:', logo);
+                        setLogoError(true);
+                      }}
+                      onLoad={() => {
+                        console.log('Logo loaded successfully:', logo);
+                      }}
+                    />
                   ) : (
-                    <ImageIcon className="w-16 h-16 text-neutral-300" />
+                    <div className="flex flex-col items-center justify-center">
+                      <ImageIcon className="w-16 h-16 text-neutral-300" />
+                      {logoError && (
+                        <p className="text-xs text-red-500 mt-2">Failed to load logo</p>
+                      )}
+                    </div>
                   )}
                   {isEditing && (
                     <input
+                      id="logo-upload-input"
                       type="file"
                       accept="image/*"
                       onChange={handleLogoUpload}
@@ -299,7 +323,12 @@ export default function RestaurantProfilePage() {
                   )}
                 </div>
                 {isEditing && (
-                  <Button variant="outline" className="w-full mt-3 border-neutral-300">
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    className="w-full mt-3 border-neutral-300"
+                    onClick={() => document.getElementById('logo-upload-input')?.click()}
+                  >
                     <Upload className="w-4 h-4 mr-2" />
                     Upload Logo
                   </Button>

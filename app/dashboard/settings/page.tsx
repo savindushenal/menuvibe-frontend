@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Lock, CreditCard, Users, Bell, Shield, Save, Loader2 } from 'lucide-react';
+import { User, Lock, CreditCard, Users, Bell, Shield, Save, Loader2, MapPin, Plus, Trash2, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { apiClient } from '@/lib/api';
+import { useLocation } from '@/contexts/location-context';
+import { useAuth } from '@/contexts/auth-context';
 
 interface SettingsData {
   account: {
@@ -63,21 +65,75 @@ interface SettingsData {
 
 export default function SettingsPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [settings, setSettings] = useState<SettingsData | null>(null);
 
   useEffect(() => {
-    fetchSettings();
-  }, []);
+    if (user) {
+      fetchSettings();
+    }
+  }, [user]);
 
   const fetchSettings = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
       const response = await apiClient.getSettings();
       
       if (response.success && response.data) {
-        setSettings(response.data);
+        // Map API response to SettingsData structure
+        const apiSettings = response.data.settings || {};
+        
+        setSettings({
+          account: {
+            name: user.name || '',
+            email: user.email || '',
+            phone: ''
+          },
+          notifications: {
+            email_notifications: apiSettings.email_notifications || false,
+            push_notifications: apiSettings.notifications_enabled || false,
+            sms_notifications: false,
+            marketing_emails: false,
+            order_updates: true,
+            menu_updates: true,
+            customer_feedback_notifications: true,
+            inventory_alerts: true,
+            daily_reports: false,
+            weekly_reports: false,
+            monthly_reports: false
+          },
+          security: {
+            two_factor_enabled: false,
+            session_timeout: 30,
+            login_alerts: true,
+            password_expiry_days: null
+          },
+          privacy: {
+            profile_visibility: 'private',
+            show_online_status: false,
+            allow_search_engines: false,
+            data_collection: true,
+            analytics_tracking: true
+          },
+          display: {
+            theme: apiSettings.theme || 'light',
+            language: apiSettings.language || 'en',
+            timezone: 'UTC',
+            date_format: 'MM/DD/YYYY',
+            time_format: '12h',
+            items_per_page: 20
+          },
+          business: {
+            business_hours_display: true,
+            auto_accept_orders: false,
+            order_confirmation_required: true,
+            menu_availability_alerts: true
+          }
+        });
       } else {
         throw new Error(response.message || 'Failed to fetch settings');
       }
@@ -254,6 +310,10 @@ export default function SettingsPage() {
           <TabsTrigger value="subscription" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
             <CreditCard className="w-4 h-4 mr-2" />
             Subscription
+          </TabsTrigger>
+          <TabsTrigger value="locations" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+            <MapPin className="w-4 h-4 mr-2" />
+            Locations
           </TabsTrigger>
         </TabsList>
 
@@ -578,7 +638,504 @@ export default function SettingsPage() {
             </Card>
           </motion.div>
         </TabsContent>
+
+        <TabsContent value="locations">
+          <LocationsManagement />
+        </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function LocationsManagement() {
+  const { locations, isLoading: locationsLoading, refreshLocations, addLocation, updateLocation, deleteLocation, setAsDefault } = useLocation();
+  const { toast } = useToast();
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    address_line_1: '',
+    address_line_2: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    country: '',
+    phone: '',
+    email: ''
+  });
+
+  // Show loading state while locations are being fetched
+  if (locationsLoading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+              <span className="ml-2 text-neutral-600">Loading locations...</span>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  }
+
+  const handleAddLocation = async () => {
+    if (!formData.name || !formData.address_line_1 || !formData.city || !formData.state || !formData.postal_code || !formData.country) {
+      toast({
+        title: 'Validation Error',
+        description: 'Name, address, city, state, postal code, and country are required',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await addLocation({
+        name: formData.name,
+        address_line_1: formData.address_line_1,
+        address_line_2: formData.address_line_2,
+        city: formData.city,
+        state: formData.state,
+        postal_code: formData.postal_code,
+        country: formData.country,
+        phone: formData.phone,
+        email: formData.email,
+        is_active: true,
+        is_default: false
+      });
+      toast({
+        title: 'Success',
+        description: 'Location added successfully'
+      });
+      setIsAdding(false);
+      setFormData({ 
+        name: '', 
+        address_line_1: '', 
+        address_line_2: '', 
+        city: '', 
+        state: '', 
+        postal_code: '', 
+        country: '', 
+        phone: '', 
+        email: '' 
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to add location',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateLocation = async (id: string) => {
+    setLoading(true);
+    try {
+      await updateLocation(id, {
+        name: formData.name,
+        address_line_1: formData.address_line_1,
+        address_line_2: formData.address_line_2,
+        city: formData.city,
+        state: formData.state,
+        postal_code: formData.postal_code,
+        country: formData.country,
+        phone: formData.phone,
+        email: formData.email
+      });
+      toast({
+        title: 'Success',
+        description: 'Location updated successfully'
+      });
+      setEditingId(null);
+      setFormData({ 
+        name: '', 
+        address_line_1: '', 
+        address_line_2: '', 
+        city: '', 
+        state: '', 
+        postal_code: '', 
+        country: '', 
+        phone: '', 
+        email: '' 
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update location',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteLocation = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this location?')) return;
+
+    setLoading(true);
+    try {
+      await deleteLocation(id);
+      toast({
+        title: 'Success',
+        description: 'Location deleted successfully'
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete location',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSetDefault = async (id: string) => {
+    setLoading(true);
+    try {
+      await setAsDefault(id);
+      toast({
+        title: 'Success',
+        description: 'Default location updated'
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to set default location',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startEdit = (location: any) => {
+    setEditingId(location.id);
+    setFormData({
+      name: location.name,
+      address_line_1: location.address_line_1,
+      address_line_2: location.address_line_2 || '',
+      city: location.city,
+      state: location.state,
+      postal_code: location.postal_code,
+      country: location.country,
+      phone: location.phone || '',
+      email: location.email || ''
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setIsAdding(false);
+    setFormData({ 
+      name: '', 
+      address_line_1: '', 
+      address_line_2: '', 
+      city: '', 
+      state: '', 
+      postal_code: '', 
+      country: '', 
+      phone: '', 
+      email: '' 
+    });
+  };
+
+  const formatAddress = (location: any) => {
+    const parts = [
+      location.address_line_1,
+      location.address_line_2,
+      location.city,
+      location.state,
+      location.postal_code,
+      location.country
+    ].filter(Boolean);
+    return parts.join(', ');
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Manage Locations</CardTitle>
+          <Button
+            onClick={() => setIsAdding(true)}
+            disabled={isAdding}
+            className="bg-emerald-500 hover:bg-emerald-600"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Location
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isAdding && (
+            <Card className="border-emerald-200 bg-emerald-50/50">
+              <CardContent className="pt-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Location Name *</Label>
+                    <Input
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Downtown Branch"
+                    />
+                  </div>
+                  <div>
+                    <Label>Phone</Label>
+                    <Input
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="+1 234 567 8900"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Address Line 1 *</Label>
+                    <Input
+                      value={formData.address_line_1}
+                      onChange={(e) => setFormData({ ...formData, address_line_1: e.target.value })}
+                      placeholder="123 Main St"
+                    />
+                  </div>
+                  <div>
+                    <Label>Address Line 2</Label>
+                    <Input
+                      value={formData.address_line_2}
+                      onChange={(e) => setFormData({ ...formData, address_line_2: e.target.value })}
+                      placeholder="Suite 100"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>City *</Label>
+                    <Input
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      placeholder="New York"
+                    />
+                  </div>
+                  <div>
+                    <Label>State *</Label>
+                    <Input
+                      value={formData.state}
+                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                      placeholder="NY"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Postal Code *</Label>
+                    <Input
+                      value={formData.postal_code}
+                      onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+                      placeholder="10001"
+                    />
+                  </div>
+                  <div>
+                    <Label>Country *</Label>
+                    <Input
+                      value={formData.country}
+                      onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                      placeholder="USA"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="location@restaurant.com"
+                  />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={cancelEdit} disabled={loading}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleAddLocation}
+                    disabled={loading}
+                    className="bg-emerald-500 hover:bg-emerald-600"
+                  >
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Location'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {Array.isArray(locations) && locations.map((location) => (
+            <Card key={location.id} className={location.is_default ? 'border-emerald-500' : ''}>
+              <CardContent className="pt-6">{editingId === location.id ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Location Name *</Label>
+                        <Input
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Phone</Label>
+                        <Input
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Address Line 1 *</Label>
+                        <Input
+                          value={formData.address_line_1}
+                          onChange={(e) => setFormData({ ...formData, address_line_1: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Address Line 2</Label>
+                        <Input
+                          value={formData.address_line_2}
+                          onChange={(e) => setFormData({ ...formData, address_line_2: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>City *</Label>
+                        <Input
+                          value={formData.city}
+                          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>State *</Label>
+                        <Input
+                          value={formData.state}
+                          onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Postal Code *</Label>
+                        <Input
+                          value={formData.postal_code}
+                          onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Country *</Label>
+                        <Input
+                          value={formData.country}
+                          onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Email</Label>
+                      <Input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      />
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="outline" onClick={cancelEdit} disabled={loading}>
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() => handleUpdateLocation(location.id)}
+                        disabled={loading}
+                        className="bg-emerald-500 hover:bg-emerald-600"
+                      >
+                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-lg">{location.name}</h3>
+                        {location.is_default && (
+                          <Badge className="bg-emerald-500">
+                            <Star className="w-3 h-3 mr-1" />
+                            Default
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-neutral-600 flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
+                        {formatAddress(location)}
+                      </p>
+                      {location.phone && (
+                        <p className="text-sm text-neutral-600">{location.phone}</p>
+                      )}
+                      {location.email && (
+                        <p className="text-sm text-neutral-600">{location.email}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      {!location.is_default && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSetDefault(location.id)}
+                          disabled={loading}
+                        >
+                          Set Default
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => startEdit(location)}
+                        disabled={loading}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteLocation(location.id)}
+                        disabled={loading || location.is_default}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+
+          {Array.isArray(locations) && locations.length === 0 && !isAdding && (
+            <div className="text-center py-12 text-neutral-500">
+              <MapPin className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>No locations added yet</p>
+              <p className="text-sm">Click "Add Location" to create your first location</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }

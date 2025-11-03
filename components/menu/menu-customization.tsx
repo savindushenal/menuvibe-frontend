@@ -604,7 +604,7 @@ export function MenuCustomization({
                   {businessLogo ? (
                     <div className="mb-4">
                       <img 
-                        src={businessLogo.startsWith('http') ? businessLogo : `http://localhost:8000${businessLogo}`}
+                        src={businessLogo.startsWith('http') ? businessLogo : businessLogo}
                         alt="Business Logo" 
                         className="h-16 object-contain"
                         style={{ maxWidth: '200px' }}

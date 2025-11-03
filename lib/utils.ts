@@ -16,13 +16,12 @@ export function getImageUrl(imageUrl?: string | null): string {
     return imageUrl;
   }
   
-  // If it's a relative URL starting with /storage, prepend the backend URL
-  const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:8000';
-  
-  if (imageUrl.startsWith('/storage/')) {
-    return `${backendUrl}${imageUrl}`;
+  // For Next.js, images are served from the same domain
+  // If it's a relative URL starting with /storage, use it directly
+  if (imageUrl.startsWith('/storage/') || imageUrl.startsWith('/')) {
+    return imageUrl;
   }
   
-  // For any other relative path, prepend backend URL
-  return `${backendUrl}${imageUrl.startsWith('/') ? imageUrl : '/' + imageUrl}`;
+  // For any other relative path, prepend /
+  return `/${imageUrl}`;
 }

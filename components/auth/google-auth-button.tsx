@@ -4,9 +4,8 @@ import { Button } from '@/components/ui/button';
 
 export function GoogleAuthButton() {
   const handleGoogleAuth = () => {
-    // Redirect to backend Google OAuth
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:8000';
-    window.location.href = `${backendUrl}/api/auth/google`;
+    // Redirect to Next.js Google OAuth API route
+    window.location.href = `/api/auth/google`;
   };
 
   return (

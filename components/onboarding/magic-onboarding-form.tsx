@@ -23,7 +23,9 @@ import {
   Check,
   Sparkles,
   Store,
-  Utensils
+  Utensils,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react';
 
 // Simple progress bar replacement
@@ -84,6 +86,8 @@ const serviceOptions = [
 export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardingFormProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [logo, setLogo] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [formData, setFormData] = useState<OnboardingData>({
     business_name: '',
     business_type: '',
@@ -119,6 +123,18 @@ export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardin
   const handlePrevious = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogo(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -162,11 +178,36 @@ export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardin
               }
             }
           });
+          
+          // Add logo file if selected
+          if (logoFile) {
+            formDataForUpdate.append('logo', logoFile);
+          }
+          
           response = await apiClient.updateBusinessProfile(formDataForUpdate);
         } else {
           // Business profile doesn't exist, create new one
           console.log('Business profile does not exist, creating...');
-          response = await apiClient.createBusinessProfile(cleanedData);
+          
+          // For creation, we need to use FormData if there's a logo
+          if (logoFile) {
+            const formDataForCreate = new FormData();
+            Object.entries(cleanedData).forEach(([key, value]) => {
+              if (value !== null && value !== undefined) {
+                if (Array.isArray(value)) {
+                  formDataForCreate.append(key, JSON.stringify(value));
+                } else {
+                  formDataForCreate.append(key, value.toString());
+                }
+              }
+            });
+            formDataForCreate.append('logo', logoFile);
+            
+            // We need to update the API to handle FormData for POST
+            response = await apiClient.updateBusinessProfile(formDataForCreate);
+          } else {
+            response = await apiClient.createBusinessProfile(cleanedData);
+          }
         }
       } catch (error: any) {
         // If we get a 409 Conflict, it means business profile exists - try update
@@ -191,6 +232,12 @@ export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardin
       }
       
       if (response?.success) {
+        // Mark onboarding as complete
+        try {
+          await apiClient.completeOnboarding();
+        } catch (error) {
+          console.error('Error marking onboarding as complete:', error);
+        }
         onComplete();
       }
     } catch (error: any) {
@@ -273,6 +320,55 @@ export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardin
               className="mt-2"
               rows={3}
             />
+          </div>
+
+          <div>
+            <Label htmlFor="logo" className="text-base font-medium">
+              Business Logo (optional)
+            </Label>
+            <div className="mt-2">
+              {logo ? (
+                <div className="relative inline-block">
+                  <img
+                    src={logo}
+                    alt="Logo preview"
+                    className="w-32 h-32 object-cover rounded-lg border-2 border-gray-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLogo(null);
+                      setLogoFile(null);
+                    }}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <label
+                  htmlFor="logo"
+                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+                >
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <Upload className="w-8 h-8 mb-2 text-gray-400" />
+                    <p className="text-sm text-gray-500">
+                      <span className="font-semibold">Click to upload</span> or drag and drop
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">PNG, JPG or SVG (max. 2MB)</p>
+                  </div>
+                  <input
+                    id="logo"
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                  />
+                </label>
+              )}
+            </div>
           </div>
         </div>
       )
