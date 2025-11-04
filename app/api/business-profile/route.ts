@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { put } from '@vercel/blob';
 
 export async function GET(request: NextRequest) {
   const authUser = await getUserFromToken(request);
@@ -130,19 +129,24 @@ export async function POST(request: NextRequest) {
     // Handle logo upload if file provided
     let logo_url = body.logo_url || null;
     if (logoFile && logoFile.size > 0) {
-      const bytes = await logoFile.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      
-      const uploadsDir = join(process.cwd(), 'public', 'uploads', 'logos');
-      await mkdir(uploadsDir, { recursive: true });
-      
-      const ext = logoFile.name.split('.').pop();
-      const timestamp = Date.now();
-      const filename = `logo-${authUser.id}-${timestamp}.${ext}`;
-      const filepath = join(uploadsDir, filename);
-      
-      await writeFile(filepath, new Uint8Array(buffer));
-      logo_url = `/uploads/logos/${filename}`;
+      try {
+        console.log('Logo file received for new profile:', logoFile.name, 'Size:', logoFile.size);
+        
+        // Upload to Vercel Blob
+        const filename = `logos/logo-${authUser.id}-${Date.now()}.${logoFile.name.split('.').pop()}`;
+        
+        const blob = await put(filename, logoFile, {
+          access: 'public',
+          addRandomSuffix: false,
+        });
+        
+        logo_url = blob.url;
+        console.log('Logo uploaded to Vercel Blob:', logo_url);
+      } catch (error) {
+        console.error('Error uploading logo for new profile:', error);
+        // Continue without logo
+        console.warn('Continuing profile creation without logo');
+      }
     }
 
     // Create new profile
@@ -242,22 +246,23 @@ export async function PUT(request: NextRequest) {
     }
 
     // Handle logo file upload
-    // NOTE: File uploads to filesystem don't work on Vercel (read-only filesystem)
-    // For production, use Vercel Blob, AWS S3, or similar cloud storage
+    // Using Vercel Blob for production file storage
     if (logoFile && logoFile.size > 0) {
       try {
         console.log('Logo file received:', logoFile.name, 'Size:', logoFile.size);
         
-        // For now, convert to base64 data URL as a temporary solution
-        const bytes = await logoFile.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        const base64 = buffer.toString('base64');
-        const mimeType = logoFile.type || 'image/jpeg';
-        logo_url = `data:${mimeType};base64,${base64}`;
+        // Upload to Vercel Blob
+        const filename = `logos/logo-${authUser.id}-${Date.now()}.${logoFile.name.split('.').pop()}`;
         
-        console.log('Logo converted to base64 data URL');
+        const blob = await put(filename, logoFile, {
+          access: 'public',
+          addRandomSuffix: false,
+        });
+        
+        logo_url = blob.url;
+        console.log('Logo uploaded to Vercel Blob:', logo_url);
       } catch (error) {
-        console.error('Error processing logo:', error);
+        console.error('Error uploading logo:', error);
         console.error('Error details:', error instanceof Error ? error.message : String(error));
         // Don't fail the entire update if logo processing fails
         console.warn('Continuing without logo update');

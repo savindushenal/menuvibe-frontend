@@ -297,11 +297,13 @@ export default function RestaurantProfilePage() {
                       alt="Restaurant logo" 
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        console.error('Failed to load logo:', logo);
+                        const logoType = logo.startsWith('data:') ? 'base64 data URL' : logo;
+                        console.error('Failed to load logo:', logoType);
                         setLogoError(true);
                       }}
                       onLoad={() => {
-                        console.log('Logo loaded successfully:', logo);
+                        const logoType = logo.startsWith('data:') ? 'base64 data URL' : logo;
+                        console.log('Logo loaded successfully:', logoType);
                       }}
                     />
                   ) : (
