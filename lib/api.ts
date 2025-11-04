@@ -810,6 +810,49 @@ class ApiClient {
       throw error;
     }
   }
+
+  // QR Code endpoints
+  async getQRCodes(locationId?: number): Promise<ApiResponse> {
+    try {
+      const query = locationId ? `?location_id=${locationId}` : '';
+      return await this.request(`/qr-codes${query}`);
+    } catch (error: any) {
+      console.error('Error fetching QR codes:', error);
+      throw error;
+    }
+  }
+
+  async createQRCode(data: { name: string; location_id?: number; menu_id?: number; table_number?: string }): Promise<ApiResponse> {
+    try {
+      return await this.request('/qr-codes', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    } catch (error: any) {
+      console.error('Error creating QR code:', error);
+      throw error;
+    }
+  }
+
+  async getQRCode(qrCodeId: number): Promise<ApiResponse> {
+    try {
+      return await this.request(`/qr-codes/${qrCodeId}`);
+    } catch (error: any) {
+      console.error('Error fetching QR code:', error);
+      throw error;
+    }
+  }
+
+  async deleteQRCode(qrCodeId: number): Promise<ApiResponse> {
+    try {
+      return await this.request(`/qr-codes/${qrCodeId}`, {
+        method: 'DELETE',
+      });
+    } catch (error: any) {
+      console.error('Error deleting QR code:', error);
+      throw error;
+    }
+  }
 }
 
 export const apiClient = new ApiClient();
