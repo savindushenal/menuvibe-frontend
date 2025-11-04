@@ -47,7 +47,7 @@ export function Sidebar() {
     <motion.aside
       animate={{ width: collapsed ? 80 : 280 }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className="bg-white border-r border-neutral-200 h-screen sticky top-0 flex flex-col shadow-sm"
+      className="bg-white border-r border-neutral-200 h-screen flex flex-col shadow-sm flex-shrink-0"
     >
       <div className={cn(
         "p-6 border-b border-neutral-200 flex items-center",
@@ -95,7 +95,7 @@ export function Sidebar() {
         )}
       </div>
 
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto min-h-0">
         {menuItems.map((item) => {
           const isActive = pathname === item.href;
           return (

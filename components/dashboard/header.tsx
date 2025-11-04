@@ -38,7 +38,7 @@ export function DashboardHeader() {
   };
 
   return (
-    <header className="bg-white border-b border-neutral-200 px-8 py-4 sticky top-0 z-10 shadow-sm">
+    <header className="bg-white border-b border-neutral-200 px-8 py-4 flex-shrink-0 shadow-sm">
       <div className="flex items-center justify-between gap-4">
         <div className="flex-1 max-w-xl flex items-center gap-4">
           {/* Location Selector */}
