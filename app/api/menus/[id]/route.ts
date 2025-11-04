@@ -59,8 +59,9 @@ export async function PUT(
     const description = formData.get('description') as string;
     const style = formData.get('style') as string;
     const currency = formData.get('currency') as string;
-    const is_active = formData.get('is_active') === '1';
-    const is_featured = formData.get('is_featured') === '1';
+    // Only parse is_active if it's explicitly provided
+    const is_active = formData.has('is_active') ? formData.get('is_active') === '1' : undefined;
+    const is_featured = formData.has('is_featured') ? formData.get('is_featured') === '1' : undefined;
     const sortOrderValue = formData.get('sort_order') as string;
     const sort_order = sortOrderValue ? parseInt(sortOrderValue) : undefined;
 

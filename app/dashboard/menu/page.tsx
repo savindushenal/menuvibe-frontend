@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Search, Trash2, Edit2, GripVertical, List, FolderOpen, Utensils } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, GripVertical, List, FolderOpen, Utensils, Power } from 'lucide-react';
 import { MenuCategory, MenuItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/lib/api';
@@ -96,12 +96,13 @@ const menuDesigns = [
 ];
 
 // Sortable Menu Card Component
-function SortableMenuCard({ menu, onEdit, onDelete, onSelect, onView }: {
+function SortableMenuCard({ menu, onEdit, onDelete, onSelect, onView, onToggleStatus }: {
   menu: any;
   onEdit: (menu: any) => void;
   onDelete: (menuId: number) => void;
   onSelect: (menu: any) => void;
   onView: (menu: any) => void;
+  onToggleStatus: (menuId: number, currentStatus: boolean) => void;
 }) {
   const designInfo = menuDesigns.find(d => d.value === menu.style) || menuDesigns[0];
   
@@ -150,23 +151,34 @@ function SortableMenuCard({ menu, onEdit, onDelete, onSelect, onView }: {
         </div>
 
         {/* Edit and Delete Icons */}
-        <div className="flex justify-end gap-1 mt-3 pt-3 border-t">
+        <div className="flex justify-between items-center gap-1 mt-3 pt-3 border-t">
           <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onEdit(menu)}
-            className="h-8 w-8"
+            variant={menu.is_active ? "default" : "outline"}
+            size="sm"
+            onClick={() => onToggleStatus(menu.id, menu.is_active)}
+            className="h-8"
           >
-            <Edit2 className="w-4 h-4" />
+            <Power className="w-3 h-3 mr-1.5" />
+            {menu.is_active ? 'Active' : 'Inactive'}
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onDelete(menu.id)}
-            className="h-8 w-8 text-destructive hover:text-destructive"
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onEdit(menu)}
+              className="h-8 w-8"
+            >
+              <Edit2 className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onDelete(menu.id)}
+              className="h-8 w-8 text-destructive hover:text-destructive"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -484,6 +496,7 @@ export default function MenuManagementPage() {
       formData.append('description', menuForm.description);
       formData.append('style', menuForm.style);
       formData.append('currency', menuForm.currency);
+      formData.append('is_active', '1'); // Ensure menu stays active when updating
 
       const response = await apiClient.updateMenu(menuForm.id, formData);
       
@@ -535,6 +548,33 @@ export default function MenuManagementPage() {
       toast({
         title: 'Error',
         description: error.message || 'Failed to delete menu',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleToggleMenuStatus = async (menuId: number, currentStatus: boolean) => {
+    try {
+      const formData = new FormData();
+      formData.append('is_active', currentStatus ? '0' : '1');
+      
+      const response = await fetch(`/api/menus/${menuId}`, {
+        method: 'PUT',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Failed to update menu status');
+
+      toast({
+        title: 'Menu updated',
+        description: `Menu ${currentStatus ? 'deactivated' : 'activated'} successfully.`,
+      });
+      
+      loadMenus();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update menu status',
         variant: 'destructive',
       });
     }
@@ -906,6 +946,7 @@ export default function MenuManagementPage() {
                       onDelete={handleDeleteMenu}
                       onSelect={handleSelectMenu}
                       onView={handleViewMenu}
+                      onToggleStatus={handleToggleMenuStatus}
                     />
                   ))}
                 </div>

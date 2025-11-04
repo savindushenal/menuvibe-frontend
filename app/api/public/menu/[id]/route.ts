@@ -9,20 +9,23 @@ export async function GET(
   try {
     const menuId = params.id;
 
-    // Get menu details
+    // Get menu details (remove is_active check to show all menus)
     const menu = await queryOne<any>(
       `SELECT m.id, m.name, m.description, m.style, m.currency, m.is_active
        FROM menus m
-       WHERE m.id = ? AND m.is_active = 1`,
+       WHERE m.id = ?`,
       [menuId]
     );
 
     if (!menu) {
+      console.log(`Menu ${menuId} not found in database`);
       return NextResponse.json(
-        { success: false, message: 'Menu not found or not available' },
+        { success: false, message: 'Menu not found' },
         { status: 404 }
       );
     }
+
+    console.log(`Found menu ${menuId}:`, menu.name, 'is_active:', menu.is_active);
 
     // Get categories
     const categories = await query<any>(
