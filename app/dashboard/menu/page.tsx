@@ -558,19 +558,16 @@ export default function MenuManagementPage() {
       const formData = new FormData();
       formData.append('is_active', currentStatus ? '0' : '1');
       
-      const response = await fetch(`/api/menus/${menuId}`, {
-        method: 'PUT',
-        body: formData,
-      });
+      const response = await apiClient.updateMenu(menuId, formData);
 
-      if (!response.ok) throw new Error('Failed to update menu status');
-
-      toast({
-        title: 'Menu updated',
-        description: `Menu ${currentStatus ? 'deactivated' : 'activated'} successfully.`,
-      });
-      
-      loadMenus();
+      if (response.success) {
+        toast({
+          title: 'Menu updated',
+          description: `Menu ${currentStatus ? 'deactivated' : 'activated'} successfully.`,
+        });
+        
+        loadMenus();
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
