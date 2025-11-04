@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
+import pool from '@/lib/db';
+import { ResultSetHeader } from 'mysql2';
 
 // GET /api/menus/[id]/categories - Get all categories for a menu
 export async function GET(
@@ -73,7 +75,7 @@ export async function POST(
     const { name, description, sort_order } = body;
 
     // Insert category
-    const [result]: any = await query(
+    const [result] = await pool.execute<ResultSetHeader>(
       `INSERT INTO menu_categories (menu_id, name, description, sort_order, created_at, updated_at)
        VALUES (?, ?, ?, ?, NOW(), NOW())`,
       [params.id, name, description || null, sort_order || 0]

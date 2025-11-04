@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
+import pool from '@/lib/db';
+import { ResultSetHeader } from 'mysql2';
 
 export async function GET(request: NextRequest) {
   const user = await getUserFromToken(request);
@@ -14,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     if (!settings) {
       // Create default settings if they don't exist
-      const [result]: any = await query(
+      const [result] = await pool.execute<ResultSetHeader>(
         `INSERT INTO user_settings (user_id, theme, language, currency, created_at, updated_at)
          VALUES (?, 'light', 'en', 'USD', NOW(), NOW())`,
         [user.id]
@@ -60,7 +62,7 @@ export async function PUT(request: NextRequest) {
 
     if (!existing) {
       // Create new settings
-      const [result]: any = await query(
+      const [result] = await pool.execute<ResultSetHeader>(
         `INSERT INTO user_settings (user_id, theme, language, currency, notifications_enabled, email_notifications, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`,
         [user.id, theme || 'light', language || 'en', currency || 'USD', notifications_enabled ? 1 : 0, email_notifications ? 1 : 0]

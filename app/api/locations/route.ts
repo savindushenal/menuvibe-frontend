@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
 import { query } from '@/lib/db';
+import pool from '@/lib/db';
+import { ResultSetHeader } from 'mysql2';
 
 // GET /api/locations - Get all locations for the authenticated user
 export async function GET(request: NextRequest) {
@@ -81,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert location
-    const [result]: any = await query(
+    const [result] = await pool.execute<ResultSetHeader>(
       `INSERT INTO locations (
         user_id, name, description, phone, email, website,
         address_line_1, address_line_2, city, state, postal_code, country,

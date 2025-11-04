@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
+import pool from '@/lib/db';
+import { ResultSetHeader } from 'mysql2';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -33,7 +35,7 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
-    const [result]: any = await query(
+    const [result] = await pool.execute<ResultSetHeader>(
       'INSERT INTO users (name, email, password, phone, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',
       [name, email, hashedPassword, phone || null]
     );
