@@ -242,32 +242,25 @@ export async function PUT(request: NextRequest) {
     }
 
     // Handle logo file upload
+    // NOTE: File uploads to filesystem don't work on Vercel (read-only filesystem)
+    // For production, use Vercel Blob, AWS S3, or similar cloud storage
     if (logoFile && logoFile.size > 0) {
       try {
+        console.log('Logo file received:', logoFile.name, 'Size:', logoFile.size);
+        
+        // For now, convert to base64 data URL as a temporary solution
         const bytes = await logoFile.arrayBuffer();
         const buffer = Buffer.from(bytes);
+        const base64 = buffer.toString('base64');
+        const mimeType = logoFile.type || 'image/jpeg';
+        logo_url = `data:${mimeType};base64,${base64}`;
         
-        // Create uploads directory if it doesn't exist
-        const uploadsDir = join(process.cwd(), 'public', 'uploads', 'logos');
-        await mkdir(uploadsDir, { recursive: true });
-        
-        // Generate unique filename
-        const timestamp = Date.now();
-        const ext = logoFile.name.split('.').pop();
-        const filename = `logo-${authUser.id}-${timestamp}.${ext}`;
-        const filepath = join(uploadsDir, filename);
-        
-        // Write file
-        await writeFile(filepath, new Uint8Array(buffer));
-        
-        // Set the URL path
-        logo_url = `/uploads/logos/${filename}`;
+        console.log('Logo converted to base64 data URL');
       } catch (error) {
-        console.error('Error uploading logo:', error);
-        return NextResponse.json(
-          { success: false, message: 'Failed to upload logo' },
-          { status: 500 }
-        );
+        console.error('Error processing logo:', error);
+        console.error('Error details:', error instanceof Error ? error.message : String(error));
+        // Don't fail the entire update if logo processing fails
+        console.warn('Continuing without logo update');
       }
     }
 
