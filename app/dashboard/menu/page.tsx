@@ -685,11 +685,7 @@ export default function MenuManagementPage() {
       formData.append('is_available', itemForm.is_available ? '1' : '0');
       formData.append('is_spicy', itemForm.is_spicy ? '1' : '0');
 
-      console.log('About to create menu item with data:', Array.from(formData.entries()));
-      
       const response = await apiClient.createMenuItem(selectedMenu.id, formData);
-      
-      console.log('Received response:', response);
       
       if (response.success) {
         toast({
@@ -698,15 +694,9 @@ export default function MenuManagementPage() {
         });
         setIsAddItemOpen(false);
         setItemForm({ id: 0, name: '', description: '', price: '', category_id: 0, is_available: true, is_spicy: false });
-        
-        console.log('About to reload items...');
-        await loadItems();
-        console.log('Items reloaded successfully');
-      } else {
-        throw new Error(response.message || 'Failed to create menu item');
+        loadItems();
       }
     } catch (error: any) {
-      console.error('Caught error in handleAddItem:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to add menu item',
