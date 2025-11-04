@@ -38,19 +38,19 @@ export function DashboardHeader() {
   };
 
   return (
-    <header className="bg-white border-b border-neutral-200 px-8 py-4 flex-shrink-0 shadow-sm">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex-1 max-w-xl flex items-center gap-4">
+    <header className="bg-white border-b border-neutral-200 px-4 md:px-8 py-4 flex-shrink-0 shadow-sm">
+      <div className="flex items-center justify-between gap-2 md:gap-4">
+        <div className="flex-1 max-w-xl flex items-center gap-2 md:gap-4">
           {/* Location Selector */}
           {locations.length > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 min-w-[200px] justify-between">
+                <Button variant="outline" className="gap-2 min-w-[140px] md:min-w-[200px] justify-between text-sm">
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-emerald-500" />
+                    <MapPin className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                     <span className="truncate">{currentLocation?.name || 'Select Location'}</span>
                   </div>
-                  <ChevronDown className="w-4 h-4 text-neutral-400" />
+                  <ChevronDown className="w-4 h-4 text-neutral-400 flex-shrink-0" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-[250px]">
@@ -75,7 +75,7 @@ export function DashboardHeader() {
             </DropdownMenu>
           )}
 
-          <div className="relative flex-1">
+          <div className="relative flex-1 hidden sm:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
             <Input
               placeholder="Search menu items, categories..."
@@ -84,8 +84,8 @@ export function DashboardHeader() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+        <div className="flex items-center gap-2 md:gap-4">
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="hidden sm:block">
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="w-5 h-5 text-neutral-600" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-emerald-500 rounded-full"></span>
@@ -96,11 +96,11 @@ export function DashboardHeader() {
             <DropdownMenuTrigger asChild>
               <motion.div
                 whileHover={{ scale: 1.05 }}
-                className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-neutral-50 cursor-pointer transition-colors"
+                className="flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2 rounded-xl hover:bg-neutral-50 cursor-pointer transition-colors"
               >
-                <Avatar className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-emerald-600">
-                  <AvatarFallback className="text-white font-semibold">
-                    {user ? getUserInitials(user.name) : <User className="w-5 h-5" />}
+                <Avatar className="w-8 h-8 md:w-9 md:h-9 bg-gradient-to-br from-emerald-500 to-emerald-600 flex-shrink-0">
+                  <AvatarFallback className="text-white font-semibold text-sm">
+                    {user ? getUserInitials(user.name) : <User className="w-4 h-4 md:w-5 md:h-5" />}
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden md:block">
