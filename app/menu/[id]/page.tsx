@@ -39,6 +39,7 @@ interface Menu {
   description: string;
   style: string;
   currency: string;
+  logo_url?: string;
 }
 
 // Menu Design color schemes (matching dashboard)
@@ -179,6 +180,19 @@ export default function PublicMenuPage() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center"
           >
+            {/* Logo */}
+            {menu.logo_url && (
+              <div className="mb-6 flex justify-center">
+                <div className="relative">
+                  <img 
+                    src={menu.logo_url} 
+                    alt={menu.restaurant_name}
+                    className="h-20 w-20 md:h-24 md:w-24 object-contain rounded-xl shadow-md bg-white p-2"
+                  />
+                </div>
+              </div>
+            )}
+            
             <h1 className="text-4xl md:text-5xl font-bold mb-2" style={{ color: designColors.text }}>
               {menu.restaurant_name}
             </h1>

@@ -9,10 +9,11 @@ export async function GET(
   try {
     const menuId = params.id;
 
-    // Get menu details with restaurant/location name
+    // Get menu details with restaurant/location name and logo
     const menu = await queryOne<any>(
       `SELECT m.id, m.name as menu_name, m.description, m.style, m.currency, m.is_active,
-              COALESCE(bp.business_name, l.name, 'Restaurant') as restaurant_name
+              COALESCE(bp.business_name, l.name, 'Restaurant') as restaurant_name,
+              COALESCE(l.logo_url, bp.logo_url) as logo_url
        FROM menus m
        LEFT JOIN locations l ON m.location_id = l.id
        LEFT JOIN business_profiles bp ON l.user_id = bp.user_id
