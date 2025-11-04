@@ -102,8 +102,8 @@ export default function PublicMenuPage() {
       setLoading(true);
       setError(null);
 
-      // Fetch menu data from public API (no auth required)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/public/menu/${menuId}`);
+      // Fetch menu data from Next.js public API route (no auth required)
+      const response = await fetch(`/api/public/menu/${menuId}`);
       
       if (!response.ok) {
         throw new Error('Menu not found');
