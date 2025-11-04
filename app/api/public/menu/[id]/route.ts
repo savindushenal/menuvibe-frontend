@@ -46,9 +46,10 @@ export async function GET(
       [menuId]
     );
 
-    // Parse dietary_info JSON
+    // Parse dietary_info JSON and convert price to number
     const itemsWithDietary = items.map(item => ({
       ...item,
+      price: parseFloat(item.price) || 0,
       dietary_info: item.dietary_info ? JSON.parse(item.dietary_info) : []
     }));
 
