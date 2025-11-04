@@ -132,24 +132,8 @@ export async function POST(
       }
     }
 
-    console.log('Menu item data to insert:', {
-      menu_id: params.id,
-      name,
-      description,
-      price,
-      currency: currency || menu.currency || 'USD',
-      category_id,
-      is_available,
-      is_featured,
-      is_spicy,
-      allergens,
-      dietary_info,
-      image_url,
-      card_color,
-      heading_color,
-      text_color,
-      sort_order
-    });
+    // Log menu item data for debugging
+    console.log('Creating menu item:', { name, price, category_id });
 
     // Insert menu item
     const [result]: any = await query(
@@ -190,10 +174,9 @@ export async function POST(
       data: { menu_item: item },
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating menu item:', error);
-    console.error('Error details:', error instanceof Error ? error.message : String(error));
+    console.error('Error creating menu item:', error instanceof Error ? error.message : String(error));
     return NextResponse.json(
-      { success: false, message: 'Failed to create menu item', error: error instanceof Error ? error.message : String(error) },
+      { success: false, message: 'Failed to create menu item' },
       { status: 500 }
     );
   }

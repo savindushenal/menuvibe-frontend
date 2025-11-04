@@ -367,6 +367,14 @@ class ApiClient {
       console.log('Creating menu item for menu ID:', menuId);
       console.log('FormData entries:', Array.from(data.entries()));
 
+      // Use the standard request method but with FormData
+      const url = `/menus/${menuId}/items`;
+      
+      // Always refresh token from localStorage before making requests
+      if (typeof window !== 'undefined') {
+        this.token = localStorage.getItem('auth_token');
+      }
+      
       const headers: Record<string, string> = {
         'Accept': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
@@ -376,13 +384,20 @@ class ApiClient {
         headers.Authorization = `Bearer ${this.token}`;
       }
 
-      const response = await fetch(`${this.baseURL}/menus/${menuId}/items`, {
+      const response = await fetch(`${this.baseURL}${url}`, {
         method: 'POST',
         headers,
         body: data,
       });
 
-      const responseData = await response.json();
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (jsonError) {
+        console.error('Failed to parse JSON response:', jsonError);
+        throw new Error('Invalid response format from server');
+      }
+      
       console.log('Response status:', response.status);
       console.log('Response data:', responseData);
 
@@ -394,15 +409,14 @@ class ApiClient {
         
         // Handle subscription limit errors specifically
         if (response.status === 403 && responseData.message?.includes('limit')) {
-          // Log additional debugging info
-          console.log('Limit error details:', {
-            currentItems: responseData.current_items || 'unknown',
-            maxItems: responseData.max_items || 'unknown',
-            message: responseData.message
-          });
           throw new Error(`SUBSCRIPTION_LIMIT: ${responseData.message}`);
         }
         throw new Error(responseData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      // Ensure we have a success property
+      if (typeof responseData.success === 'undefined') {
+        responseData.success = true;
       }
 
       return responseData;
