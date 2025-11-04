@@ -106,9 +106,31 @@ export async function POST(request: NextRequest) {
     const isPro = planSlug === 'pro';
     const isEnterprise = planSlug === 'enterprise';
 
+    // Menu ID is required for all plans
+    if (!menu_id) {
+      return NextResponse.json(
+        { success: false, message: 'Menu selection is required to create a QR code.' },
+        { status: 400 }
+      );
+    }
+
+    // Verify menu belongs to user
+    const menu = await queryOne<any>(
+      `SELECT m.* FROM menus m
+       WHERE m.id = ? AND m.location_id = ?`,
+      [menu_id, location.id]
+    );
+
+    if (!menu) {
+      return NextResponse.json(
+        { success: false, message: 'Menu not found' },
+        { status: 404 }
+      );
+    }
+
     // Check subscription limits based on plan
     if (isFree) {
-      // Free plan: only 1 general QR code (no menu/table specificity)
+      // Free plan: only 1 QR code per menu
       const existingCount = await queryOne<any>(
         'SELECT COUNT(*) as count FROM qr_codes WHERE location_id = ?',
         [location.id]
@@ -116,47 +138,27 @@ export async function POST(request: NextRequest) {
 
       if (existingCount && existingCount.count > 0) {
         return NextResponse.json(
-          { success: false, message: 'Free plan allows only 1 QR code. Upgrade to Pro or Enterprise for unlimited QR codes with menu and table-specific features.' },
+          { success: false, message: 'Free plan allows only 1 QR code. Upgrade to Pro or Enterprise for unlimited QR codes.' },
           { status: 403 }
         );
       }
 
-      // Free plan cannot have custom QR codes (menu or table specific)
-      if (menu_id || table_number) {
+      // Free plan cannot have table-specific QR codes
+      if (table_number) {
         return NextResponse.json(
-          { success: false, message: 'Menu-specific and table-specific QR codes require Pro or Enterprise subscription.' },
+          { success: false, message: 'Table-specific QR codes require Pro or Enterprise subscription.' },
           { status: 403 }
         );
       }
     }
-    // Pro and Enterprise plans have unlimited QR codes with custom features
-    // No additional restrictions needed for Pro/Enterprise
+    // Pro and Enterprise plans have unlimited QR codes with table features
 
-    // Verify menu belongs to user if menu_id is provided
-    if (menu_id) {
-      const menu = await queryOne<any>(
-        `SELECT m.* FROM menus m
-         WHERE m.id = ? AND m.location_id = ?`,
-        [menu_id, location.id]
-      );
-
-      if (!menu) {
-        return NextResponse.json(
-          { success: false, message: 'Menu not found' },
-          { status: 404 }
-        );
-      }
-    }
-
-    // Generate QR code URL
+    // Generate QR code URL - always menu-specific
     const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
-    let qrUrl = `${baseUrl}/menu/${location.id}`;
+    let qrUrl = `${baseUrl}/menu/${menu_id}`;
     
-    if (menu_id) {
-      qrUrl += `?menu=${menu_id}`;
-    }
     if (table_number) {
-      qrUrl += menu_id ? `&table=${table_number}` : `?table=${table_number}`;
+      qrUrl += `?table=${table_number}`;
     }
 
     // Generate QR code as data URL

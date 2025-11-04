@@ -100,6 +100,15 @@ export default function QRCodesPage() {
       return;
     }
 
+    if (!formData.menu_id) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a menu for the QR code',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       const data: any = { name: formData.name.trim() };
       if (currentLocation?.id) data.location_id = parseInt(currentLocation.id);
@@ -168,9 +177,9 @@ export default function QRCodesPage() {
             )}
           </div>
           <p className="text-neutral-600 mt-1">
-            {isFree && 'Generate 1 general QR code • '}
-            {isPro && 'Unlimited QR codes with menu & table features • '}
-            {isEnterprise && 'Unlimited QR codes with advanced features • '}
+            {isFree && 'Create 1 QR code for a menu • '}
+            {isPro && 'Unlimited menu QR codes with table features • '}
+            {isEnterprise && 'Unlimited menu QR codes with advanced features • '}
             {isPremium ? `${qrCodes.length} QR code${qrCodes.length !== 1 ? 's' : ''} created` : 'Upgrade for more features'}
           </p>
         </div>
@@ -198,7 +207,7 @@ export default function QRCodesPage() {
                   <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div className="text-sm">
                     <p className="font-medium text-blue-900">Free Plan</p>
-                    <p className="text-blue-700 mt-1">You can create 1 general QR code. Upgrade for unlimited QR codes with menu and table customization.</p>
+                    <p className="text-blue-700 mt-1">Create 1 QR code for your menu. Upgrade for unlimited QR codes with table customization.</p>
                   </div>
                 </div>
               )}
@@ -207,12 +216,11 @@ export default function QRCodesPage() {
                 <Input id="name" placeholder="e.g., Main Menu QR" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
               </div>
               <div>
-                <Label htmlFor="menu">Menu (Optional)</Label>
-                <select id="menu" className="w-full border border-gray-300 rounded-md p-2" value={formData.menu_id} onChange={(e) => setFormData({ ...formData, menu_id: e.target.value })} disabled={isFree}>
-                  <option value="">All Menus</option>
+                <Label htmlFor="menu">Select Menu *</Label>
+                <select id="menu" className="w-full border border-gray-300 rounded-md p-2" value={formData.menu_id} onChange={(e) => setFormData({ ...formData, menu_id: e.target.value })} required>
+                  <option value="">Select a menu...</option>
                   {menus.map((menu) => (<option key={menu.id} value={menu.id}>{menu.name}</option>))}
                 </select>
-                {isFree && <p className="text-xs text-amber-600 mt-1"><Sparkles className="w-3 h-3 inline mr-1" />Upgrade to Pro or Enterprise to link specific menus</p>}
               </div>
               <div>
                 <Label htmlFor="table">Table Number (Optional)</Label>
