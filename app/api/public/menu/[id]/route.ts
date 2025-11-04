@@ -9,10 +9,13 @@ export async function GET(
   try {
     const menuId = params.id;
 
-    // Get menu details (remove is_active check to show all menus)
+    // Get menu details with restaurant/location name
     const menu = await queryOne<any>(
-      `SELECT m.id, m.name, m.description, m.style, m.currency, m.is_active
+      `SELECT m.id, m.name as menu_name, m.description, m.style, m.currency, m.is_active,
+              COALESCE(bp.business_name, l.name, 'Restaurant') as restaurant_name
        FROM menus m
+       LEFT JOIN locations l ON m.location_id = l.id
+       LEFT JOIN business_profiles bp ON l.user_id = bp.user_id
        WHERE m.id = ?`,
       [menuId]
     );
@@ -25,7 +28,7 @@ export async function GET(
       );
     }
 
-    console.log(`Found menu ${menuId}:`, menu.name, 'is_active:', menu.is_active);
+    console.log(`Found menu ${menuId}:`, menu.menu_name, 'Restaurant:', menu.restaurant_name, 'is_active:', menu.is_active);
 
     // Get categories
     const categories = await query<any>(

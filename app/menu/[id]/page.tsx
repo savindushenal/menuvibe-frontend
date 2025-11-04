@@ -34,7 +34,8 @@ interface MenuCategory {
 
 interface Menu {
   id: number;
-  name: string;
+  menu_name: string;
+  restaurant_name: string;
   description: string;
   style: string;
   currency: string;
@@ -179,7 +180,7 @@ export default function PublicMenuPage() {
             className="text-center"
           >
             <h1 className="text-4xl md:text-5xl font-bold mb-2" style={{ color: designColors.text }}>
-              {menu.name}
+              {menu.restaurant_name}
             </h1>
             {menu.description && (
               <p className="text-lg opacity-80" style={{ color: designColors.text }}>{menu.description}</p>

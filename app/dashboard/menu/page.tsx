@@ -1292,7 +1292,7 @@ export default function MenuManagementPage() {
 
       {/* Edit Menu Dialog */}
       <Dialog open={isEditMenuOpen} onOpenChange={setIsEditMenuOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl" key={`edit-menu-${menuForm.id}`}>
           <DialogHeader>
             <DialogTitle>Edit Menu</DialogTitle>
             <DialogDescription>Update menu details</DialogDescription>
