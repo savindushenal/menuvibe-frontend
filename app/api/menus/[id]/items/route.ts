@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
+import pool from '@/lib/db';
+import { ResultSetHeader } from 'mysql2';
 
 // GET /api/menus/[id]/items - Get all items for a menu
 export async function GET(
@@ -104,7 +106,7 @@ export async function POST(
     });
 
     // Insert menu item
-    const [result]: any = await query(
+    const [result] = await pool.execute<ResultSetHeader>(
       `INSERT INTO menu_items (
         menu_id, name, description, price, currency, category_id,
         is_available, is_featured, allergens, dietary_info,
