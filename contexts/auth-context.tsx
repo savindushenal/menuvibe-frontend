@@ -46,11 +46,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Check onboarding status - will be handled separately
         await checkOnboardingStatus();
+      } else {
+        // Invalid response, clear auth
+        localStorage.removeItem('auth_token');
+        apiClient.setToken(null);
       }
-    } catch (error) {
-      console.error('Auth check failed:', error);
+    } catch (error: any) {
+      // Only log non-401 errors (401 is expected for expired/invalid tokens)
+      if (!error.message?.includes('401') && !error.message?.includes('Unauthorized')) {
+        console.error('Auth check failed:', error);
+      }
+      // Clear invalid token
       localStorage.removeItem('auth_token');
       apiClient.setToken(null);
+      setUser(null);
     } finally {
       setIsLoading(false);
     }

@@ -73,12 +73,15 @@ class ApiClient {
 
       return data;
     } catch (error: any) {
-      // Don't log 404 errors for business profile as they're expected for new users
-      const isBusinessProfile404 = 
-        url.includes('/business-profile') && 
-        (error.message?.includes('404') || error.message?.includes('Not Found'));
+      // Don't log expected errors to reduce console noise
+      const isExpectedError = 
+        // Business profile 404s are expected for new users
+        (url.includes('/business-profile') && 
+          (error.message?.includes('404') || error.message?.includes('Not Found'))) ||
+        // 401s are expected for expired/invalid tokens
+        (error.message?.includes('401') || error.message?.includes('Unauthorized'));
       
-      if (!isBusinessProfile404) {
+      if (!isExpectedError) {
         console.error('API Error:', error);
       }
       
