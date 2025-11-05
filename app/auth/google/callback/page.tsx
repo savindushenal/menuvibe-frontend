@@ -26,7 +26,7 @@ function GoogleCallbackContent() {
           description: 'Google authentication failed. Please try again.',
           variant: 'destructive',
         });
-        router.push('/auth/login?error=google_auth_failed');
+        router.replace('/auth/login?error=google_auth_failed');
         return;
       }
 
@@ -34,37 +34,44 @@ function GoogleCallbackContent() {
         try {
           console.log('Google OAuth token received, setting up session...');
           
-          // Set token in API client and localStorage
-          apiClient.setToken(token);
+          // Set token in localStorage and API client
           localStorage.setItem('auth_token', token);
+          apiClient.setToken(token);
           
-          // Fetch user profile to verify and populate auth context
+          // Fetch and verify user profile
+          console.log('Fetching user profile...');
           const profileResponse = await apiClient.getProfile();
           
           if (!profileResponse.success || !profileResponse.data?.user) {
             throw new Error('Failed to fetch user profile');
           }
           
-          console.log('User profile loaded:', profileResponse.data.user.email);
+          console.log('User profile verified:', profileResponse.data.user.email);
           
-          // Refresh auth context to sync state
+          // Refresh auth context (this will set user state and check onboarding)
+          console.log('Refreshing auth context...');
           await refreshAuth();
           
-          // Check onboarding status
+          // Give React time to update state
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // Get fresh onboarding status
+          console.log('Checking onboarding status...');
           const needsOnboarding = await checkOnboardingStatus();
+          console.log('Needs onboarding:', needsOnboarding || isNewUser);
           
           toast({
             title: 'Login Successful',
             description: `Welcome to MenuVibe${isNewUser ? '! Let\'s set up your account.' : '!'}`,
           });
           
-          // Redirect based on onboarding status or new user flag
+          // Use router.replace to avoid back button issues
           if (isNewUser || needsOnboarding) {
             console.log('Redirecting to onboarding...');
-            router.push('/onboarding');
+            router.replace('/onboarding');
           } else {
             console.log('Redirecting to dashboard...');
-            router.push('/dashboard');
+            router.replace('/dashboard');
           }
         } catch (err) {
           console.error('Failed to complete Google authentication:', err);
@@ -73,13 +80,14 @@ function GoogleCallbackContent() {
             description: 'Failed to complete authentication. Please try again.',
             variant: 'destructive',
           });
+          // Clean up
           apiClient.setToken(null);
           localStorage.removeItem('auth_token');
-          router.push('/auth/login?error=auth_failed');
+          router.replace('/auth/login?error=auth_failed');
         }
       } else {
         console.error('No token received from Google OAuth');
-        router.push('/auth/login?error=missing_token');
+        router.replace('/auth/login?error=missing_token');
       }
       
       setIsProcessing(false);
