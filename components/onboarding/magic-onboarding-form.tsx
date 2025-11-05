@@ -85,9 +85,10 @@ const serviceOptions = [
 
 export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardingFormProps) {
   const [currentStep, setCurrentStep] = useState(0);
-  const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [logo, setLogo] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [internalSubmitting, setInternalSubmitting] = useState(false);
   const [formData, setFormData] = useState<OnboardingData>({
     business_name: '',
     business_type: '',
@@ -141,6 +142,7 @@ export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardin
   const handleSubmit = async () => {
     try {
       setErrors({}); // Clear previous errors
+      setInternalSubmitting(true);
       
       // Clean the form data before sending
       const cleanedData = {
@@ -231,14 +233,21 @@ export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardin
         }
       }
       
+      console.log('Business profile response:', response);
+      
       if (response?.success) {
+        console.log('Business profile saved successfully, marking onboarding as complete...');
         // Mark onboarding as complete
         try {
           await apiClient.completeOnboarding();
+          console.log('Onboarding marked as complete');
         } catch (error) {
           console.error('Error marking onboarding as complete:', error);
         }
         onComplete();
+      } else {
+        console.error('Business profile save failed:', response);
+        throw new Error(response?.message || 'Failed to save business profile');
       }
     } catch (error: any) {
       console.error('Error creating business profile:', error);
@@ -247,14 +256,16 @@ export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardin
       if (error.message?.includes('Validation failed') && error.response?.errors) {
         setErrors(error.response.errors);
       }
+    } finally {
+      setInternalSubmitting(false);
     }
   };
 
   const toggleService = (serviceId: string) => {
-    setFormData(prev => ({
+    setFormData((prev: OnboardingData) => ({
       ...prev,
       services: prev.services.includes(serviceId)
-        ? prev.services.filter(s => s !== serviceId)
+        ? prev.services.filter((s: string) => s !== serviceId)
         : [...prev.services, serviceId]
     }));
   };
@@ -622,11 +633,11 @@ export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardin
             <Button
               type="button"
               onClick={handleSubmit}
-              disabled={isSubmitting || !formData.business_name || !formData.business_type}
+              disabled={internalSubmitting || isSubmitting || !formData.business_name || !formData.business_type}
               className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
             >
               <Check className="w-4 h-4" />
-              <span>{isSubmitting ? 'Setting up...' : 'Complete Setup'}</span>
+              <span>{(internalSubmitting || isSubmitting) ? 'Setting up...' : 'Complete Setup'}</span>
             </Button>
           ) : (
             <Button
