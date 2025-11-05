@@ -9,7 +9,10 @@ export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
 
+    console.log('Login attempt for email:', email);
+
     if (!email || !password) {
+      console.log('Missing email or password');
       return NextResponse.json(
         { success: false, message: 'Email and password are required' },
         { status: 400 }
@@ -23,20 +26,26 @@ export async function POST(request: NextRequest) {
     );
 
     if (!user) {
+      console.log('User not found for email:', email);
       return NextResponse.json(
         { success: false, message: 'Invalid credentials' },
         { status: 401 }
       );
     }
 
+    console.log('User found, verifying password...');
+
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
+      console.log('Invalid password for user:', email);
       return NextResponse.json(
         { success: false, message: 'Invalid credentials' },
         { status: 401 }
       );
     }
+
+    console.log('Password valid, creating token...');
 
     // Get user's default location
     const location = await queryOne<any>(
@@ -67,8 +76,12 @@ export async function POST(request: NextRequest) {
       { expiresIn: '7d' }
     );
 
+    console.log('Token created successfully for user:', user.id);
+
     // Remove password from response
     delete user.password;
+
+    console.log('Sending successful login response');
 
     return NextResponse.json({
       success: true,

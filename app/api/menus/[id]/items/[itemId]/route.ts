@@ -65,20 +65,45 @@ export async function PUT(
     }
 
     const formData = await request.formData();
+    
+    // Parse FormData instead of JSON
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
-    const price = formData.get('price') ? parseFloat(formData.get('price') as string) : undefined;
+    const priceValue = formData.get('price') as string;
+    const price = priceValue ? parseFloat(priceValue) : undefined;
     const currency = formData.get('currency') as string;
-    const category_id = formData.get('category_id') ? parseInt(formData.get('category_id') as string) : undefined;
+    const categoryIdValue = formData.get('category_id') as string;
+    const category_id = categoryIdValue ? parseInt(categoryIdValue) : undefined;
     const is_available = formData.get('is_available') ? formData.get('is_available') === '1' : undefined;
     const is_featured = formData.get('is_featured') ? formData.get('is_featured') === '1' : undefined;
-    const allergens = formData.get('allergens') as string;
-    const dietary_info = formData.get('dietary_info') as string;
     const image_url = formData.get('image_url') as string;
     const card_color = formData.get('card_color') as string;
     const heading_color = formData.get('heading_color') as string;
     const text_color = formData.get('text_color') as string;
-    const sort_order = formData.get('sort_order') ? parseInt(formData.get('sort_order') as string) : undefined;
+    const sortOrderValue = formData.get('sort_order') as string;
+    const sort_order = sortOrderValue ? parseInt(sortOrderValue) : undefined;
+    
+    // Handle arrays - these might come as JSON strings
+    let allergens = undefined;
+    let dietary_info = undefined;
+    
+    const allergensValue = formData.get('allergens') as string;
+    if (allergensValue) {
+      try {
+        allergens = JSON.parse(allergensValue);
+      } catch {
+        allergens = [allergensValue];
+      }
+    }
+    
+    const dietaryInfoValue = formData.get('dietary_info') as string;
+    if (dietaryInfoValue) {
+      try {
+        dietary_info = JSON.parse(dietaryInfoValue);
+      } catch {
+        dietary_info = [dietaryInfoValue];
+      }
+    }
 
     // Build update query
     const updates: string[] = [];

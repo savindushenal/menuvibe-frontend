@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Search, Trash2, Edit2, GripVertical, List, FolderOpen, Utensils, Power } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, GripVertical, List, FolderOpen, Utensils } from 'lucide-react';
 import { MenuCategory, MenuItem } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/lib/api';
@@ -96,13 +96,12 @@ const menuDesigns = [
 ];
 
 // Sortable Menu Card Component
-function SortableMenuCard({ menu, onEdit, onDelete, onSelect, onView, onToggleStatus }: {
+function SortableMenuCard({ menu, onEdit, onDelete, onSelect, onView }: {
   menu: any;
   onEdit: (menu: any) => void;
   onDelete: (menuId: number) => void;
   onSelect: (menu: any) => void;
   onView: (menu: any) => void;
-  onToggleStatus: (menuId: number, currentStatus: boolean) => void;
 }) {
   const designInfo = menuDesigns.find(d => d.value === menu.style) || menuDesigns[0];
   
@@ -151,34 +150,23 @@ function SortableMenuCard({ menu, onEdit, onDelete, onSelect, onView, onToggleSt
         </div>
 
         {/* Edit and Delete Icons */}
-        <div className="flex justify-between items-center gap-1 mt-3 pt-3 border-t">
+        <div className="flex justify-end gap-1 mt-3 pt-3 border-t">
           <Button
-            variant={menu.is_active ? "default" : "outline"}
-            size="sm"
-            onClick={() => onToggleStatus(menu.id, menu.is_active)}
-            className="h-8"
+            variant="ghost"
+            size="icon"
+            onClick={() => onEdit(menu)}
+            className="h-8 w-8"
           >
-            <Power className="w-3 h-3 mr-1.5" />
-            {menu.is_active ? 'Active' : 'Inactive'}
+            <Edit2 className="w-4 h-4" />
           </Button>
-          <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onEdit(menu)}
-              className="h-8 w-8"
-            >
-              <Edit2 className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onDelete(menu.id)}
-              className="h-8 w-8 text-destructive hover:text-destructive"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onDelete(menu.id)}
+            className="h-8 w-8 text-destructive hover:text-destructive"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -496,7 +484,6 @@ export default function MenuManagementPage() {
       formData.append('description', menuForm.description);
       formData.append('style', menuForm.style);
       formData.append('currency', menuForm.currency);
-      formData.append('is_active', '1'); // Ensure menu stays active when updating
 
       const response = await apiClient.updateMenu(menuForm.id, formData);
       
@@ -548,30 +535,6 @@ export default function MenuManagementPage() {
       toast({
         title: 'Error',
         description: error.message || 'Failed to delete menu',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleToggleMenuStatus = async (menuId: number, currentStatus: boolean) => {
-    try {
-      const formData = new FormData();
-      formData.append('is_active', currentStatus ? '0' : '1');
-      
-      const response = await apiClient.updateMenu(menuId, formData);
-
-      if (response.success) {
-        toast({
-          title: 'Menu updated',
-          description: `Menu ${currentStatus ? 'deactivated' : 'activated'} successfully.`,
-        });
-        
-        loadMenus();
-      }
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to update menu status',
         variant: 'destructive',
       });
     }
@@ -722,7 +685,11 @@ export default function MenuManagementPage() {
       formData.append('is_available', itemForm.is_available ? '1' : '0');
       formData.append('is_spicy', itemForm.is_spicy ? '1' : '0');
 
+      console.log('About to create menu item with data:', Array.from(formData.entries()));
+      
       const response = await apiClient.createMenuItem(selectedMenu.id, formData);
+      
+      console.log('Received response:', response);
       
       if (response.success) {
         toast({
@@ -731,9 +698,15 @@ export default function MenuManagementPage() {
         });
         setIsAddItemOpen(false);
         setItemForm({ id: 0, name: '', description: '', price: '', category_id: 0, is_available: true, is_spicy: false });
-        loadItems();
+        
+        console.log('About to reload items...');
+        await loadItems();
+        console.log('Items reloaded successfully');
+      } else {
+        throw new Error(response.message || 'Failed to create menu item');
       }
     } catch (error: any) {
+      console.error('Caught error in handleAddItem:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to add menu item',
@@ -943,7 +916,6 @@ export default function MenuManagementPage() {
                       onDelete={handleDeleteMenu}
                       onSelect={handleSelectMenu}
                       onView={handleViewMenu}
-                      onToggleStatus={handleToggleMenuStatus}
                     />
                   ))}
                 </div>
@@ -1292,7 +1264,7 @@ export default function MenuManagementPage() {
 
       {/* Edit Menu Dialog */}
       <Dialog open={isEditMenuOpen} onOpenChange={setIsEditMenuOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl" key={`edit-menu-${menuForm.id}`}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Menu</DialogTitle>
             <DialogDescription>Update menu details</DialogDescription>

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
-import pool from '@/lib/db';
-import { ResultSetHeader } from 'mysql2';
 
 // GET /api/menus/[id]/items - Get all items for a menu
 export async function GET(
@@ -71,42 +69,74 @@ export async function POST(
       );
     }
 
+    // Parse FormData instead of JSON
     const formData = await request.formData();
     const name = formData.get('name') as string;
-    const description = formData.get('description') as string || '';
-    const price = parseFloat(formData.get('price') as string);
+    const description = formData.get('description') as string;
+    const priceValue = formData.get('price') as string;
+    const price = priceValue ? parseFloat(priceValue) : 0;
     const currency = formData.get('currency') as string;
-    const category_id = parseInt(formData.get('category_id') as string);
+    const categoryIdValue = formData.get('category_id') as string;
+    const category_id = categoryIdValue ? parseInt(categoryIdValue) : null;
     const is_available = formData.get('is_available') === '1';
     const is_featured = formData.get('is_featured') === '1';
-    const allergens = formData.get('allergens') as string;
-    const dietary_info = formData.get('dietary_info') as string;
+    const is_spicy = formData.get('is_spicy') === '1';
     const image_url = formData.get('image_url') as string;
     const card_color = formData.get('card_color') as string;
     const heading_color = formData.get('heading_color') as string;
     const text_color = formData.get('text_color') as string;
-    const sort_order = formData.get('sort_order') ? parseInt(formData.get('sort_order') as string) : 0;
+    const sortOrderValue = formData.get('sort_order') as string;
+    const sort_order = sortOrderValue ? parseInt(sortOrderValue) : 0;
+    
+    // Validate required fields
+    if (!name || name.trim() === '') {
+      return NextResponse.json(
+        { success: false, message: 'Item name is required' },
+        { status: 400 }
+      );
+    }
 
-    console.log('Menu item data to insert:', {
-      menu_id: params.id,
-      name,
-      description,
-      price,
-      currency: currency || menu.currency || 'USD',
-      category_id,
-      is_available,
-      is_featured,
-      allergens,
-      dietary_info,
-      image_url,
-      card_color,
-      heading_color,
-      text_color,
-      sort_order
-    });
+    if (!priceValue || isNaN(price) || price < 0) {
+      return NextResponse.json(
+        { success: false, message: 'Valid price is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!categoryIdValue || isNaN(parseInt(categoryIdValue)) || category_id === null) {
+      return NextResponse.json(
+        { success: false, message: 'Valid category is required' },
+        { status: 400 }
+      );
+    }
+    
+    // Handle arrays - these might come as JSON strings or individual entries
+    let allergens = null;
+    let dietary_info = null;
+    
+    const allergensValue = formData.get('allergens') as string;
+    if (allergensValue) {
+      try {
+        allergens = JSON.parse(allergensValue);
+      } catch {
+        allergens = [allergensValue];
+      }
+    }
+    
+    const dietaryInfoValue = formData.get('dietary_info') as string;
+    if (dietaryInfoValue) {
+      try {
+        dietary_info = JSON.parse(dietaryInfoValue);
+      } catch {
+        dietary_info = [dietaryInfoValue];
+      }
+    }
+
+    // Log menu item data for debugging
+    console.log('Creating menu item:', { name, price, category_id });
 
     // Insert menu item
-    const [result] = await pool.execute<ResultSetHeader>(
+    const [result]: any = await query(
       `INSERT INTO menu_items (
         menu_id, name, description, price, currency, category_id,
         is_available, is_featured, allergens, dietary_info,
@@ -144,10 +174,9 @@ export async function POST(
       data: { menu_item: item },
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating menu item:', error);
-    console.error('Error details:', error instanceof Error ? error.message : String(error));
+    console.error('Error creating menu item:', error instanceof Error ? error.message : String(error));
     return NextResponse.json(
-      { success: false, message: 'Failed to create menu item', error: error instanceof Error ? error.message : String(error) },
+      { success: false, message: 'Failed to create menu item' },
       { status: 500 }
     );
   }

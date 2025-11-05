@@ -41,9 +41,12 @@ class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
     
-    // Always refresh token from localStorage before making requests
+    // Always refresh token from localStorage before making requests, but prefer instance token
     if (typeof window !== 'undefined') {
-      this.token = localStorage.getItem('auth_token');
+      const storageToken = localStorage.getItem('auth_token');
+      // Use instance token if available, otherwise use localStorage token
+      this.token = this.token || storageToken;
+      console.log(`Making request to ${endpoint} with token:`, this.token ? 'present' : 'none');
     }
     
     const headers: Record<string, string> = {
@@ -66,22 +69,21 @@ class ApiClient {
       const data = await response.json();
 
       if (!response.ok) {
+        console.log(`Request to ${endpoint} failed with status:`, response.status, data);
         const error = new Error(data.message || `HTTP ${response.status}: ${response.statusText}`) as any;
         error.response = data; // Include the response data for validation errors
         throw error;
       }
 
+      console.log(`Request to ${endpoint} successful`);
       return data;
     } catch (error: any) {
-      // Don't log expected errors to reduce console noise
-      const isExpectedError = 
-        // Business profile 404s are expected for new users
-        (url.includes('/business-profile') && 
-          (error.message?.includes('404') || error.message?.includes('Not Found'))) ||
-        // 401s are expected for expired/invalid tokens
-        (error.message?.includes('401') || error.message?.includes('Unauthorized'));
+      // Don't log 404 errors for business profile as they're expected for new users
+      const isBusinessProfile404 = 
+        url.includes('/business-profile') && 
+        (error.message?.includes('404') || error.message?.includes('Not Found'));
       
-      if (!isExpectedError) {
+      if (!isBusinessProfile404) {
         console.error('API Error:', error);
       }
       
@@ -95,12 +97,15 @@ class ApiClient {
   }
 
   setToken(token: string | null) {
+    console.log('Setting token:', token ? 'present' : 'null');
     this.token = token;
     if (typeof window !== 'undefined') {
       if (token) {
         localStorage.setItem('auth_token', token);
+        console.log('Token stored in localStorage');
       } else {
         localStorage.removeItem('auth_token');
+        console.log('Token removed from localStorage');
       }
     }
   }
@@ -810,49 +815,6 @@ class ApiClient {
       });
     } catch (error: any) {
       console.error('Error resetting settings:', error);
-      throw error;
-    }
-  }
-
-  // QR Code endpoints
-  async getQRCodes(locationId?: number): Promise<ApiResponse> {
-    try {
-      const query = locationId ? `?location_id=${locationId}` : '';
-      return await this.request(`/qr-codes${query}`);
-    } catch (error: any) {
-      console.error('Error fetching QR codes:', error);
-      throw error;
-    }
-  }
-
-  async createQRCode(data: { name: string; location_id?: number; menu_id?: number; table_number?: string }): Promise<ApiResponse> {
-    try {
-      return await this.request('/qr-codes', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
-    } catch (error: any) {
-      console.error('Error creating QR code:', error);
-      throw error;
-    }
-  }
-
-  async getQRCode(qrCodeId: number): Promise<ApiResponse> {
-    try {
-      return await this.request(`/qr-codes/${qrCodeId}`);
-    } catch (error: any) {
-      console.error('Error fetching QR code:', error);
-      throw error;
-    }
-  }
-
-  async deleteQRCode(qrCodeId: number): Promise<ApiResponse> {
-    try {
-      return await this.request(`/qr-codes/${qrCodeId}`, {
-        method: 'DELETE',
-      });
-    } catch (error: any) {
-      console.error('Error deleting QR code:', error);
       throw error;
     }
   }

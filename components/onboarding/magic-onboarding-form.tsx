@@ -270,6 +270,16 @@ export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardin
     }));
   };
 
+  // Helper function to validate required fields
+  const isFormValid = () => {
+    return formData.business_name && 
+           formData.business_type && 
+           formData.address_line_1 && 
+           formData.city && 
+           formData.state && 
+           formData.postal_code;
+  };
+
   const steps = [
     {
       title: "Tell us about your business",
@@ -563,8 +573,22 @@ export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardin
               <h3 className="font-semibold text-green-800">Almost Done!</h3>
             </div>
             <p className="text-green-700 mb-4">
-              You're all set! Click "Complete Setup" to finish your onboarding and start using MenuVibe.
+              You're all set! Click "Complete Setup" to finish your onboarding and start using MenuVibe. 
+              We'll automatically create your first location based on the information you provided.
             </p>
+            {!isFormValid() && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                <p className="text-yellow-800 text-sm font-medium mb-2">Please complete the following required fields:</p>
+                <ul className="text-yellow-700 text-sm space-y-1">
+                  {!formData.business_name && <li>• Business name</li>}
+                  {!formData.business_type && <li>• Business type</li>}
+                  {!formData.address_line_1 && <li>• Street address</li>}
+                  {!formData.city && <li>• City</li>}
+                  {!formData.state && <li>• State</li>}
+                  {!formData.postal_code && <li>• ZIP code</li>}
+                </ul>
+              </div>
+            )}
             <div className="flex flex-wrap gap-2">
               <Badge variant="secondary">{formData.business_name || 'Your Business'}</Badge>
               <Badge variant="secondary">{formData.business_type || 'Business Type'}</Badge>
@@ -633,7 +657,7 @@ export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardin
             <Button
               type="button"
               onClick={handleSubmit}
-              disabled={internalSubmitting || isSubmitting || !formData.business_name || !formData.business_type}
+              disabled={internalSubmitting || isSubmitting || !isFormValid()}
               className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
             >
               <Check className="w-4 h-4" />
