@@ -10,7 +10,7 @@ export default function AuthCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { refreshAuth } = useAuth();
+  const { refreshAuth, checkOnboardingStatus } = useAuth();
   const [isProcessing, setIsProcessing] = useState(true);
 
   useEffect(() => {
@@ -33,21 +33,40 @@ export default function AuthCallbackPage() {
 
       if (token) {
         try {
-          console.log('Setting token and refreshing auth...');
+          console.log('Setting token and loading user profile...');
           
           // Set the token in API client and localStorage
           apiClient.setToken(token);
           localStorage.setItem('auth_token', token);
           
-          // Refresh auth context to load user data
+          // Fetch user profile to verify token and populate auth context
+          const profileResponse = await apiClient.getProfile();
+          
+          if (!profileResponse.success || !profileResponse.data?.user) {
+            throw new Error('Failed to fetch user profile');
+          }
+          
+          console.log('User profile loaded:', profileResponse.data.user.email);
+          
+          // Refresh auth context to sync state
           await refreshAuth();
+          
+          // Check onboarding status
+          const needsOnboarding = await checkOnboardingStatus();
           
           toast({
             title: 'Login Successful',
             description: 'Welcome to MenuVibe!',
           });
-          console.log('Redirecting to dashboard...');
-          router.push('/dashboard');
+          
+          // Redirect based on onboarding status
+          if (needsOnboarding) {
+            console.log('Redirecting to onboarding...');
+            router.push('/onboarding');
+          } else {
+            console.log('Redirecting to dashboard...');
+            router.push('/dashboard');
+          }
         } catch (error) {
           console.error('Error processing auth callback:', error);
           toast({
@@ -68,7 +87,7 @@ export default function AuthCallbackPage() {
     };
 
     processCallback();
-  }, [searchParams, router, toast]);
+  }, [searchParams, router, toast, refreshAuth, checkOnboardingStatus]);
 
   if (isProcessing) {
     return (
