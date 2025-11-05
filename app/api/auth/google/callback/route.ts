@@ -109,6 +109,14 @@ export async function GET(request: NextRequest) {
         [userId, 'Main Location', 'Default location', 'Address not set', 'City', 'State', '00000', 'US']
       );
 
+      // Create empty business profile for onboarding
+      await query(
+        `INSERT INTO business_profiles 
+        (user_id, business_name, country, onboarding_completed, created_at, updated_at) 
+        VALUES (?, ?, ?, 0, NOW(), NOW())`,
+        [userId, googleUser.name || 'My Business', 'US']
+      );
+
       // Create user settings
       await query(
         'INSERT INTO user_settings (user_id, theme, language, currency, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',

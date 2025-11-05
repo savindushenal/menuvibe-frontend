@@ -187,10 +187,12 @@ export async function POST(request: NextRequest) {
       data: profile,
       message: 'Business profile created successfully'
     }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating business profile:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     return NextResponse.json(
-      { success: false, message: 'Failed to create business profile' },
+      { success: false, message: error.message || 'Failed to create business profile' },
       { status: 500 }
     );
   }
