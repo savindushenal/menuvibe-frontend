@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
+import pool from '@/lib/db';
 import { put } from '@vercel/blob';
 
 export async function GET(request: NextRequest) {
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new profile
-    const result: any = await query(
+    const [result]: any = await pool.execute(
       `INSERT INTO business_profiles 
       (user_id, business_name, business_type, description, address_line_1, address_line_2, city, state, country, postal_code, phone, email, website, logo_url, cuisine_type, seating_capacity, operating_hours, services, social_media, created_at, updated_at) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
@@ -179,7 +180,7 @@ export async function POST(request: NextRequest) {
 
     const profile = await queryOne<any>(
       'SELECT * FROM business_profiles WHERE id = ?',
-      [result[0].insertId]
+      [result.insertId]
     );
 
     return NextResponse.json({
