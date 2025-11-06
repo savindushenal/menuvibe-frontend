@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     // Get subscription
     const subscription = await queryOne<any>(
-      `SELECT us.*, sp.name, sp.price, sp.billing_cycle, sp.features, sp.limits
+      `SELECT us.*, sp.name, sp.price, sp.billing_period, sp.features, sp.limits
        FROM user_subscriptions us
        JOIN subscription_plans sp ON us.subscription_plan_id = sp.id
        WHERE us.user_id = ? AND us.status = 'active'

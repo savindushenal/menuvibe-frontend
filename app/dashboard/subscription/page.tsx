@@ -41,7 +41,7 @@ interface CurrentSubscription {
   name: string;
   slug: string;
   price: number;
-  billing_cycle: string;
+  billing_period: string;
   features: any;
   limits: any;
 }
