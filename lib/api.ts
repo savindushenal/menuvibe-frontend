@@ -46,7 +46,6 @@ class ApiClient {
       const storageToken = localStorage.getItem('auth_token');
       // Use instance token if available, otherwise use localStorage token
       this.token = this.token || storageToken;
-      console.log(`Making request to ${endpoint} with token:`, this.token ? 'present' : 'none');
     }
     
     const headers: Record<string, string> = {
@@ -69,13 +68,11 @@ class ApiClient {
       const data = await response.json();
 
       if (!response.ok) {
-        console.log(`Request to ${endpoint} failed with status:`, response.status, data);
         const error = new Error(data.message || `HTTP ${response.status}: ${response.statusText}`) as any;
         error.response = data; // Include the response data for validation errors
         throw error;
       }
 
-      console.log(`Request to ${endpoint} successful`);
       return data;
     } catch (error: any) {
       // Don't log 404 errors for business profile as they're expected for new users
@@ -97,15 +94,12 @@ class ApiClient {
   }
 
   setToken(token: string | null) {
-    console.log('Setting token:', token ? 'present' : 'null');
     this.token = token;
     if (typeof window !== 'undefined') {
       if (token) {
         localStorage.setItem('auth_token', token);
-        console.log('Token stored in localStorage');
       } else {
         localStorage.removeItem('auth_token');
-        console.log('Token removed from localStorage');
       }
     }
   }

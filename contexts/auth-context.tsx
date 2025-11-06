@@ -67,26 +67,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkOnboardingStatus = async (): Promise<boolean> => {
     try {
-      console.log('Checking onboarding status...');
       const response = await apiClient.getBusinessProfile();
       
       // If no business profile exists or onboarding not completed
       if (!response.success || !response.data || !response.data.onboarding_completed) {
-        console.log('Onboarding needed - no profile or not completed');
         setNeedsOnboarding(true);
         return true;
       }
       
       // Business profile exists and is complete
-      console.log('Onboarding completed');
       setNeedsOnboarding(false);
       return false;
     } catch (error: any) {
       // Only log unexpected errors (not 404s which are expected for new users)
       if (!error.message?.includes('404') && !error.message?.includes('Business profile not found')) {
         console.error('Error checking onboarding status:', error);
-      } else {
-        console.log('No business profile found (expected for new users)');
       }
       // On error, assume onboarding is needed for safety
       setNeedsOnboarding(true);
@@ -96,25 +91,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      console.log('Attempting login for:', email);
       const response = await apiClient.login({ email, password });
       
       if (response.success && response.data) {
         const { user, token } = response.data;
-        console.log('Login successful, setting token and user');
         
         // Set token first
         apiClient.setToken(token);
         setUser(user);
         
         // Check if user needs onboarding
-        console.log('Checking onboarding status...');
         const needsOnboarding = await checkOnboardingStatus();
         if (needsOnboarding) {
-          console.log('Redirecting to onboarding');
           router.push('/onboarding');
         } else {
-          console.log('Redirecting to dashboard');
           router.push('/dashboard');
         }
       } else {
