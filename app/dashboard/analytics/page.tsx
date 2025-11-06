@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Eye, Scan, Calendar } from 'lucide-react';
+import { TrendingUp, Users, Eye, Scan, Calendar, ShoppingCart } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   LineChart,
@@ -18,24 +18,27 @@ import {
   Cell,
 } from 'recharts';
 import { Button } from '@/components/ui/button';
+import { useEffect, useState } from 'react';
 
-const viewsData = [
-  { date: 'Mon', views: 320, scans: 145 },
-  { date: 'Tue', views: 410, scans: 190 },
-  { date: 'Wed', views: 380, scans: 165 },
-  { date: 'Thu', views: 520, scans: 240 },
-  { date: 'Fri', views: 680, scans: 310 },
-  { date: 'Sat', views: 890, scans: 420 },
-  { date: 'Sun', views: 750, scans: 350 },
-];
-
-const popularItems = [
-  { name: 'Caesar Salad', orders: 145 },
-  { name: 'Grilled Salmon', orders: 132 },
-  { name: 'Margherita Pizza', orders: 118 },
-  { name: 'Beef Burger', orders: 98 },
-  { name: 'Pasta Carbonara', orders: 87 },
-];
+// Types for analytics data
+interface AnalyticsStats {
+  totalViews: number;
+  totalScans: number;
+  totalOrders: number;
+  uniqueVisitors: number;
+  recentTrends: {
+    views: number;
+    scans: number;
+    orders: number;
+  }[];
+  popularItems: {
+    name: string;
+    orders: number;
+  }[];
+  eventsByType: {
+    [key: string]: number;
+  };
+}
 
 const categoryData = [
   { name: 'Appetizers', value: 25, color: '#10b981' },
@@ -44,38 +47,90 @@ const categoryData = [
   { name: 'Beverages', value: 15, color: '#8b5cf6' },
 ];
 
-const stats = [
-  {
-    title: 'Total Views',
-    value: '24,567',
-    change: '+15.3%',
-    icon: Eye,
-    color: 'emerald',
-  },
-  {
-    title: 'QR Scans',
-    value: '8,234',
-    change: '+12.5%',
-    icon: Scan,
-    color: 'blue',
-  },
-  {
-    title: 'Engagement Rate',
-    value: '68.4%',
-    change: '+5.2%',
-    icon: TrendingUp,
-    color: 'orange',
-  },
-  {
-    title: 'Unique Visitors',
-    value: '3,892',
-    change: '+8.7%',
-    icon: Users,
-    color: 'purple',
-  },
-];
-
 export default function AnalyticsPage() {
+  const [analytics, setAnalytics] = useState<AnalyticsStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState('7'); // days
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [dateRange]);
+
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/analytics/stats?days=${dateRange}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setAnalytics(result.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatNumber = (num: number) => {
+    if (num >= 1000) {
+      return `${(num / 1000).toFixed(1)}k`;
+    }
+    return num.toString();
+  };
+
+  const calculateChange = (current: number, previous: number) => {
+    if (previous === 0) return '+0%';
+    const change = ((current - previous) / previous) * 100;
+    return `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
+  };
+
+  // Create stats array from analytics data
+  const stats = analytics ? [
+    {
+      title: 'Total Views',
+      value: formatNumber(analytics.totalViews),
+      change: '+15.3%', // You can calculate this from analytics.recentTrends
+      icon: Eye,
+      color: 'emerald',
+    },
+    {
+      title: 'QR Scans',
+      value: formatNumber(analytics.totalScans),
+      change: '+12.5%',
+      icon: Scan,
+      color: 'blue',
+    },
+    {
+      title: 'Orders',
+      value: formatNumber(analytics.totalOrders),
+      change: '+8.7%',
+      icon: ShoppingCart,
+      color: 'orange',
+    },
+    {
+      title: 'Unique Visitors',
+      value: formatNumber(analytics.uniqueVisitors),
+      change: '+5.2%',
+      icon: Users,
+      color: 'purple',
+    },
+  ] : [];
+
+  // Create chart data from analytics trends
+  const viewsData = analytics?.recentTrends.map((trend, index) => ({
+    date: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][index] || `Day ${index + 1}`,
+    views: trend.views,
+    scans: trend.scans,
+    orders: trend.orders,
+  })) || [];
   return (
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
@@ -86,9 +141,20 @@ export default function AnalyticsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="border-neutral-300">
+          <Button 
+            variant={dateRange === '7' ? 'default' : 'outline'} 
+            className="border-neutral-300"
+            onClick={() => setDateRange('7')}
+          >
             <Calendar className="w-4 h-4 mr-2" />
             Last 7 Days
+          </Button>
+          <Button 
+            variant={dateRange === '30' ? 'default' : 'outline'} 
+            className="border-neutral-300"
+            onClick={() => setDateRange('30')}
+          >
+            Last 30 Days
           </Button>
         </div>
       </div>
@@ -99,54 +165,70 @@ export default function AnalyticsPage() {
         transition={{ duration: 0.5 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
       >
-        {stats.map((stat, index) => (
-          <motion.div
-            key={stat.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
-          >
-            <Card className="border-neutral-200 hover:shadow-lg transition-shadow duration-300">
+        {loading ? (
+          // Loading skeletons
+          Array.from({ length: 4 }).map((_, index) => (
+            <Card key={index} className="border-neutral-200">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-neutral-600">
-                  {stat.title}
-                </CardTitle>
-                <div
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br ${
-                    stat.color === 'emerald'
-                      ? 'from-emerald-100 to-emerald-200'
-                      : stat.color === 'blue'
-                      ? 'from-blue-100 to-blue-200'
-                      : stat.color === 'orange'
-                      ? 'from-orange-100 to-orange-200'
-                      : 'from-purple-100 to-purple-200'
-                  }`}
-                >
-                  <stat.icon
-                    className={`w-5 h-5 ${
-                      stat.color === 'emerald'
-                        ? 'text-emerald-600'
-                        : stat.color === 'blue'
-                        ? 'text-blue-600'
-                        : stat.color === 'orange'
-                        ? 'text-orange-600'
-                        : 'text-purple-600'
-                    }`}
-                  />
-                </div>
+                <div className="h-4 bg-neutral-200 rounded w-24 animate-pulse"></div>
+                <div className="w-10 h-10 bg-neutral-200 rounded-lg animate-pulse"></div>
               </CardHeader>
               <CardContent>
-                <div className="flex items-baseline justify-between">
-                  <h3 className="text-3xl font-bold text-neutral-900">{stat.value}</h3>
-                  <span className="text-sm font-semibold text-emerald-600">
-                    {stat.change}
-                  </span>
-                </div>
-                <p className="text-xs text-neutral-500 mt-2">vs last week</p>
+                <div className="h-8 bg-neutral-200 rounded w-16 animate-pulse mb-2"></div>
+                <div className="h-3 bg-neutral-200 rounded w-20 animate-pulse"></div>
               </CardContent>
             </Card>
-          </motion.div>
-        ))}
+          ))
+        ) : (
+          stats.map((stat, index) => (
+            <motion.div
+              key={stat.title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+            >
+              <Card className="border-neutral-200 hover:shadow-lg transition-shadow duration-300">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-neutral-600">
+                    {stat.title}
+                  </CardTitle>
+                  <div
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br ${
+                      stat.color === 'emerald'
+                        ? 'from-emerald-100 to-emerald-200'
+                        : stat.color === 'blue'
+                        ? 'from-blue-100 to-blue-200'
+                        : stat.color === 'orange'
+                        ? 'from-orange-100 to-orange-200'
+                        : 'from-purple-100 to-purple-200'
+                    }`}
+                  >
+                    <stat.icon
+                      className={`w-5 h-5 ${
+                        stat.color === 'emerald'
+                          ? 'text-emerald-600'
+                          : stat.color === 'blue'
+                          ? 'text-blue-600'
+                          : stat.color === 'orange'
+                          ? 'text-orange-600'
+                          : 'text-purple-600'
+                      }`}
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-baseline justify-between">
+                    <h3 className="text-3xl font-bold text-neutral-900">{stat.value}</h3>
+                    <span className="text-sm font-semibold text-emerald-600">
+                      {stat.change}
+                    </span>
+                  </div>
+                  <p className="text-xs text-neutral-500 mt-2">vs last week</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))
+        )}
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -182,6 +264,13 @@ export default function AnalyticsPage() {
                   stroke="#3b82f6"
                   strokeWidth={3}
                   dot={{ fill: '#3b82f6', r: 4 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="orders"
+                  stroke="#f97316"
+                  strokeWidth={3}
+                  dot={{ fill: '#f97316', r: 4 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -220,30 +309,30 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      <Card className="border-neutral-200">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-neutral-900">
-            Most Popular Items
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={popularItems}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="name" stroke="#6b7280" />
-              <YAxis stroke="#6b7280" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                }}
-              />
-              <Bar dataKey="orders" fill="#10b981" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+        <Card className="border-neutral-200">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-neutral-900">
+              Most Popular Items
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={analytics?.popularItems || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="name" stroke="#6b7280" />
+                <YAxis stroke="#6b7280" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Bar dataKey="orders" fill="#10b981" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-neutral-200">
@@ -254,7 +343,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {popularItems.map((item, index) => (
+              {(analytics?.popularItems || []).map((item, index) => (
                 <motion.div
                   key={item.name}
                   initial={{ opacity: 0, x: -20 }}
