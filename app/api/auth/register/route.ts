@@ -48,10 +48,10 @@ export async function POST(request: NextRequest) {
       [userId, 'Main Location']
     );
 
-    // Create user settings
+    // Create user settings with basic columns only
     await query(
-      'INSERT INTO user_settings (user_id, theme, language, currency, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',
-      [userId, 'light', 'en', 'USD']
+      'INSERT INTO user_settings (user_id, created_at, updated_at) VALUES (?, NOW(), NOW())',
+      [userId]
     );
 
     // Assign free subscription
