@@ -3,6 +3,7 @@ import { getUserFromToken, unauthorized } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import pool from '@/lib/db';
 import { ResultSetHeader } from 'mysql2';
+import { canCreateMenuItem, canAccessFeature } from '@/lib/permissions';
 
 // GET /api/menus/[id]/items - Get all items for a menu
 export async function GET(
@@ -71,6 +72,22 @@ export async function POST(
       );
     }
 
+    // DYNAMIC PERMISSION CHECK - Check subscription limits from database
+    const permissionCheck = await canCreateMenuItem(user.id);
+    
+    if (!permissionCheck.allowed) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: permissionCheck.reason,
+          subscription_limit: true,
+          current_count: permissionCheck.current_count,
+          limit: permissionCheck.limit
+        },
+        { status: 403 }
+      );
+    }
+
     // Parse FormData instead of JSON
     const formData = await request.formData();
     const name = formData.get('name') as string;
@@ -84,6 +101,23 @@ export async function POST(
     const is_featured = formData.get('is_featured') === '1';
     const is_spicy = formData.get('is_spicy') === '1';
     const image_url = formData.get('image_url') as string;
+    
+    // Check photo upload permission if image is provided
+    if (image_url && image_url.trim() !== '') {
+      const photoPermission = await canAccessFeature(user.id, 'photo_uploads');
+      
+      if (!photoPermission.allowed) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            message: 'Photo uploads require a higher subscription plan.',
+            subscription_limit: true
+          },
+          { status: 403 }
+        );
+      }
+    }
+    
     const card_color = formData.get('card_color') as string;
     const heading_color = formData.get('heading_color') as string;
     const text_color = formData.get('text_color') as string;

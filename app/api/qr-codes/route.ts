@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import pool from '@/lib/db';
-import { ResultSetHeader } from 'mysql2';
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import QRCode from 'qrcode';
+import { canCreateQRCode, canAccessFeature } from '@/lib/permissions';
 
 // GET /api/qr-codes - Get all QR codes for user's location
 export async function GET(request: NextRequest) {
@@ -128,30 +129,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check subscription limits based on plan
-    if (isFree) {
-      // Free plan: only 1 QR code per menu
-      const existingCount = await queryOne<any>(
-        'SELECT COUNT(*) as count FROM qr_codes WHERE location_id = ?',
-        [location.id]
+    // DYNAMIC PERMISSION CHECK - Check subscription limits from database
+    const permissionCheck = await canCreateQRCode(user.id, { 
+      table_specific: !!table_number 
+    });
+    
+    if (!permissionCheck.allowed) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: permissionCheck.reason,
+          subscription_limit: true,
+          current_count: permissionCheck.current_count,
+          limit: permissionCheck.limit
+        },
+        { status: 403 }
       );
-
-      if (existingCount && existingCount.count > 0) {
-        return NextResponse.json(
-          { success: false, message: 'Free plan allows only 1 QR code. Upgrade to Pro or Enterprise for unlimited QR codes.' },
-          { status: 403 }
-        );
-      }
-
-      // Free plan cannot have table-specific QR codes
-      if (table_number) {
-        return NextResponse.json(
-          { success: false, message: 'Table-specific QR codes require Pro or Enterprise subscription.' },
-          { status: 403 }
-        );
-      }
     }
-    // Pro and Enterprise plans have unlimited QR codes with table features
+
+    // Note: Custom QR code design check removed - feature not in current request body
+    // If you want to add custom_design, include it in the request body first
 
     // Generate QR code URL - always menu-specific
     const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';

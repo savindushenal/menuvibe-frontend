@@ -3,6 +3,7 @@ import { getUserFromToken, unauthorized } from '@/lib/auth';
 import { query } from '@/lib/db';
 import pool from '@/lib/db';
 import { ResultSetHeader } from 'mysql2';
+import { getRemainingQuota } from '@/lib/permissions';
 
 // GET /api/locations - Get all locations for the authenticated user
 export async function GET(request: NextRequest) {
@@ -15,13 +16,18 @@ export async function GET(request: NextRequest) {
       [user.id]
     );
 
+    // Get dynamic quota from subscription
+    const quota = await getRemainingQuota(user.id, 'locations');
+
     return NextResponse.json({
       success: true,
       data: locations,
       meta: {
-        can_add_location: true,
-        remaining_quota: 10,
-        max_locations: 10
+        can_add_location: quota.unlimited || quota.remaining > 0,
+        remaining_quota: quota.remaining,
+        max_locations: quota.limit,
+        current_count: quota.current,
+        unlimited: quota.unlimited
       }
     });
   } catch (error) {
@@ -71,6 +77,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, message: 'Name, address line 1, city, state, postal code, and country are required' },
         { status: 400 }
+      );
+    }
+
+    // DYNAMIC PERMISSION CHECK - Check subscription limits from database
+    const { canCreateLocation } = await import('@/lib/permissions');
+    const permissionCheck = await canCreateLocation(user.id);
+    
+    if (!permissionCheck.allowed) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: permissionCheck.reason,
+          subscription_limit: true,
+          current_count: permissionCheck.current_count,
+          limit: permissionCheck.limit
+        },
+        { status: 403 }
       );
     }
 

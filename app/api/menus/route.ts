@@ -3,6 +3,7 @@ import { getUserFromToken, unauthorized } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import pool from '@/lib/db';
 import { ResultSetHeader } from 'mysql2';
+import { canCreateMenu } from '@/lib/permissions';
 
 // GET /api/menus - Get all menus for the authenticated user's location
 export async function GET(request: NextRequest) {
@@ -116,11 +117,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check subscription limits (simplified - expand as needed)
-    const menuCount = await queryOne<any>(
-      'SELECT COUNT(*) as count FROM menus WHERE location_id = ?',
-      [location.id]
-    );
+    // DYNAMIC PERMISSION CHECK - Check subscription limits from database
+    const permissionCheck = await canCreateMenu(user.id, location.id);
+    
+    if (!permissionCheck.allowed) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: permissionCheck.reason,
+          subscription_limit: true,
+          current_count: permissionCheck.current_count,
+          limit: permissionCheck.limit
+        },
+        { status: 403 }
+      );
+    }
 
     // Insert menu
     const [result] = await pool.execute<ResultSetHeader>(
