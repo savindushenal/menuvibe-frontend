@@ -7,6 +7,8 @@
  */
 
 import { query, queryOne } from './db';
+import pool from './db';
+import { ResultSetHeader } from 'mysql2';
 
 export interface SubscriptionLimits {
   max_locations: number;
@@ -38,6 +40,7 @@ export interface UserSubscriptionInfo {
 
 /**
  * Get user's current subscription with limits from database
+ * If no subscription found, automatically assigns Free plan
  */
 export async function getUserSubscription(userId: number): Promise<UserSubscriptionInfo | null> {
   try {
@@ -45,18 +48,28 @@ export async function getUserSubscription(userId: number): Promise<UserSubscript
       `SELECT 
         us.id as subscription_id,
         us.is_active,
+        us.status,
         sp.name as plan_name,
         sp.slug as plan_slug,
         sp.limits
        FROM user_subscriptions us
-       JOIN subscription_plans sp ON us.plan_id = sp.id
-       WHERE us.user_id = ? AND us.is_active = 1
+       JOIN subscription_plans sp ON us.subscription_plan_id = sp.id
+       WHERE us.user_id = ? 
+         AND (us.is_active = 1 OR us.status = 'active')
        ORDER BY us.created_at DESC
        LIMIT 1`,
       [userId]
     );
 
     if (!subscription) {
+      // If no subscription found, check if user exists and create free subscription
+      console.log(`No active subscription found for user ${userId}`);
+      return null;
+    }
+
+    // Ensure subscription is actually active
+    if (subscription.is_active !== 1 && subscription.status !== 'active') {
+      console.log(`User ${userId} has subscription but it's not active: is_active=${subscription.is_active}, status=${subscription.status}`);
       return null;
     }
 
@@ -70,12 +83,65 @@ export async function getUserSubscription(userId: number): Promise<UserSubscript
       plan_slug: subscription.plan_slug,
       limits,
       subscription_id: subscription.subscription_id,
-      is_active: subscription.is_active === 1,
+      is_active: subscription.is_active === 1 || subscription.status === 'active',
     };
   } catch (error) {
     console.error('Error fetching user subscription:', error);
     return null;
   }
+}
+
+/**
+ * Get user subscription or auto-assign Free plan if none exists
+ */
+async function getUserSubscriptionOrCreateFree(userId: number): Promise<UserSubscriptionInfo | null> {
+  let subscription = await getUserSubscription(userId);
+  
+  if (!subscription) {
+    // Try to auto-create Free subscription
+    try {
+      // Get Free plan
+      const freePlan = await queryOne<any>(
+        'SELECT id, name, slug, limits FROM subscription_plans WHERE slug = ? AND is_active = 1 LIMIT 1',
+        ['free']
+      );
+
+      if (freePlan) {
+        // Deactivate old subscriptions
+        await query(
+          'UPDATE user_subscriptions SET is_active = 0, status = ? WHERE user_id = ?',
+          ['cancelled', userId]
+        );
+
+        // Create Free subscription
+        const [result] = await pool.execute<ResultSetHeader>(
+          `INSERT INTO user_subscriptions 
+           (user_id, subscription_plan_id, status, is_active, starts_at, created_at, updated_at) 
+           VALUES (?, ?, 'active', 1, NOW(), NOW(), NOW())`,
+          [userId, freePlan.id]
+        );
+
+        console.log(`Auto-created Free subscription for user ${userId}`);
+        
+        // Return the newly created subscription
+        const limits: SubscriptionLimits = typeof freePlan.limits === 'string'
+          ? JSON.parse(freePlan.limits)
+          : freePlan.limits;
+
+        subscription = {
+          plan_name: freePlan.name,
+          plan_slug: freePlan.slug,
+          limits,
+          subscription_id: result.insertId,
+          is_active: true,
+        };
+      }
+    } catch (error) {
+      console.error('Error auto-creating Free subscription:', error);
+    }
+  }
+  
+  return subscription;
 }
 
 /**
@@ -143,12 +209,12 @@ export interface PermissionCheckResult {
  * Check if user can create a new location
  */
 export async function canCreateLocation(userId: number): Promise<PermissionCheckResult> {
-  const subscription = await getUserSubscription(userId);
+  const subscription = await getUserSubscriptionOrCreateFree(userId);
   
   if (!subscription) {
     return {
       allowed: false,
-      reason: 'No active subscription found',
+      reason: 'Unable to determine subscription status. Please contact support.',
       upgrade_required: true,
     };
   }
@@ -182,12 +248,12 @@ export async function canCreateLocation(userId: number): Promise<PermissionCheck
  * Check if user can create a new menu at a specific location
  */
 export async function canCreateMenu(userId: number, locationId: number): Promise<PermissionCheckResult> {
-  const subscription = await getUserSubscription(userId);
+  const subscription = await getUserSubscriptionOrCreateFree(userId);
   
   if (!subscription) {
     return {
       allowed: false,
-      reason: 'No active subscription found',
+      reason: 'Unable to determine subscription status. Please contact support.',
       upgrade_required: true,
     };
   }
@@ -221,12 +287,12 @@ export async function canCreateMenu(userId: number, locationId: number): Promise
  * Check if user can create menu items
  */
 export async function canCreateMenuItem(userId: number): Promise<PermissionCheckResult> {
-  const subscription = await getUserSubscription(userId);
+  const subscription = await getUserSubscriptionOrCreateFree(userId);
   
   if (!subscription) {
     return {
       allowed: false,
-      reason: 'No active subscription found',
+      reason: 'Unable to determine subscription status. Please contact support.',
       upgrade_required: true,
     };
   }
@@ -260,12 +326,12 @@ export async function canCreateMenuItem(userId: number): Promise<PermissionCheck
  * Check if user can create QR codes
  */
 export async function canCreateQRCode(userId: number, options?: { table_specific?: boolean }): Promise<PermissionCheckResult> {
-  const subscription = await getUserSubscription(userId);
+  const subscription = await getUserSubscriptionOrCreateFree(userId);
   
   if (!subscription) {
     return {
       allowed: false,
-      reason: 'No active subscription found',
+      reason: 'Unable to determine subscription status. Please contact support.',
       upgrade_required: true,
     };
   }
@@ -308,12 +374,12 @@ export async function canCreateQRCode(userId: number, options?: { table_specific
  * Check if user has access to a specific feature
  */
 export async function canAccessFeature(userId: number, feature: keyof SubscriptionLimits): Promise<PermissionCheckResult> {
-  const subscription = await getUserSubscription(userId);
+  const subscription = await getUserSubscriptionOrCreateFree(userId);
   
   if (!subscription) {
     return {
       allowed: false,
-      reason: 'No active subscription found',
+      reason: 'Unable to determine subscription status. Please contact support.',
       upgrade_required: true,
     };
   }
@@ -352,7 +418,7 @@ export async function getRemainingQuota(userId: number, resource: 'locations' | 
   remaining: number;
   unlimited: boolean;
 }> {
-  const subscription = await getUserSubscription(userId);
+  const subscription = await getUserSubscriptionOrCreateFree(userId);
   const usage = await getUserUsage(userId);
 
   if (!subscription) {

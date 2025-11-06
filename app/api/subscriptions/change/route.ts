@@ -50,15 +50,15 @@ export async function POST(request: NextRequest) {
 
     const changeType = isUpgrade ? 'upgrade' : 'downgrade';
 
-    // Deactivate current subscription
+    // Deactivate current subscription (set both status and is_active)
     if (currentSubscription) {
       await query(
-        'UPDATE user_subscriptions SET status = ?, ends_at = NOW(), updated_at = NOW() WHERE id = ?',
+        'UPDATE user_subscriptions SET status = ?, is_active = 0, ends_at = NOW(), updated_at = NOW() WHERE id = ?',
         ['cancelled', currentSubscription.id]
       );
     }
 
-    // Create new subscription
+    // Create new subscription (set both status='active' AND is_active=1)
     const [result] = await pool.execute<ResultSetHeader>(
       `INSERT INTO user_subscriptions 
        (user_id, subscription_plan_id, status, starts_at, is_active, created_at, updated_at) 

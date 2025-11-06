@@ -133,8 +133,8 @@ export async function GET(request: NextRequest) {
 
       if (freePlan) {
         await query(
-          'INSERT INTO user_subscriptions (user_id, subscription_plan_id, status, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())',
-          [userId, freePlan.id, 'active']
+          'INSERT INTO user_subscriptions (user_id, subscription_plan_id, status, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',
+          [userId, freePlan.id, 'active', 1]
         );
       }
 
