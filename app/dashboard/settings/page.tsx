@@ -285,35 +285,40 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 lg:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-neutral-900">Settings</h1>
-        <p className="text-neutral-600 mt-1">
+        <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">Settings</h1>
+        <p className="text-sm sm:text-base text-neutral-600 mt-1">
           Manage your account, subscription, and preferences
         </p>
       </div>
 
-      <Tabs defaultValue="account" className="space-y-6">
-        <TabsList className="bg-white border border-neutral-200 p-1">
-          <TabsTrigger value="account" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
-            <User className="w-4 h-4 mr-2" />
-            Account
+      <Tabs defaultValue="account" className="space-y-4 sm:space-y-6">
+        <TabsList className="bg-white border border-neutral-200 p-1 w-full overflow-x-auto flex-nowrap justify-start sm:justify-center">
+          <TabsTrigger value="account" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white whitespace-nowrap text-xs sm:text-sm">
+            <User className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Account</span>
+            <span className="sm:hidden">Acct</span>
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
-            <Bell className="w-4 h-4 mr-2" />
-            Notifications
+          <TabsTrigger value="notifications" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white whitespace-nowrap text-xs sm:text-sm">
+            <Bell className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Notifications</span>
+            <span className="sm:hidden">Notif</span>
           </TabsTrigger>
-          <TabsTrigger value="security" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
-            <Shield className="w-4 h-4 mr-2" />
-            Security
+          <TabsTrigger value="security" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white whitespace-nowrap text-xs sm:text-sm">
+            <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Security</span>
+            <span className="sm:hidden">Sec</span>
           </TabsTrigger>
-          <TabsTrigger value="subscription" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
-            <CreditCard className="w-4 h-4 mr-2" />
-            Subscription
+          <TabsTrigger value="subscription" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white whitespace-nowrap text-xs sm:text-sm">
+            <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Subscription</span>
+            <span className="sm:hidden">Sub</span>
           </TabsTrigger>
-          <TabsTrigger value="locations" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
-            <MapPin className="w-4 h-4 mr-2" />
-            Locations
+          <TabsTrigger value="locations" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white whitespace-nowrap text-xs sm:text-sm">
+            <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Locations</span>
+            <span className="sm:hidden">Loc</span>
           </TabsTrigger>
         </TabsList>
 
@@ -359,11 +364,11 @@ export default function SettingsPage() {
                     className="border-neutral-300"
                   />
                 </div>
-                <div className="flex justify-end pt-4 border-t border-neutral-200">
+                <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t border-neutral-200">
                   <Button
                     onClick={handleSaveAccount}
                     disabled={saving === 'account'}
-                    className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/30"
+                    className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/30 w-full sm:w-auto"
                   >
                     {saving === 'account' ? (
                       <>
@@ -397,7 +402,7 @@ export default function SettingsPage() {
                 <div className="space-y-4">
                   <h3 className="font-semibold text-neutral-800">General Notifications</h3>
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <div>
                         <Label htmlFor="email-notifications">Email Notifications</Label>
                         <p className="text-sm text-neutral-600">Receive notifications via email</p>
@@ -408,7 +413,7 @@ export default function SettingsPage() {
                         onCheckedChange={(checked) => updateNotificationField('email_notifications', checked)}
                       />
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <div>
                         <Label htmlFor="push-notifications">Push Notifications</Label>
                         <p className="text-sm text-neutral-600">Receive browser push notifications</p>
@@ -419,7 +424,7 @@ export default function SettingsPage() {
                         onCheckedChange={(checked) => updateNotificationField('push_notifications', checked)}
                       />
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <div>
                         <Label htmlFor="sms-notifications">SMS Notifications</Label>
                         <p className="text-sm text-neutral-600">Receive notifications via text message</p>
@@ -436,7 +441,7 @@ export default function SettingsPage() {
                 <div className="space-y-4">
                   <h3 className="font-semibold text-neutral-800">Business Notifications</h3>
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <div>
                         <Label htmlFor="order-updates">Order Updates</Label>
                         <p className="text-sm text-neutral-600">Get notified about new orders</p>
@@ -447,7 +452,7 @@ export default function SettingsPage() {
                         onCheckedChange={(checked) => updateNotificationField('order_updates', checked)}
                       />
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <div>
                         <Label htmlFor="customer-feedback">Customer Feedback</Label>
                         <p className="text-sm text-neutral-600">Get notified about customer reviews and feedback</p>
@@ -458,7 +463,7 @@ export default function SettingsPage() {
                         onCheckedChange={(checked) => updateNotificationField('customer_feedback_notifications', checked)}
                       />
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <div>
                         <Label htmlFor="inventory-alerts">Inventory Alerts</Label>
                         <p className="text-sm text-neutral-600">Get notified about low inventory</p>
@@ -475,7 +480,7 @@ export default function SettingsPage() {
                 <div className="space-y-4">
                   <h3 className="font-semibold text-neutral-800">Reports & Marketing</h3>
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <div>
                         <Label htmlFor="weekly-reports">Weekly Reports</Label>
                         <p className="text-sm text-neutral-600">Receive weekly business performance reports</p>
@@ -486,7 +491,7 @@ export default function SettingsPage() {
                         onCheckedChange={(checked) => updateNotificationField('weekly_reports', checked)}
                       />
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <div>
                         <Label htmlFor="marketing-emails">Marketing Emails</Label>
                         <p className="text-sm text-neutral-600">Receive promotional emails and updates</p>
@@ -500,11 +505,11 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-4 border-t border-neutral-200">
+                <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t border-neutral-200">
                   <Button
                     onClick={handleSaveNotifications}
                     disabled={saving === 'notifications'}
-                    className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/30"
+                    className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/30 w-full sm:w-auto"
                   >
                     {saving === 'notifications' ? (
                       <>
@@ -536,7 +541,7 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div>
                       <Label htmlFor="two-factor">Two-Factor Authentication</Label>
                       <p className="text-sm text-neutral-600">Add an extra layer of security to your account</p>
@@ -555,7 +560,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div>
                       <Label htmlFor="login-alerts">Login Alerts</Label>
                       <p className="text-sm text-neutral-600">Get notified when someone logs into your account</p>
@@ -577,16 +582,16 @@ export default function SettingsPage() {
                       max="1440"
                       value={settings.security.session_timeout}
                       onChange={(e) => updateSecurityField('session_timeout', parseInt(e.target.value))}
-                      className="border-neutral-300 w-32"
+                      className="border-neutral-300 w-full sm:w-32"
                     />
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-4 border-t border-neutral-200">
+                <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t border-neutral-200">
                   <Button
                     onClick={handleSaveSecurity}
                     disabled={saving === 'security'}
-                    className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/30"
+                    className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/30 w-full sm:w-auto"
                   >
                     {saving === 'security' ? (
                       <>
@@ -868,12 +873,12 @@ function LocationsManagement() {
       transition={{ duration: 0.3 }}
     >
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle>Manage Locations</CardTitle>
           <Button
             onClick={() => setIsAdding(true)}
             disabled={isAdding}
-            className="bg-emerald-500 hover:bg-emerald-600"
+            className="bg-emerald-500 hover:bg-emerald-600 w-full sm:w-auto"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Location
@@ -883,7 +888,7 @@ function LocationsManagement() {
           {isAdding && (
             <Card className="border-emerald-200 bg-emerald-50/50">
               <CardContent className="pt-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label>Location Name *</Label>
                     <Input
@@ -901,7 +906,7 @@ function LocationsManagement() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label>Address Line 1 *</Label>
                     <Input
@@ -919,7 +924,7 @@ function LocationsManagement() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label>City *</Label>
                     <Input
@@ -937,7 +942,7 @@ function LocationsManagement() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label>Postal Code *</Label>
                     <Input
@@ -964,14 +969,14 @@ function LocationsManagement() {
                     placeholder="location@restaurant.com"
                   />
                 </div>
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={cancelEdit} disabled={loading}>
+                <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                  <Button variant="outline" onClick={cancelEdit} disabled={loading} className="w-full sm:w-auto">
                     Cancel
                   </Button>
                   <Button
                     onClick={handleAddLocation}
                     disabled={loading}
-                    className="bg-emerald-500 hover:bg-emerald-600"
+                    className="bg-emerald-500 hover:bg-emerald-600 w-full sm:w-auto"
                   >
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Location'}
                   </Button>
@@ -984,7 +989,7 @@ function LocationsManagement() {
             <Card key={location.id} className={location.is_default ? 'border-emerald-500' : ''}>
               <CardContent className="pt-6">{editingId === location.id ? (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label>Location Name *</Label>
                         <Input
@@ -1000,7 +1005,7 @@ function LocationsManagement() {
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label>Address Line 1 *</Label>
                         <Input
@@ -1016,7 +1021,7 @@ function LocationsManagement() {
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label>City *</Label>
                         <Input
@@ -1032,7 +1037,7 @@ function LocationsManagement() {
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label>Postal Code *</Label>
                         <Input
@@ -1056,24 +1061,24 @@ function LocationsManagement() {
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       />
                     </div>
-                    <div className="flex gap-2 justify-end">
-                      <Button variant="outline" onClick={cancelEdit} disabled={loading}>
+                    <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                      <Button variant="outline" onClick={cancelEdit} disabled={loading} className="w-full sm:w-auto">
                         Cancel
                       </Button>
                       <Button
                         onClick={() => handleUpdateLocation(location.id)}
                         disabled={loading}
-                        className="bg-emerald-500 hover:bg-emerald-600"
+                        className="bg-emerald-500 hover:bg-emerald-600 w-full sm:w-auto"
                       >
                         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update'}
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-start justify-between">
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                     <div className="space-y-1 flex-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-lg">{location.name}</h3>
+                        <h3 className="font-semibold text-base sm:text-lg">{location.name}</h3>
                         {location.is_default && (
                           <Badge className="bg-emerald-500">
                             <Star className="w-3 h-3 mr-1" />
@@ -1081,24 +1086,25 @@ function LocationsManagement() {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-neutral-600 flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        {formatAddress(location)}
+                      <p className="text-xs sm:text-sm text-neutral-600 flex items-start sm:items-center gap-2">
+                        <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5 sm:mt-0" />
+                        <span className="break-words">{formatAddress(location)}</span>
                       </p>
                       {location.phone && (
-                        <p className="text-sm text-neutral-600">{location.phone}</p>
+                        <p className="text-xs sm:text-sm text-neutral-600">{location.phone}</p>
                       )}
                       {location.email && (
-                        <p className="text-sm text-neutral-600">{location.email}</p>
+                        <p className="text-xs sm:text-sm text-neutral-600 break-all">{location.email}</p>
                       )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto">
                       {!location.is_default && (
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleSetDefault(location.id)}
                           disabled={loading}
+                          className="flex-1 sm:flex-none"
                         >
                           Set Default
                         </Button>
@@ -1108,6 +1114,7 @@ function LocationsManagement() {
                         size="sm"
                         onClick={() => startEdit(location)}
                         disabled={loading}
+                        className="flex-1 sm:flex-none"
                       >
                         Edit
                       </Button>
@@ -1116,7 +1123,7 @@ function LocationsManagement() {
                         size="sm"
                         onClick={() => handleDeleteLocation(location.id)}
                         disabled={loading || location.is_default}
-                        className="text-red-600 hover:text-red-700"
+                        className="text-red-600 hover:text-red-700 flex-1 sm:flex-none"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
