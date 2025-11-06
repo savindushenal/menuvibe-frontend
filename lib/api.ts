@@ -812,6 +812,70 @@ class ApiClient {
       throw error;
     }
   }
+
+  // QR Code API methods
+  async getQRCodes(locationId?: string): Promise<ApiResponse> {
+    try {
+      const params = locationId ? `?location_id=${locationId}` : '';
+      return await this.request(`/qr-codes${params}`);
+    } catch (error: any) {
+      console.error('Error fetching QR codes:', error);
+      throw error;
+    }
+  }
+
+  async createQRCode(data: {
+    name: string;
+    menu_id?: number;
+    table_number?: string;
+    location_id?: number;
+  }): Promise<ApiResponse> {
+    try {
+      return await this.request('/qr-codes', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    } catch (error: any) {
+      console.error('Error creating QR code:', error);
+      throw error;
+    }
+  }
+
+  async updateQRCode(id: number, data: {
+    name?: string;
+    menu_id?: number;
+    table_number?: string;
+  }): Promise<ApiResponse> {
+    try {
+      return await this.request(`/qr-codes/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    } catch (error: any) {
+      console.error('Error updating QR code:', error);
+      throw error;
+    }
+  }
+
+  async deleteQRCode(id: number): Promise<ApiResponse> {
+    try {
+      return await this.request(`/qr-codes/${id}`, {
+        method: 'DELETE',
+      });
+    } catch (error: any) {
+      console.error('Error deleting QR code:', error);
+      throw error;
+    }
+  }
+
+  async getQRCode(id: number): Promise<ApiResponse> {
+    try {
+      return await this.request(`/qr-codes/${id}`);
+    } catch (error: any) {
+      console.error('Error fetching QR code:', error);
+      throw error;
+    }
+  }
 }
 
 export const apiClient = new ApiClient();
