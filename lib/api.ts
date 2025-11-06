@@ -643,7 +643,7 @@ class ApiClient {
   // Subscription API methods
   async getSubscriptionPlans(): Promise<ApiResponse> {
     try {
-      return await this.request('/subscription-plans');
+      return await this.request('/subscriptions/plans');
     } catch (error: any) {
       console.error('Error fetching subscription plans:', error);
       throw error;
@@ -652,7 +652,7 @@ class ApiClient {
 
   async getCurrentSubscription(): Promise<ApiResponse> {
     try {
-      return await this.request('/subscription/current');
+      return await this.request('/subscriptions/current');
     } catch (error: any) {
       console.error('Error fetching current subscription:', error);
       throw error;
@@ -675,6 +675,18 @@ class ApiClient {
       return await this.request('/subscription/recommendations');
     } catch (error: any) {
       console.error('Error fetching upgrade recommendations:', error);
+      throw error;
+    }
+  }
+
+  async changeSubscription(planId: string): Promise<ApiResponse> {
+    try {
+      return await this.request('/subscriptions/change', {
+        method: 'POST',
+        body: JSON.stringify({ plan_id: planId }),
+      });
+    } catch (error: any) {
+      console.error('Error changing subscription:', error);
       throw error;
     }
   }

@@ -622,21 +622,24 @@ export default function SettingsPage() {
                 <CardTitle className="text-xl text-neutral-900">Subscription & Billing</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
                     <h3 className="font-semibold text-neutral-800">Current Plan</h3>
-                    <p className="text-sm text-neutral-600">Free Plan</p>
+                    <p className="text-sm text-neutral-600">Manage your subscription and view billing</p>
                   </div>
                   <Badge variant="outline" className="border-emerald-300 text-emerald-700">
                     Active
                   </Badge>
                 </div>
                 <div className="pt-4 border-t border-neutral-200">
-                  <p className="text-neutral-600">
-                    Upgrade to a premium plan to unlock more features and remove limitations.
+                  <p className="text-neutral-600 mb-4">
+                    View all available plans, upgrade or downgrade your subscription, and manage billing preferences.
                   </p>
-                  <Button variant="outline" className="mt-3">
-                    View Plans
+                  <Button 
+                    onClick={() => window.location.href = '/dashboard/subscription'}
+                    className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/30 w-full sm:w-auto"
+                  >
+                    Manage Subscription
                   </Button>
                 </div>
               </CardContent>
