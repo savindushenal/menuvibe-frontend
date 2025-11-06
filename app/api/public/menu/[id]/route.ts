@@ -2,36 +2,80 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query, queryOne } from '@/lib/db';
 import pool from '@/lib/db';
 import { ResultSetHeader } from 'mysql2';
+import { isValidSlug } from '@/lib/slug';
 
-// GET /api/public/menu/[id] - Public menu view (no auth required)
+// GET /api/public/menu/[id] - Public menu view (supports both slug and numeric ID)
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const menuId = params.id;
+    const identifier = params.id;
+    const { searchParams } = new URL(request.url);
+    const tableNumber = searchParams.get('table');
 
-    // Get menu details with restaurant/location name and logo
-    const menu = await queryOne<any>(
-      `SELECT m.id, m.name as menu_name, m.description, m.style, m.currency, m.is_active,
-              COALESCE(bp.business_name, l.name, 'Restaurant') as restaurant_name,
-              COALESCE(l.logo_url, bp.logo_url) as logo_url
-       FROM menus m
-       LEFT JOIN locations l ON m.location_id = l.id
-       LEFT JOIN business_profiles bp ON l.user_id = bp.user_id
-       WHERE m.id = ?`,
-      [menuId]
-    );
+    let menu;
+
+    // Check if identifier is a slug or numeric ID
+    if (isValidSlug(identifier)) {
+      // It's a slug - lookup by slug
+      menu = await queryOne<any>(
+        `SELECT m.id, m.name as menu_name, m.description, m.style, m.currency, m.is_active, m.slug,
+                COALESCE(bp.business_name, l.name, 'Restaurant') as restaurant_name,
+                COALESCE(l.logo_url, bp.logo_url) as logo_url,
+                l.name as location_name,
+                l.primary_color,
+                l.secondary_color,
+                l.phone,
+                l.email,
+                l.website
+         FROM menus m
+         LEFT JOIN locations l ON m.location_id = l.id
+         LEFT JOIN business_profiles bp ON l.user_id = bp.user_id
+         WHERE m.slug = ?`,
+        [identifier]
+      );
+    } else if (/^\d+$/.test(identifier)) {
+      // It's a numeric ID - lookup by ID (backward compatibility)
+      menu = await queryOne<any>(
+        `SELECT m.id, m.name as menu_name, m.description, m.style, m.currency, m.is_active, m.slug,
+                COALESCE(bp.business_name, l.name, 'Restaurant') as restaurant_name,
+                COALESCE(l.logo_url, bp.logo_url) as logo_url,
+                l.name as location_name,
+                l.primary_color,
+                l.secondary_color,
+                l.phone,
+                l.email,
+                l.website
+         FROM menus m
+         LEFT JOIN locations l ON m.location_id = l.id
+         LEFT JOIN business_profiles bp ON l.user_id = bp.user_id
+         WHERE m.id = ?`,
+        [identifier]
+      );
+    } else {
+      return NextResponse.json(
+        { success: false, message: 'Invalid menu identifier' },
+        { status: 400 }
+      );
+    }
 
     if (!menu) {
-      console.log(`Menu ${menuId} not found in database`);
+      console.log(`Menu ${identifier} not found in database`);
       return NextResponse.json(
         { success: false, message: 'Menu not found' },
         { status: 404 }
       );
     }
 
-    console.log(`Found menu ${menuId}:`, menu.menu_name, 'Restaurant:', menu.restaurant_name, 'is_active:', menu.is_active);
+    console.log(`Found menu ${identifier}:`, menu.menu_name, 'Restaurant:', menu.restaurant_name, 'is_active:', menu.is_active);
+
+    const menuId = menu.id; // Use the resolved menu ID for subsequent queries
+
+    // Track analytics if table number provided
+    if (tableNumber) {
+      console.log(`Menu accessed from table ${tableNumber}`);
+    }
 
     // Get categories
     const categories = await query<any>(

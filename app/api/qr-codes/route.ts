@@ -150,9 +150,24 @@ export async function POST(request: NextRequest) {
     // Note: Custom QR code design check removed - feature not in current request body
     // If you want to add custom_design, include it in the request body first
 
-    // Generate QR code URL - always menu-specific
+    // Get menu with slug for URL generation
+    const menuWithSlug = await queryOne<any>(
+      `SELECT m.id, m.slug, m.name
+       FROM menus m
+       WHERE m.id = ?`,
+      [menu_id]
+    );
+
+    if (!menuWithSlug || !menuWithSlug.slug) {
+      return NextResponse.json(
+        { success: false, message: 'Menu slug not found. Please regenerate menu slugs.' },
+        { status: 404 }
+      );
+    }
+
+    // Generate QR code URL using slug instead of ID
     const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
-    let qrUrl = `${baseUrl}/menu/${menu_id}`;
+    let qrUrl = `${baseUrl}/menu/${menuWithSlug.slug}`;
     
     if (table_number) {
       qrUrl += `?table=${table_number}`;
