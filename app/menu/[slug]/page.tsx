@@ -20,6 +20,27 @@ export default function PublicMenuPage() {
         setLoading(true);
         setError(null);
 
+        // Check if it's a numeric ID (old URL format) - redirect to slug
+        if (/^\d+$/.test(slug)) {
+          // Fetch the slug for this numeric ID
+          const slugResponse = await fetch(`/api/menus/${slug}/slug`);
+          if (slugResponse.ok) {
+            const slugData = await slugResponse.json();
+            if (slugData.success && slugData.slug) {
+              // Redirect to slug-based URL
+              const newUrl = tableNumber 
+                ? `/menu/${slugData.slug}?table=${tableNumber}`
+                : `/menu/${slugData.slug}`;
+              window.location.replace(newUrl);
+              return;
+            }
+          }
+          // If we can't get the slug, show error
+          setError('Menu not found');
+          setLoading(false);
+          return;
+        }
+
         // Validate slug format
         if (!isValidSlug(slug)) {
           setError('Invalid menu URL');
