@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { extractPublicIdFromSlug, isValidSlug } from '@/lib/slug';
+import { extractPublicIdFromSlug, isValidSlug } from '@/lib/slug-utils';
 
 export default function PublicMenuPage() {
   const params = useParams();

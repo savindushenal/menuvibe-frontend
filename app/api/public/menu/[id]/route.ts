@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query, queryOne } from '@/lib/db';
 import pool from '@/lib/db';
 import { ResultSetHeader } from 'mysql2';
-import { isValidSlug } from '@/lib/slug';
+import { isValidSlug } from '@/lib/slug-utils';
 
 // GET /api/public/menu/[id] - Public menu view (supports both slug and numeric ID)
 export async function GET(
