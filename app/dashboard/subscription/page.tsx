@@ -270,8 +270,17 @@ export default function SubscriptionPage() {
 
                 <CardContent className="space-y-4">
                   {/* Features List */}
-                  <div className="space-y-2 min-h-[200px]">
-                    {Object.entries(plan.features || {}).map(([key, value]: [string, any]) => {
+                  <div className="space-y-2 min-h-[280px]">
+                    {/* Display array features */}
+                    {Array.isArray(plan.features) && plan.features.map((feature: string, index: number) => (
+                      <div key={index} className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <span className="text-sm text-neutral-900">{feature}</span>
+                      </div>
+                    ))}
+
+                    {/* Display object features if not array */}
+                    {!Array.isArray(plan.features) && typeof plan.features === 'object' && Object.entries(plan.features || {}).map(([key, value]: [string, any]) => {
                       const isIncluded = value === true || value === 'true' || value === 1;
                       
                       return (
@@ -287,30 +296,6 @@ export default function SubscriptionPage() {
                         </div>
                       );
                     })}
-
-                    {/* Limits */}
-                    {plan.limits && (
-                      <>
-                        <div className="flex items-start gap-2">
-                          <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                          <span className="text-sm text-neutral-900">
-                            {plan.limits.max_locations === -1 ? 'Unlimited' : plan.limits.max_locations} Location{plan.limits.max_locations !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                          <span className="text-sm text-neutral-900">
-                            {plan.limits.max_menus_per_location === -1 ? 'Unlimited' : plan.limits.max_menus_per_location} Menu{plan.limits.max_menus_per_location !== 1 ? 's' : ''} per location
-                          </span>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                          <span className="text-sm text-neutral-900">
-                            {plan.limits.max_menu_items_per_menu === -1 ? 'Unlimited' : plan.limits.max_menu_items_per_menu} Item{plan.limits.max_menu_items_per_menu !== 1 ? 's' : ''} per menu
-                          </span>
-                        </div>
-                      </>
-                    )}
                   </div>
 
                   {/* CTA Button */}
