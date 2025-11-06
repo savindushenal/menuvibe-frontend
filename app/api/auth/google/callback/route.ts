@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query, queryOne } from '@/lib/db';
+import pool from '@/lib/db';
+import { ResultSetHeader } from 'mysql2';
 import jwt from 'jsonwebtoken';
 
 // Force dynamic rendering for this route
@@ -94,12 +96,12 @@ export async function GET(request: NextRequest) {
     if (!user) {
       // Create new user
       isNewUser = true;
-      const result: any = await query(
+      const [result] = await pool.execute<ResultSetHeader>(
         'INSERT INTO users (name, email, google_id, email_verified_at, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW(), NOW())',
         [googleUser.name, googleUser.email, googleUser.id]
       );
 
-      const userId = result[0].insertId;
+      const userId = result.insertId;
 
       // Create default location with proper fields
       await query(

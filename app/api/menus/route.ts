@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
+import pool from '@/lib/db';
+import { ResultSetHeader } from 'mysql2';
 
 // GET /api/menus - Get all menus for the authenticated user's location
 export async function GET(request: NextRequest) {
@@ -121,7 +123,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Insert menu
-    const [result]: any = await query(
+    const [result] = await pool.execute<ResultSetHeader>(
       `INSERT INTO menus (location_id, name, description, style, currency, is_active, is_featured, sort_order, created_at, updated_at) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [

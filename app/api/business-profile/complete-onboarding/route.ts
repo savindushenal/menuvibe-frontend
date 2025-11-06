@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
+import pool from '@/lib/db';
+import { ResultSetHeader } from 'mysql2';
 
 export async function POST(request: NextRequest) {
   const authUser = await getUserFromToken(request);
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
 
         try {
           // Create default location
-          const [locationResult]: any = await query(
+          const [locationResult] = await pool.execute<ResultSetHeader>(
             `INSERT INTO locations 
             (user_id, name, description, phone, email, website, address_line_1, address_line_2, 
              city, state, postal_code, country, cuisine_type, seating_capacity, operating_hours, 
