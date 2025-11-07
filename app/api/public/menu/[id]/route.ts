@@ -26,7 +26,7 @@ export async function GET(
       console.log('Looking up by SLUG:', identifier);
       // It's a slug - lookup by slug
       menu = await queryOne<any>(
-        `SELECT m.id, m.name as menu_name, m.description, m.style, m.currency, m.is_active, m.slug,
+        `SELECT m.id, m.location_id, m.name as menu_name, m.description, m.style, m.currency, m.is_active, m.slug,
                 COALESCE(bp.business_name, l.name, 'Restaurant') as restaurant_name,
                 COALESCE(l.logo_url, bp.logo_url) as logo_url,
                 l.name as location_name,
@@ -34,7 +34,8 @@ export async function GET(
                 l.secondary_color,
                 l.phone,
                 l.email,
-                l.website
+                l.website,
+                l.settings as location_settings
          FROM menus m
          LEFT JOIN locations l ON m.location_id = l.id
          LEFT JOIN business_profiles bp ON l.user_id = bp.user_id
@@ -45,7 +46,7 @@ export async function GET(
       console.log('Looking up by NUMERIC ID:', identifier);
       // It's a numeric ID - lookup by ID (backward compatibility)
       menu = await queryOne<any>(
-        `SELECT m.id, m.name as menu_name, m.description, m.style, m.currency, m.is_active, m.slug,
+        `SELECT m.id, m.location_id, m.name as menu_name, m.description, m.style, m.currency, m.is_active, m.slug,
                 COALESCE(bp.business_name, l.name, 'Restaurant') as restaurant_name,
                 COALESCE(l.logo_url, bp.logo_url) as logo_url,
                 l.name as location_name,
@@ -53,7 +54,8 @@ export async function GET(
                 l.secondary_color,
                 l.phone,
                 l.email,
-                l.website
+                l.website,
+                l.settings as location_settings
          FROM menus m
          LEFT JOIN locations l ON m.location_id = l.id
          LEFT JOIN business_profiles bp ON l.user_id = bp.user_id
@@ -107,12 +109,6 @@ export async function GET(
       [menuId]
     );
 
-    // Get location settings for customization
-    const locationSettings = await queryOne<any>(
-      `SELECT settings FROM locations WHERE id = ?`,
-      [menu.location_id]
-    );
-
     // Parse dietary_info JSON and convert price to number
     const itemsWithDietary = items.map(item => ({
       ...item,
@@ -123,12 +119,16 @@ export async function GET(
     // Parse location settings
     let parsedLocationSettings = {};
     try {
-      parsedLocationSettings = locationSettings?.settings ? JSON.parse(locationSettings.settings) : {};
+      if (menu.location_settings) {
+        parsedLocationSettings = typeof menu.location_settings === 'string' 
+          ? JSON.parse(menu.location_settings) 
+          : menu.location_settings;
+      }
     } catch (e) {
       console.error('Error parsing location settings:', e);
     }
 
-    // Add settings to menu object
+    // Add parsed settings to menu object
     const menuWithSettings = {
       ...menu,
       location_settings: parsedLocationSettings
