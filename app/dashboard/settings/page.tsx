@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Lock, CreditCard, Users, Bell, Shield, Save, Loader2, MapPin, Plus, Trash2, Star } from 'lucide-react';
+import { User, Lock, CreditCard, Users, Bell, Shield, Save, Loader2, MapPin, Plus, Trash2, Star, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -310,6 +310,11 @@ export default function SettingsPage() {
             <span className="hidden sm:inline">Security</span>
             <span className="sm:hidden">Sec</span>
           </TabsTrigger>
+          <TabsTrigger value="ordering" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white whitespace-nowrap text-xs sm:text-sm">
+            <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Ordering</span>
+            <span className="sm:hidden">Order</span>
+          </TabsTrigger>
           <TabsTrigger value="subscription" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white whitespace-nowrap text-xs sm:text-sm">
             <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             <span className="hidden sm:inline">Subscription</span>
@@ -609,6 +614,10 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           </motion.div>
+        </TabsContent>
+
+        <TabsContent value="ordering">
+          <OrderingSettings />
         </TabsContent>
 
         <TabsContent value="subscription">
@@ -1144,6 +1153,304 @@ function LocationsManagement() {
               <p className="text-sm">Click "Add Location" to create your first location</p>
             </div>
           )}
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+function OrderingSettings() {
+  const { toast } = useToast();
+  const [settings, setSettings] = useState({
+    ordering: {
+      enabled: true,
+      requiresApproval: false
+    },
+    loyalty: {
+      enabled: false,
+      required: false,
+      label: 'Loyalty Number',
+      placeholder: 'Enter your loyalty number',
+      helpText: ''
+    }
+  });
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/settings/ordering');
+      const data = await response.json();
+      if (data.success && data.settings) {
+        setSettings(data.settings);
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load settings',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveSettings = async () => {
+    setSaving(true);
+    try {
+      const response = await fetch('/api/settings/ordering', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast({
+          title: 'Success',
+          description: 'Settings saved successfully'
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: data.message || 'Failed to save settings',
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save settings',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+              <span className="ml-2 text-neutral-600">Loading settings...</span>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Card className="border-neutral-200">
+        <CardHeader>
+          <CardTitle className="text-xl text-neutral-900">Ordering & Loyalty Settings</CardTitle>
+          <p className="text-sm text-neutral-600 mt-2">Configure how customers can order from your menu</p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Ordering Settings */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <ShoppingCart className="w-5 h-5 text-emerald-600" />
+              <h3 className="font-semibold text-neutral-900">Online Ordering</h3>
+            </div>
+            
+            <div className="space-y-3 ml-8">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-neutral-50 rounded-lg">
+                <div>
+                  <Label htmlFor="ordering-enabled">Enable Online Ordering</Label>
+                  <p className="text-sm text-neutral-600">Allow customers to place orders directly from the menu</p>
+                </div>
+                <Switch
+                  id="ordering-enabled"
+                  checked={settings.ordering.enabled}
+                  onCheckedChange={(checked) => setSettings(prev => ({
+                    ...prev,
+                    ordering: { ...prev.ordering, enabled: checked }
+                  }))}
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-neutral-50 rounded-lg">
+                <div>
+                  <Label htmlFor="requires-approval">Require Order Approval</Label>
+                  <p className="text-sm text-neutral-600">Orders need manual confirmation before processing</p>
+                </div>
+                <Switch
+                  id="requires-approval"
+                  checked={settings.ordering.requiresApproval}
+                  onCheckedChange={(checked) => setSettings(prev => ({
+                    ...prev,
+                    ordering: { ...prev.ordering, requiresApproval: checked }
+                  }))}
+                  disabled={!settings.ordering.enabled}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Loyalty Program Settings */}
+          <div className="space-y-4 pt-4 border-t border-neutral-200">
+            <div className="flex items-center gap-3">
+              <Star className="w-5 h-5 text-purple-600" />
+              <h3 className="font-semibold text-neutral-900">Loyalty Program</h3>
+              <Badge variant="secondary" className="bg-purple-100 text-purple-700 text-xs">
+                Enterprise
+              </Badge>
+            </div>
+            
+            <div className="space-y-4 ml-8">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-neutral-50 rounded-lg">
+                <div>
+                  <Label htmlFor="loyalty-enabled">Enable Loyalty Program</Label>
+                  <p className="text-sm text-neutral-600">Track customer loyalty numbers with orders</p>
+                </div>
+                <Switch
+                  id="loyalty-enabled"
+                  checked={settings.loyalty.enabled}
+                  onCheckedChange={(checked) => setSettings(prev => ({
+                    ...prev,
+                    loyalty: { ...prev.loyalty, enabled: checked }
+                  }))}
+                />
+              </div>
+
+              {settings.loyalty.enabled && (
+                <>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-neutral-50 rounded-lg">
+                    <div>
+                      <Label htmlFor="loyalty-required">Require Loyalty Number</Label>
+                      <p className="text-sm text-neutral-600">Customers must provide loyalty number to place orders</p>
+                    </div>
+                    <Switch
+                      id="loyalty-required"
+                      checked={settings.loyalty.required}
+                      onCheckedChange={(checked) => setSettings(prev => ({
+                        ...prev,
+                        loyalty: { ...prev.loyalty, required: checked }
+                      }))}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 p-4 bg-white rounded-lg border border-neutral-200">
+                    <div>
+                      <Label htmlFor="loyalty-label">Field Label</Label>
+                      <Input
+                        id="loyalty-label"
+                        value={settings.loyalty.label}
+                        onChange={(e) => setSettings(prev => ({
+                          ...prev,
+                          loyalty: { ...prev.loyalty, label: e.target.value }
+                        }))}
+                        placeholder="Loyalty Number"
+                        className="mt-2"
+                      />
+                      <p className="text-xs text-neutral-500 mt-1">
+                        Examples: "Member Number", "Rewards Card", "Loyalty ID"
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="loyalty-placeholder">Placeholder Text</Label>
+                      <Input
+                        id="loyalty-placeholder"
+                        value={settings.loyalty.placeholder}
+                        onChange={(e) => setSettings(prev => ({
+                          ...prev,
+                          loyalty: { ...prev.loyalty, placeholder: e.target.value }
+                        }))}
+                        placeholder="Enter your loyalty number"
+                        className="mt-2"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="loyalty-help">Help Text (Optional)</Label>
+                      <Input
+                        id="loyalty-help"
+                        value={settings.loyalty.helpText}
+                        onChange={(e) => setSettings(prev => ({
+                          ...prev,
+                          loyalty: { ...prev.loyalty, helpText: e.target.value }
+                        }))}
+                        placeholder="e.g., Earn 10 points for every $1 spent"
+                        className="mt-2"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Preview */}
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                    <h4 className="text-sm font-semibold text-blue-900 mb-3">Preview</h4>
+                    <div className="bg-white rounded-lg p-4">
+                      <Label className="flex items-center gap-2 mb-2">
+                        <Star className="w-4 h-4 text-purple-600" />
+                        {settings.loyalty.label} {settings.loyalty.required && <span className="text-red-500">*</span>}
+                      </Label>
+                      <Input
+                        placeholder={settings.loyalty.placeholder}
+                        disabled
+                        className="bg-gray-50"
+                      />
+                      {settings.loyalty.helpText && (
+                        <p className="text-xs text-neutral-600 mt-2">{settings.loyalty.helpText}</p>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Save Button */}
+          <div className="flex justify-end pt-4 border-t border-neutral-200">
+            <Button
+              onClick={saveSettings}
+              disabled={saving}
+              className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/30 w-full sm:w-auto"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Settings
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Info Box */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 className="font-semibold text-blue-900 mb-2">💡 How This Works</h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• <strong>Online Ordering</strong>: Requires Pro or Enterprise subscription</li>
+              <li>• <strong>Loyalty Program</strong>: Enterprise feature for tracking customer rewards</li>
+              <li>• Settings apply to all menus at this location</li>
+              <li>• Changes take effect immediately for new orders</li>
+            </ul>
+          </div>
         </CardContent>
       </Card>
     </motion.div>

@@ -35,6 +35,12 @@ export default function PublicMenuPage() {
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [orderingEnabled, setOrderingEnabled] = useState(false);
   const [requiresLoyalty, setRequiresLoyalty] = useState(false);
+  const [loyaltyConfig, setLoyaltyConfig] = useState<any>({
+    enabled: false,
+    label: 'Loyalty Number',
+    placeholder: 'Enter your loyalty number',
+    required: false
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderForm, setOrderForm] = useState<OrderForm>({
@@ -96,14 +102,26 @@ export default function PublicMenuPage() {
         setMenu(data.data);
         setLoading(false);
         
-        // Check if ordering is enabled (we'll detect this from the menu metadata or try a test)
-        // For now, assume ordering is available - the API will block if subscription doesn't allow it
-        setOrderingEnabled(true);
+        // Check menu customization settings
+        const menuSettings = data.data.menu?.settings || {};
+        const locationSettings = data.data.menu?.location_settings || {};
         
-        // Check if this is an enterprise account requiring loyalty numbers
-        // This would come from menu metadata or restaurant settings
-        if (data.data.menu?.requires_loyalty) {
-          setRequiresLoyalty(true);
+        // Enable ordering if restaurant has Pro or Enterprise subscription
+        // The API will do final validation, but we show/hide UI based on settings
+        const orderingConfig = menuSettings.ordering || locationSettings.ordering || {};
+        setOrderingEnabled(orderingConfig.enabled !== false); // Default to true
+        
+        // Configure loyalty program settings (Enterprise feature)
+        const loyaltySettings = menuSettings.loyalty || locationSettings.loyalty || {};
+        if (loyaltySettings.enabled) {
+          setRequiresLoyalty(loyaltySettings.required || false);
+          setLoyaltyConfig({
+            enabled: true,
+            label: loyaltySettings.label || 'Loyalty Number',
+            placeholder: loyaltySettings.placeholder || 'Enter your loyalty number',
+            required: loyaltySettings.required || false,
+            helpText: loyaltySettings.helpText || null
+          });
         }
       } catch (err) {
         console.error('Error fetching menu:', err);
@@ -159,8 +177,8 @@ export default function PublicMenuPage() {
       return;
     }
 
-    if (requiresLoyalty && !orderForm.loyaltyNumber.trim()) {
-      alert('Please provide your loyalty number');
+    if (loyaltyConfig.enabled && loyaltyConfig.required && !orderForm.loyaltyNumber.trim()) {
+      alert(`Please provide your ${loyaltyConfig.label.toLowerCase()}`);
       return;
     }
 
@@ -560,21 +578,23 @@ export default function PublicMenuPage() {
                     />
                   </div>
 
-                  {requiresLoyalty && (
+                  {loyaltyConfig.enabled && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         <Award className="w-4 h-4 inline mr-2" />
-                        Loyalty Number *
+                        {loyaltyConfig.label} {loyaltyConfig.required && '*'}
                       </label>
                       <input
                         type="text"
                         value={orderForm.loyaltyNumber}
                         onChange={(e) => setOrderForm(prev => ({ ...prev, loyaltyNumber: e.target.value }))}
-                        placeholder="Enter your loyalty number"
+                        placeholder={loyaltyConfig.placeholder}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                        required
+                        required={loyaltyConfig.required}
                       />
-                      <p className="text-xs text-gray-500 mt-1">Required for loyalty rewards tracking</p>
+                      {loyaltyConfig.helpText && (
+                        <p className="text-xs text-gray-500 mt-1">{loyaltyConfig.helpText}</p>
+                      )}
                     </div>
                   )}
 
@@ -624,7 +644,7 @@ export default function PublicMenuPage() {
                   </button>
                   <button
                     onClick={submitOrder}
-                    disabled={isSubmitting || !orderForm.customerName.trim() || !orderForm.customerPhone.trim() || (requiresLoyalty && !orderForm.loyaltyNumber.trim())}
+                    disabled={isSubmitting || !orderForm.customerName.trim() || !orderForm.customerPhone.trim() || (loyaltyConfig.enabled && loyaltyConfig.required && !orderForm.loyaltyNumber.trim())}
                     className="flex-1 py-3 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (

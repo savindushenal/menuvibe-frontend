@@ -107,6 +107,12 @@ export async function GET(
       [menuId]
     );
 
+    // Get location settings for customization
+    const locationSettings = await queryOne<any>(
+      `SELECT settings FROM locations WHERE id = ?`,
+      [menu.location_id]
+    );
+
     // Parse dietary_info JSON and convert price to number
     const itemsWithDietary = items.map(item => ({
       ...item,
@@ -114,10 +120,24 @@ export async function GET(
       dietary_info: item.dietary_info ? JSON.parse(item.dietary_info) : []
     }));
 
+    // Parse location settings
+    let parsedLocationSettings = {};
+    try {
+      parsedLocationSettings = locationSettings?.settings ? JSON.parse(locationSettings.settings) : {};
+    } catch (e) {
+      console.error('Error parsing location settings:', e);
+    }
+
+    // Add settings to menu object
+    const menuWithSettings = {
+      ...menu,
+      location_settings: parsedLocationSettings
+    };
+
     return NextResponse.json({
       success: true,
       data: {
-        menu,
+        menu: menuWithSettings,
         categories,
         items: itemsWithDietary
       }
