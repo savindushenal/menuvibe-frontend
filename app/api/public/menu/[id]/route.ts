@@ -143,9 +143,11 @@ export async function POST(
     const customerName = formData.get('customerName') as string;
     const customerPhone = formData.get('customerPhone') as string;
     const customerEmail = formData.get('customerEmail') as string;
+    const loyaltyNumber = formData.get('loyaltyNumber') as string;
     const items = JSON.parse(formData.get('items') as string);
     const totalAmount = parseFloat(formData.get('totalAmount') as string);
     const notes = formData.get('notes') as string;
+    const tableNumber = formData.get('tableNumber') as string;
 
     // Get menu with location and user info
     const menu = await queryOne<any>(
@@ -221,9 +223,19 @@ export async function POST(
     const [orderResult] = await pool.execute<ResultSetHeader>(
       `INSERT INTO orders (
         menu_id, location_id, customer_name, customer_phone, customer_email,
-        total_amount, notes, status, order_date
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
-      [menuId, menu.location_id, customerName, customerPhone, customerEmail || null, totalAmount, notes || null]
+        total_amount, notes, status, order_date, loyalty_number, table_number
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW(), ?, ?)`,
+      [
+        menuId, 
+        menu.location_id, 
+        customerName, 
+        customerPhone, 
+        customerEmail || null, 
+        totalAmount, 
+        notes || null,
+        loyaltyNumber || null,
+        tableNumber || null
+      ]
     );
 
     const orderId = orderResult.insertId;
