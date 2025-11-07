@@ -30,6 +30,7 @@ interface OrderForm {
   customerEmail: string;
   loyaltyNumber: string;
   notes: string;
+  [key: string]: string; // Allow dynamic custom fields
 }
 
 export default function PublicMenuPage() {
@@ -47,6 +48,8 @@ export default function PublicMenuPage() {
   const [orderingEnabled, setOrderingEnabled] = useState(false);
   const [requiresLoyalty, setRequiresLoyalty] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [customFormFields, setCustomFormFields] = useState<any[]>([]);
+  const [defaultFieldsConfig, setDefaultFieldsConfig] = useState<any>({});
   const [loyaltyConfig, setLoyaltyConfig] = useState<any>({
     enabled: false,
     label: 'Loyalty Number',
@@ -117,11 +120,32 @@ export default function PublicMenuPage() {
         // Check menu customization settings
         const menuSettings = data.data.menu?.settings || {};
         const locationSettings = data.data.menu?.location_settings || {};
+        const formConfig = data.data.menu?.order_form_config || {};
         
         // Enable ordering if restaurant has Pro or Enterprise subscription
         // The API will do final validation, but we show/hide UI based on settings
         const orderingConfig = menuSettings.ordering || locationSettings.ordering || {};
         setOrderingEnabled(orderingConfig.enabled !== false); // Default to true
+        
+        // Configure custom form fields
+        if (formConfig.fields && Array.isArray(formConfig.fields)) {
+          const enabledFields = formConfig.fields
+            .filter((field: any) => field.enabled)
+            .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
+          setCustomFormFields(enabledFields);
+          
+          // Initialize custom field values in form state
+          const initialCustomFields: any = {};
+          enabledFields.forEach((field: any) => {
+            initialCustomFields[field.id] = '';
+          });
+          setOrderForm(prev => ({ ...prev, ...initialCustomFields }));
+        }
+        
+        // Configure default fields (name, phone, email)
+        if (formConfig.defaultFields) {
+          setDefaultFieldsConfig(formConfig.defaultFields);
+        }
         
         // Configure loyalty program settings (Enterprise feature)
         const loyaltySettings = menuSettings.loyalty || locationSettings.loyalty || {};
@@ -183,15 +207,38 @@ export default function PublicMenuPage() {
   };
 
   const submitOrder = async () => {
-    // Validation
-    if (!orderForm.customerName.trim() || !orderForm.customerPhone.trim()) {
-      alert('Please provide your name and phone number');
+    // Validation for default fields
+    const nameConfig = defaultFieldsConfig.customerName || { enabled: true, required: true };
+    const phoneConfig = defaultFieldsConfig.customerPhone || { enabled: true, required: true };
+    const emailConfig = defaultFieldsConfig.customerEmail || { enabled: true, required: false };
+    
+    if (nameConfig.enabled && nameConfig.required && !orderForm.customerName.trim()) {
+      alert(`Please provide your ${nameConfig.label || 'name'}`);
+      return;
+    }
+    
+    if (phoneConfig.enabled && phoneConfig.required && !orderForm.customerPhone.trim()) {
+      alert(`Please provide your ${phoneConfig.label || 'phone number'}`);
+      return;
+    }
+    
+    if (emailConfig.enabled && emailConfig.required && !orderForm.customerEmail.trim()) {
+      alert(`Please provide your ${emailConfig.label || 'email'}`);
       return;
     }
 
+    // Validation for loyalty field
     if (loyaltyConfig.enabled && loyaltyConfig.required && !orderForm.loyaltyNumber.trim()) {
       alert(`Please provide your ${loyaltyConfig.label.toLowerCase()}`);
       return;
+    }
+
+    // Validation for custom fields
+    for (const field of customFormFields) {
+      if (field.required && !orderForm[field.id]?.trim()) {
+        alert(`Please provide ${field.label}`);
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -204,6 +251,17 @@ export default function PublicMenuPage() {
       formData.append('loyaltyNumber', orderForm.loyaltyNumber);
       formData.append('notes', orderForm.notes);
       formData.append('tableNumber', tableNumber || '');
+      
+      // Add custom fields
+      const customFieldsData: any = {};
+      customFormFields.forEach(field => {
+        if (orderForm[field.id]) {
+          customFieldsData[field.id] = orderForm[field.id];
+        }
+      });
+      if (Object.keys(customFieldsData).length > 0) {
+        formData.append('customFields', JSON.stringify(customFieldsData));
+      }
       
       // Convert cart to items array
       const items = Object.entries(cart).map(([itemId, quantity]) => {
@@ -230,13 +288,19 @@ export default function PublicMenuPage() {
       if (result.success) {
         setOrderSuccess(true);
         setCart({});
-        setOrderForm({
+        
+        // Reset form including custom fields
+        const resetForm: OrderForm = {
           customerName: '',
           customerPhone: '',
           customerEmail: '',
           loyaltyNumber: '',
           notes: ''
+        };
+        customFormFields.forEach(field => {
+          resetForm[field.id] = '';
         });
+        setOrderForm(resetForm);
 
         setTimeout(() => {
           setShowOrderForm(false);
@@ -590,49 +654,125 @@ export default function PublicMenuPage() {
                 </div>
                 
                 <div className="p-6 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <User className="w-4 h-4 inline mr-2" />
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={orderForm.customerName}
-                      onChange={(e) => setOrderForm(prev => ({ ...prev, customerName: e.target.value }))}
-                      placeholder="Enter your name"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
+                  {/* Default Fields */}
+                  {(defaultFieldsConfig.customerName?.enabled !== false) && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <User className="w-4 h-4 inline mr-2" />
+                        {defaultFieldsConfig.customerName?.label || 'Full Name'} {defaultFieldsConfig.customerName?.required !== false && '*'}
+                      </label>
+                      <input
+                        type="text"
+                        value={orderForm.customerName}
+                        onChange={(e) => setOrderForm(prev => ({ ...prev, customerName: e.target.value }))}
+                        placeholder={defaultFieldsConfig.customerName?.placeholder || "Enter your name"}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        required={defaultFieldsConfig.customerName?.required !== false}
+                      />
+                    </div>
+                  )}
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <Phone className="w-4 h-4 inline mr-2" />
-                      Phone Number *
-                    </label>
-                    <input
-                      type="tel"
-                      value={orderForm.customerPhone}
-                      onChange={(e) => setOrderForm(prev => ({ ...prev, customerPhone: e.target.value }))}
-                      placeholder="Enter your phone number"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
+                  {(defaultFieldsConfig.customerPhone?.enabled !== false) && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <Phone className="w-4 h-4 inline mr-2" />
+                        {defaultFieldsConfig.customerPhone?.label || 'Phone Number'} {defaultFieldsConfig.customerPhone?.required !== false && '*'}
+                      </label>
+                      <input
+                        type="tel"
+                        value={orderForm.customerPhone}
+                        onChange={(e) => setOrderForm(prev => ({ ...prev, customerPhone: e.target.value }))}
+                        placeholder={defaultFieldsConfig.customerPhone?.placeholder || "Enter your phone number"}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        required={defaultFieldsConfig.customerPhone?.required !== false}
+                      />
+                    </div>
+                  )}
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <Mail className="w-4 h-4 inline mr-2" />
-                      Email (Optional)
-                    </label>
-                    <input
-                      type="email"
-                      value={orderForm.customerEmail}
-                      onChange={(e) => setOrderForm(prev => ({ ...prev, customerEmail: e.target.value }))}
-                      placeholder="Enter your email"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    />
-                  </div>
+                  {(defaultFieldsConfig.customerEmail?.enabled !== false) && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <Mail className="w-4 h-4 inline mr-2" />
+                        {defaultFieldsConfig.customerEmail?.label || 'Email'} {defaultFieldsConfig.customerEmail?.required && '*'}
+                      </label>
+                      <input
+                        type="email"
+                        value={orderForm.customerEmail}
+                        onChange={(e) => setOrderForm(prev => ({ ...prev, customerEmail: e.target.value }))}
+                        placeholder={defaultFieldsConfig.customerEmail?.placeholder || "Enter your email"}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        required={defaultFieldsConfig.customerEmail?.required}
+                      />
+                    </div>
+                  )}
+
+                  {/* Custom Form Fields */}
+                  {customFormFields.map((field) => (
+                    <div key={field.id}>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {field.label} {field.required && '*'}
+                      </label>
+                      
+                      {field.type === 'text' && (
+                        <input
+                          type="text"
+                          value={orderForm[field.id] || ''}
+                          onChange={(e) => setOrderForm(prev => ({ ...prev, [field.id]: e.target.value }))}
+                          placeholder={field.placeholder || ''}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                          required={field.required}
+                        />
+                      )}
+                      
+                      {field.type === 'textarea' && (
+                        <textarea
+                          value={orderForm[field.id] || ''}
+                          onChange={(e) => setOrderForm(prev => ({ ...prev, [field.id]: e.target.value }))}
+                          placeholder={field.placeholder || ''}
+                          rows={3}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                          required={field.required}
+                        />
+                      )}
+                      
+                      {field.type === 'select' && (
+                        <select
+                          value={orderForm[field.id] || ''}
+                          onChange={(e) => setOrderForm(prev => ({ ...prev, [field.id]: e.target.value }))}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                          required={field.required}
+                        >
+                          <option value="">Select...</option>
+                          {field.options?.map((option: string, idx: number) => (
+                            <option key={idx} value={option}>{option}</option>
+                          ))}
+                        </select>
+                      )}
+                      
+                      {field.type === 'radio' && (
+                        <div className="space-y-2">
+                          {field.options?.map((option: string, idx: number) => (
+                            <label key={idx} className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name={field.id}
+                                value={option}
+                                checked={orderForm[field.id] === option}
+                                onChange={(e) => setOrderForm(prev => ({ ...prev, [field.id]: e.target.value }))}
+                                className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
+                                required={field.required && idx === 0}
+                              />
+                              <span className="text-sm text-gray-700">{option}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {field.helpText && (
+                        <p className="text-xs text-gray-500 mt-1">{field.helpText}</p>
+                      )}
+                    </div>
+                  ))}
 
                   {loyaltyConfig.enabled && (
                     <div>

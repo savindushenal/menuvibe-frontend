@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { createClient } from '@/lib/auth';
-import { cookies } from 'next/headers';
+import { getUserFromToken, unauthorized } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const user = await getUserFromToken(request);
 
-    if (authError || !user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    if (!user) {
+      return unauthorized();
     }
 
     // Get user's location
@@ -62,12 +59,10 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const user = await getUserFromToken(request);
 
-    if (authError || !user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    if (!user) {
+      return unauthorized();
     }
 
     const settings = await request.json();

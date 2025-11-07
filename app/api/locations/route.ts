@@ -84,14 +84,6 @@ export async function POST(request: NextRequest) {
     const { canCreateLocation } = await import('@/lib/permissions');
     const permissionCheck = await canCreateLocation(user.id);
     
-    console.log('[Locations API] Permission check result:', {
-      userId: user.id,
-      allowed: permissionCheck.allowed,
-      reason: permissionCheck.reason,
-      current_count: permissionCheck.current_count,
-      limit: permissionCheck.limit
-    });
-    
     if (!permissionCheck.allowed) {
       return NextResponse.json(
         { 

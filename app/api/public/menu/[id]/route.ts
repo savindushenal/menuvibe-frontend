@@ -35,7 +35,8 @@ export async function GET(
                 l.phone,
                 l.email,
                 l.website,
-                l.settings as location_settings
+                l.settings as location_settings,
+                l.order_form_config
          FROM menus m
          LEFT JOIN locations l ON m.location_id = l.id
          LEFT JOIN business_profiles bp ON l.user_id = bp.user_id
@@ -55,7 +56,8 @@ export async function GET(
                 l.phone,
                 l.email,
                 l.website,
-                l.settings as location_settings
+                l.settings as location_settings,
+                l.order_form_config
          FROM menus m
          LEFT JOIN locations l ON m.location_id = l.id
          LEFT JOIN business_profiles bp ON l.user_id = bp.user_id
@@ -118,11 +120,17 @@ export async function GET(
 
     // Parse location settings
     let parsedLocationSettings = {};
+    let parsedOrderFormConfig = {};
     try {
       if (menu.location_settings) {
         parsedLocationSettings = typeof menu.location_settings === 'string' 
           ? JSON.parse(menu.location_settings) 
           : menu.location_settings;
+      }
+      if (menu.order_form_config) {
+        parsedOrderFormConfig = typeof menu.order_form_config === 'string' 
+          ? JSON.parse(menu.order_form_config) 
+          : menu.order_form_config;
       }
     } catch (e) {
       console.error('Error parsing location settings:', e);
@@ -131,7 +139,8 @@ export async function GET(
     // Add parsed settings to menu object
     const menuWithSettings = {
       ...menu,
-      location_settings: parsedLocationSettings
+      location_settings: parsedLocationSettings,
+      order_form_config: parsedOrderFormConfig
     };
 
     return NextResponse.json({
@@ -168,6 +177,7 @@ export async function POST(
     const totalAmount = parseFloat(formData.get('totalAmount') as string);
     const notes = formData.get('notes') as string;
     const tableNumber = formData.get('tableNumber') as string;
+    const customFields = formData.get('customFields') ? JSON.parse(formData.get('customFields') as string) : null;
 
     // Get menu with location and user info
     const menu = await queryOne<any>(
@@ -243,8 +253,8 @@ export async function POST(
     const [orderResult] = await pool.execute<ResultSetHeader>(
       `INSERT INTO orders (
         menu_id, location_id, customer_name, customer_phone, customer_email,
-        total_amount, notes, status, order_date, loyalty_number, table_number
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW(), ?, ?)`,
+        total_amount, notes, status, order_date, loyalty_number, table_number, custom_fields
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW(), ?, ?, ?)`,
       [
         menuId, 
         menu.location_id, 
@@ -254,7 +264,8 @@ export async function POST(
         totalAmount, 
         notes || null,
         loyaltyNumber || null,
-        tableNumber || null
+        tableNumber || null,
+        customFields ? JSON.stringify(customFields) : null
       ]
     );
 
