@@ -52,9 +52,9 @@ export function extractPublicIdFromSlug(slug: string): string | null {
  * Validate if a slug is properly formatted
  */
 export function isValidSlug(slug: string): boolean {
-  // Must be lowercase alphanumeric with hyphens
-  // Must contain at least 3 segments (location-menu-id)
-  const isValidFormat = /^[a-z0-9]+(-[a-z0-9]+){2,}$/.test(slug);
+  // Must be lowercase alphanumeric with hyphens (allow multiple consecutive hyphens)
+  // Must end with 8-character public ID
+  const isValidFormat = /^[a-z0-9-]+$/.test(slug);
   const hasPublicId = extractPublicIdFromSlug(slug) !== null;
   
   return isValidFormat && hasPublicId;

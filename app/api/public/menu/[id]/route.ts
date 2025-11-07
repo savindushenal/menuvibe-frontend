@@ -14,10 +14,16 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const tableNumber = searchParams.get('table');
 
+    console.log('=== Public Menu API ===');
+    console.log('Identifier:', identifier);
+    console.log('Is valid slug?', isValidSlug(identifier));
+    console.log('Is numeric?', /^\d+$/.test(identifier));
+
     let menu;
 
     // Check if identifier is a slug or numeric ID
     if (isValidSlug(identifier)) {
+      console.log('Looking up by SLUG:', identifier);
       // It's a slug - lookup by slug
       menu = await queryOne<any>(
         `SELECT m.id, m.name as menu_name, m.description, m.style, m.currency, m.is_active, m.slug,
@@ -36,6 +42,7 @@ export async function GET(
         [identifier]
       );
     } else if (/^\d+$/.test(identifier)) {
+      console.log('Looking up by NUMERIC ID:', identifier);
       // It's a numeric ID - lookup by ID (backward compatibility)
       menu = await queryOne<any>(
         `SELECT m.id, m.name as menu_name, m.description, m.style, m.currency, m.is_active, m.slug,
@@ -54,6 +61,7 @@ export async function GET(
         [identifier]
       );
     } else {
+      console.log('INVALID identifier format:', identifier);
       return NextResponse.json(
         { success: false, message: 'Invalid menu identifier' },
         { status: 400 }
