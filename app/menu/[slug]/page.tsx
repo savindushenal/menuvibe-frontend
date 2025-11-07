@@ -5,6 +5,17 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { extractPublicIdFromSlug, isValidSlug } from '@/lib/slug-utils';
 import { ShoppingCart, Plus, Minus, X, User, Phone, Mail, Award } from 'lucide-react';
 
+// Add custom styles for scrollbar hiding
+const styles = `
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
 interface CartItem {
   id: number;
   name: string;
@@ -35,6 +46,7 @@ export default function PublicMenuPage() {
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [orderingEnabled, setOrderingEnabled] = useState(false);
   const [requiresLoyalty, setRequiresLoyalty] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [loyaltyConfig, setLoyaltyConfig] = useState<any>({
     enabled: false,
     label: 'Loyalty Number',
@@ -270,41 +282,85 @@ export default function PublicMenuPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <>
+      <style dangerouslySetInnerHTML={{ __html: styles }} />
+      <div className="min-h-screen bg-gray-50">
       {/* Header with restaurant branding */}
       <div 
-        className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-8"
-        style={menu.location?.primary_color ? {
-          background: `linear-gradient(135deg, ${menu.location.primary_color} 0%, ${menu.location.secondary_color || menu.location.primary_color} 100%)`
+        className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-6 shadow-lg sticky top-0 z-10"
+        style={menu.menu?.primary_color ? {
+          background: `linear-gradient(135deg, ${menu.menu.primary_color} 0%, ${menu.menu.secondary_color || menu.menu.primary_color} 100%)`
         } : undefined}
       >
         <div className="container mx-auto px-4">
-          <div className="flex items-center gap-4">
-            {menu.location?.logo_url && (
-              <img 
-                src={menu.location.logo_url} 
-                alt={menu.location.name}
-                className="h-16 w-16 rounded-full bg-white p-1"
-              />
-            )}
-            <div>
-              <h1 className="text-3xl font-bold">{menu.location?.name || 'Restaurant'}</h1>
-              <p className="text-emerald-100">{menu.name}</p>
-              {tableNumber && (
-                <p className="text-sm text-emerald-200 mt-1">
-                  Table #{tableNumber}
-                </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {menu.menu?.logo_url && (
+                <img 
+                  src={menu.menu.logo_url} 
+                  alt={menu.menu.restaurant_name}
+                  className="h-16 w-16 rounded-full bg-white p-1 object-cover shadow-md"
+                />
               )}
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold">{menu.menu?.restaurant_name || 'Restaurant'}</h1>
+                <p className="text-sm md:text-base opacity-90">{menu.menu?.menu_name}</p>
+                {tableNumber && (
+                  <p className="text-xs md:text-sm opacity-75 mt-1">
+                    Table #{tableNumber}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Category Filter */}
+      {menu.categories && menu.categories.length > 1 && (
+        <div className="bg-white border-b sticky top-[88px] md:top-[96px] z-10 shadow-sm">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`px-4 py-2 rounded-full font-medium whitespace-nowrap transition-colors ${
+                  selectedCategory === null
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                All Items
+              </button>
+              {menu.categories.map((category: any) => (
+                <button
+                  key={category.id}
+                  onClick={() => setSelectedCategory(category.id)}
+                  className={`px-4 py-2 rounded-full font-medium whitespace-nowrap transition-colors ${
+                    selectedCategory === category.id
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                  style={
+                    selectedCategory === category.id && category.background_color
+                      ? { backgroundColor: category.background_color, color: category.text_color || 'white' }
+                      : undefined
+                  }
+                >
+                  {category.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Menu Content */}
       <div className="container mx-auto px-4 py-8">
         {menu.categories && menu.categories.length > 0 ? (
           <div className="space-y-8">
-            {menu.categories.map((category: any) => {
+            {menu.categories
+              .filter((category: any) => selectedCategory === null || category.id === selectedCategory)
+              .map((category: any) => {
               // Filter items for this category
               const categoryItems = menu.items?.filter((item: any) => item.category_id === category.id) || [];
               
@@ -667,12 +723,12 @@ export default function PublicMenuPage() {
       <div className="bg-white border-t mt-12 py-6">
         <div className="container mx-auto px-4 text-center text-sm text-gray-500">
           <p>Powered by MenuVibe</p>
-          {menu.location?.phone && (
-            <p className="mt-2">📞 {menu.location.phone}</p>
+          {menu.menu?.phone && (
+            <p className="mt-2">📞 {menu.menu.phone}</p>
           )}
-          {menu.location?.website && (
+          {menu.menu?.website && (
             <a 
-              href={menu.location.website} 
+              href={menu.menu.website} 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-emerald-600 hover:underline mt-1 inline-block"
@@ -683,5 +739,6 @@ export default function PublicMenuPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
