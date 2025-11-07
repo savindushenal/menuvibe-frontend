@@ -522,20 +522,20 @@ export default function PublicMenuPage() {
                               }}>
                                 {item.name}
                               </h4>
-                              {item.is_spicy && <span className="text-red-500">🌶️</span>}
-                              {!item.is_available && (
+                              {item.is_spicy === true && <span className="text-red-500">🌶️</span>}
+                              {item.is_available === false && (
                                 <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">Unavailable</span>
                               )}
-                              {item.is_featured && (
+                              {item.is_featured === true && (
                                 <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">⭐ Featured</span>
                               )}
                             </div>
-                            {item.description && (
+                            {item.description && item.description !== '0' && (
                               <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
                             )}
-                            {item.dietary_info && item.dietary_info.length > 0 && (
+                            {item.dietary_info && Array.isArray(item.dietary_info) && item.dietary_info.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-2">
-                                {item.dietary_info.map((info: string, idx: number) => (
+                                {item.dietary_info.filter((info: string) => info && info !== '0').map((info: string, idx: number) => (
                                   <span key={idx} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
                                     {info}
                                   </span>
