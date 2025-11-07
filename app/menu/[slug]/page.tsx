@@ -5,6 +5,64 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { extractPublicIdFromSlug, isValidSlug } from '@/lib/slug-utils';
 import { ShoppingCart, Plus, Minus, X, User, Phone, Mail, Award } from 'lucide-react';
 
+// Menu design templates
+const menuDesigns = [
+  {
+    value: 'modern',
+    label: 'Modern',
+    colors: {
+      bg: '#F8FAFC',
+      text: '#1E293B',
+      accent: '#3B82F6'
+    }
+  },
+  {
+    value: 'classic',
+    label: 'Classic',
+    colors: {
+      bg: '#FEF3C7',
+      text: '#78350F',
+      accent: '#D97706'
+    }
+  },
+  {
+    value: 'minimal',
+    label: 'Minimal',
+    colors: {
+      bg: '#FFFFFF',
+      text: '#18181B',
+      accent: '#71717A'
+    }
+  },
+  {
+    value: 'elegant',
+    label: 'Elegant',
+    colors: {
+      bg: '#FAF5FF',
+      text: '#581C87',
+      accent: '#9333EA'
+    }
+  },
+  {
+    value: 'rustic',
+    label: 'Rustic',
+    colors: {
+      bg: '#FEF2F2',
+      text: '#7F1D1D',
+      accent: '#B91C1C'
+    }
+  },
+  {
+    value: 'bold',
+    label: 'Bold',
+    colors: {
+      bg: '#FEF9C3',
+      text: '#7C2D12',
+      accent: '#DC2626'
+    }
+  }
+];
+
 // Add custom styles for scrollbar hiding
 const styles = `
   .scrollbar-hide {
@@ -345,16 +403,21 @@ export default function PublicMenuPage() {
     );
   }
 
+  // Get design colors based on menu style
+  const menuStyle = menu.menu?.style || 'modern';
+  const designColors = menuDesigns.find(d => d.value === menuStyle)?.colors || menuDesigns[0].colors;
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: styles }} />
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen" style={{ backgroundColor: designColors.bg }}>
       {/* Header with restaurant branding */}
       <div 
-        className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-6 shadow-lg sticky top-0 z-10"
-        style={menu.menu?.primary_color ? {
-          background: `linear-gradient(135deg, ${menu.menu.primary_color} 0%, ${menu.menu.secondary_color || menu.menu.primary_color} 100%)`
-        } : undefined}
+        className="text-white py-6 shadow-lg sticky top-0 z-10"
+        style={{
+          backgroundColor: designColors.accent,
+          background: `linear-gradient(135deg, ${designColors.accent} 0%, ${designColors.accent}dd 100%)`
+        }}
       >
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">
@@ -364,6 +427,7 @@ export default function PublicMenuPage() {
                   src={menu.menu.logo_url} 
                   alt={menu.menu.restaurant_name}
                   className="h-16 w-16 rounded-full bg-white p-1 object-cover shadow-md"
+                  style={{ borderColor: designColors.accent, borderWidth: '2px' }}
                 />
               )}
               <div>
@@ -387,11 +451,12 @@ export default function PublicMenuPage() {
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               <button
                 onClick={() => setSelectedCategory(null)}
-                className={`px-4 py-2 rounded-full font-medium whitespace-nowrap transition-colors ${
+                className="px-4 py-2 rounded-full font-medium whitespace-nowrap transition-colors"
+                style={
                   selectedCategory === null
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                    ? { backgroundColor: designColors.accent, color: '#FFFFFF' }
+                    : { backgroundColor: '#F3F4F6', color: designColors.text }
+                }
               >
                 All Items
               </button>
@@ -399,15 +464,11 @@ export default function PublicMenuPage() {
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
-                  className={`px-4 py-2 rounded-full font-medium whitespace-nowrap transition-colors ${
-                    selectedCategory === category.id
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                  className="px-4 py-2 rounded-full font-medium whitespace-nowrap transition-colors"
                   style={
-                    selectedCategory === category.id && category.background_color
-                      ? { backgroundColor: category.background_color, color: category.text_color || 'white' }
-                      : undefined
+                    selectedCategory === category.id
+                      ? { backgroundColor: designColors.accent, color: '#FFFFFF' }
+                      : { backgroundColor: '#F3F4F6', color: designColors.text }
                   }
                 >
                   {category.name}
@@ -429,97 +490,104 @@ export default function PublicMenuPage() {
               const categoryItems = menu.items?.filter((item: any) => item.category_id === category.id) || [];
               
               return (
-                <div key={category.id} className="bg-white rounded-lg shadow-sm p-6">
+                <div key={category.id} className="bg-white rounded-lg shadow-sm p-6 border-2" style={{
+                  borderColor: designColors.accent
+                }}>
                   <h2 
                     className="text-2xl font-bold mb-4 border-b pb-2"
                     style={{
-                      color: category.heading_color || '#111827',
-                      borderColor: category.background_color || '#e5e7eb'
+                      color: designColors.text,
+                      borderColor: designColors.accent + '40'
                     }}
                   >
                     {category.name}
                   </h2>
                   {category.description && (
-                    <p className="text-gray-600 mb-4">{category.description}</p>
+                    <p className="text-sm text-muted-foreground mb-4">{category.description}</p>
                   )}
                   {categoryItems.length > 0 ? (
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-3">
                       {categoryItems.map((item: any) => (
                         <div 
                           key={item.id} 
-                          className="border rounded-lg p-4 hover:shadow-md transition-shadow"
-                          style={item.card_color ? { backgroundColor: item.card_color } : undefined}
+                          className="flex justify-between items-start border-b pb-3 last:border-0"
+                          style={{
+                            borderColor: designColors.accent + '40'
+                          }}
                         >
-                          <div className="flex justify-between items-start gap-4">
-                            <div className="flex-1">
-                              <h3 
-                                className="font-semibold text-lg"
-                                style={item.heading_color ? { color: item.heading_color } : undefined}
-                              >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-medium" style={{
+                                color: designColors.text
+                              }}>
                                 {item.name}
-                                {item.is_featured && (
-                                  <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">⭐ Featured</span>
-                                )}
-                              </h3>
-                              {item.description && (
-                                <p 
-                                  className="text-sm mt-1"
-                                  style={item.text_color ? { color: item.text_color } : { color: '#4B5563' }}
-                                >
-                                  {item.description}
-                                </p>
+                              </h4>
+                              {item.is_spicy && <span className="text-red-500">🌶️</span>}
+                              {!item.is_available && (
+                                <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">Unavailable</span>
                               )}
-                              {item.dietary_info && item.dietary_info.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  {item.dietary_info.map((info: string, idx: number) => (
-                                    <span key={idx} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                                      {info}
-                                    </span>
-                                  ))}
-                                </div>
+                              {item.is_featured && (
+                                <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">⭐ Featured</span>
                               )}
                             </div>
-                            <div className="text-right flex-shrink-0">
-                              {item.image_url && (
-                                <img 
-                                  src={item.image_url} 
-                                  alt={item.name}
-                                  className="w-24 h-24 object-cover rounded-lg mb-2"
-                                />
-                              )}
-                              <p className="font-bold text-xl text-emerald-600 mb-2">
-                                ${parseFloat(item.price || 0).toFixed(2)}
-                              </p>
-                              {orderingEnabled && (
-                                <div className="flex flex-col gap-2">
-                                  {cart[item.id] ? (
-                                    <div className="flex items-center justify-center gap-2">
-                                      <button
-                                        onClick={() => removeFromCart(item.id)}
-                                        className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600"
-                                      >
-                                        <Minus className="w-4 h-4" />
-                                      </button>
-                                      <span className="font-bold min-w-[30px] text-center">{cart[item.id]}</span>
-                                      <button
-                                        onClick={() => addToCart(item.id)}
-                                        className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center hover:bg-emerald-700"
-                                      >
-                                        <Plus className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                  ) : (
+                            {item.description && (
+                              <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                            )}
+                            {item.dietary_info && item.dietary_info.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {item.dietary_info.map((info: string, idx: number) => (
+                                  <span key={idx} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                                    {info}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="ml-4 text-right flex-shrink-0">
+                            {item.image_url && (
+                              <img 
+                                src={item.image_url} 
+                                alt={item.name}
+                                className="w-24 h-24 object-cover rounded-lg mb-2"
+                              />
+                            )}
+                            <div className="font-semibold mb-2" style={{
+                              color: designColors.accent
+                            }}>
+                              ${parseFloat(item.price || 0).toFixed(2)}
+                            </div>
+                            {orderingEnabled && item.is_available && (
+                              <div className="flex flex-col gap-2">
+                                {cart[item.id] ? (
+                                  <div className="flex items-center justify-center gap-2">
+                                    <button
+                                      onClick={() => removeFromCart(item.id)}
+                                      className="w-8 h-8 rounded-full text-white flex items-center justify-center transition-opacity hover:opacity-80"
+                                      style={{ backgroundColor: '#EF4444' }}
+                                    >
+                                      <Minus className="w-4 h-4" />
+                                    </button>
+                                    <span className="font-bold min-w-[30px] text-center" style={{ color: designColors.text }}>{cart[item.id]}</span>
                                     <button
                                       onClick={() => addToCart(item.id)}
-                                      className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
+                                      className="w-8 h-8 rounded-full text-white flex items-center justify-center transition-opacity hover:opacity-80"
+                                      style={{ backgroundColor: designColors.accent }}
                                     >
                                       <Plus className="w-4 h-4" />
-                                      Add
                                     </button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => addToCart(item.id)}
+                                    className="px-4 py-2 rounded-lg text-white font-medium transition-opacity hover:opacity-80 flex items-center justify-center gap-2"
+                                    style={{ backgroundColor: designColors.accent }}
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                    Add
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -544,7 +612,8 @@ export default function PublicMenuPage() {
       {orderingEnabled && getTotalItems() > 0 && (
         <button
           onClick={() => setShowCart(true)}
-          className="fixed bottom-6 right-6 w-16 h-16 bg-emerald-600 text-white rounded-full shadow-lg hover:bg-emerald-700 transition-all hover:scale-110 flex items-center justify-center z-50"
+          className="fixed bottom-6 right-6 w-16 h-16 text-white rounded-full shadow-lg transition-all hover:scale-110 flex items-center justify-center z-50"
+          style={{ backgroundColor: designColors.accent }}
         >
           <ShoppingCart className="w-6 h-6" />
           <span className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
@@ -599,7 +668,7 @@ export default function PublicMenuPage() {
                           <Plus className="w-3 h-3" />
                         </button>
                       </div>
-                      <p className="font-bold text-emerald-600 min-w-[60px] text-right">
+                      <p className="font-bold min-w-[60px] text-right" style={{ color: designColors.accent }}>
                         ${(parseFloat(item.price) * quantity).toFixed(2)}
                       </p>
                     </div>
@@ -611,13 +680,14 @@ export default function PublicMenuPage() {
             <div className="p-6 border-t bg-gray-50">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-lg font-bold text-gray-900">Total:</span>
-                <span className="text-2xl font-bold text-emerald-600">
+                <span className="text-2xl font-bold" style={{ color: designColors.accent }}>
                   ${getTotalPrice().toFixed(2)}
                 </span>
               </div>
               <button
                 onClick={handleCheckout}
-                className="w-full py-3 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-colors"
+                className="w-full py-3 text-white rounded-lg font-bold transition-opacity hover:opacity-90"
+                style={{ backgroundColor: designColors.accent }}
               >
                 Proceed to Checkout
               </button>
@@ -822,7 +892,7 @@ export default function PublicMenuPage() {
                       })}
                       <div className="border-t pt-2 flex justify-between font-bold">
                         <span>Total:</span>
-                        <span className="text-emerald-600">${getTotalPrice().toFixed(2)}</span>
+                        <span style={{ color: designColors.accent }}>${getTotalPrice().toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -841,7 +911,8 @@ export default function PublicMenuPage() {
                   <button
                     onClick={submitOrder}
                     disabled={isSubmitting || !orderForm.customerName.trim() || !orderForm.customerPhone.trim() || (loyaltyConfig.enabled && loyaltyConfig.required && !orderForm.loyaltyNumber.trim())}
-                    className="flex-1 py-3 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    className="flex-1 py-3 text-white rounded-lg font-bold transition-opacity hover:opacity-90 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    style={isSubmitting || !orderForm.customerName.trim() || !orderForm.customerPhone.trim() ? {} : { backgroundColor: designColors.accent }}
                   >
                     {isSubmitting ? (
                       <div className="flex items-center justify-center gap-2">
@@ -871,7 +942,8 @@ export default function PublicMenuPage() {
               href={menu.menu.website} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-emerald-600 hover:underline mt-1 inline-block"
+              className="hover:underline mt-1 inline-block"
+              style={{ color: designColors.accent }}
             >
               Visit Website
             </a>
