@@ -39,7 +39,13 @@ export default function CustomOrderFormSettings() {
   const loadConfig = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/settings/order-form');
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/settings/order-form', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       const data = await response.json();
       
       if (data.success && data.config) {
@@ -93,9 +99,13 @@ export default function CustomOrderFormSettings() {
         defaultFields
       };
 
+      const token = localStorage.getItem('auth_token');
       const response = await fetch('/api/settings/order-form', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(config)
       });
 

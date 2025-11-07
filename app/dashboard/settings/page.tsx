@@ -1184,7 +1184,13 @@ function OrderingSettings() {
   const loadSettings = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/settings/ordering');
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/settings/ordering', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       const data = await response.json();
       if (data.success && data.settings) {
         setSettings(data.settings);
@@ -1204,9 +1210,13 @@ function OrderingSettings() {
   const saveSettings = async () => {
     setSaving(true);
     try {
+      const token = localStorage.getItem('auth_token');
       const response = await fetch('/api/settings/ordering', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(settings)
       });
 
