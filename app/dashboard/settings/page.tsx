@@ -1451,6 +1451,34 @@ function OrderingSettings() {
               <li>• Changes take effect immediately for new orders</li>
             </ul>
           </div>
+
+          {/* Custom Order Form Link */}
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <h4 className="font-semibold text-purple-900 mb-2 flex items-center gap-2">
+                  🎨 Custom Order Form Fields
+                  <Badge variant="secondary" className="bg-purple-100 text-purple-700 text-xs">
+                    Pro+
+                  </Badge>
+                </h4>
+                <p className="text-sm text-purple-800 mb-3">
+                  Add custom fields to your order form for POS integration, delivery addresses, room numbers, employee IDs, and more.
+                </p>
+                <ul className="text-xs text-purple-700 space-y-1 mb-3">
+                  <li>• Add text fields, dropdowns, radio buttons, and text areas</li>
+                  <li>• Perfect for hotels, corporate cafeterias, and delivery services</li>
+                  <li>• Integrate with your existing POS or booking system</li>
+                </ul>
+              </div>
+              <Button
+                onClick={() => window.location.href = '/dashboard/settings/order-form'}
+                className="bg-purple-600 hover:bg-purple-700 text-white whitespace-nowrap"
+              >
+                Customize Form →
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </motion.div>
