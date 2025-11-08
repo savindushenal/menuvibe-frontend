@@ -69,7 +69,14 @@ export default function DashboardPage() {
     async function fetchDashboardData() {
       try {
         setLoading(true);
-        const response = await fetch('/api/dashboard/stats');
+        const token = localStorage.getItem('auth_token');
+        
+        const response = await fetch('/api/dashboard/stats', {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` })
+          }
+        });
         const result = await response.json();
 
         if (result.success) {
