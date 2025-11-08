@@ -84,9 +84,40 @@ export async function GET(
 
     const menuId = menu.id; // Use the resolved menu ID for subsequent queries
 
-    // Track analytics if table number provided
-    if (tableNumber) {
-      console.log(`Menu accessed from table ${tableNumber}`);
+    // Track analytics
+    try {
+      // Get client information
+      const clientIp = request.headers.get('x-forwarded-for') 
+        || request.headers.get('x-real-ip') 
+        || 'unknown';
+      const userAgent = request.headers.get('user-agent') || 'unknown';
+      const referer = request.headers.get('referer') || null;
+      
+      // Generate session ID from IP + User Agent (simple approach)
+      const sessionId = Buffer.from(`${clientIp}-${userAgent.substring(0, 50)}`).toString('base64').substring(0, 64);
+      
+      // Track QR scan if table number provided, otherwise track menu view
+      const eventType = tableNumber ? 'qr_scan' : 'menu_view';
+      
+      await pool.execute(
+        `INSERT INTO analytics_events 
+         (event_type, menu_id, table_number, ip_address, user_agent, referrer, session_id, created_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+          eventType,
+          menuId,
+          tableNumber || null,
+          clientIp,
+          userAgent,
+          referer,
+          sessionId
+        ]
+      );
+      
+      console.log(`Tracked ${eventType} for menu ${menuId}${tableNumber ? ` at table ${tableNumber}` : ''}`);
+    } catch (analyticsError) {
+      // Don't fail the request if analytics fails
+      console.error('Error tracking analytics:', analyticsError);
     }
 
     // Get categories
