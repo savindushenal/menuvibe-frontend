@@ -59,17 +59,38 @@ export default function AnalyticsPage() {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/analytics/stats?days=${dateRange}`, {
+      const token = localStorage.getItem('auth_token');
+      const period = dateRange === '7' ? '7d' : '30d';
+      
+      const response = await fetch(`/api/analytics/stats?period=${period}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
         },
       });
       
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          setAnalytics(result.data);
+          // Transform API data to match component expectations
+          const transformedData: AnalyticsStats = {
+            totalViews: result.data.overview?.total_views || 0,
+            totalScans: result.data.overview?.total_scans || 0,
+            totalOrders: result.data.overview?.total_orders || 0,
+            uniqueVisitors: result.data.overview?.unique_visitors || 0,
+            recentTrends: result.data.timeline?.map((day: any) => ({
+              views: day.views || 0,
+              scans: day.scans || 0,
+              orders: day.orders || 0,
+            })).reverse() || [],
+            popularItems: result.data.popular_items?.map((item: any) => ({
+              name: item.name,
+              orders: item.interactions || item.view_count || 0,
+            })) || [],
+            eventsByType: {}
+          };
+          setAnalytics(transformedData);
         }
       }
     } catch (error) {
@@ -125,12 +146,41 @@ export default function AnalyticsPage() {
   ] : [];
 
   // Create chart data from analytics trends
-  const viewsData = analytics?.recentTrends.map((trend, index) => ({
-    date: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][index] || `Day ${index + 1}`,
-    views: trend.views,
-    scans: trend.scans,
-    orders: trend.orders,
-  })) || [];
+  const viewsData = analytics?.recentTrends.map((trend, index) => {
+    const daysAgo = analytics.recentTrends.length - 1 - index;
+    const date = new Date();
+    date.setDate(date.getDate() - daysAgo);
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+    const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    
+    return {
+      date: dateRange === '7' ? dayName : monthDay,
+      views: trend.views,
+      scans: trend.scans,
+      orders: trend.orders,
+    };
+  }) || [];
+
+  if (loading) {
+    return (
+      <div className="p-8 space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-neutral-900">Analytics</h1>
+            <p className="text-neutral-600 mt-1">
+              Track your menu performance and customer engagement
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto"></div>
+            <p className="mt-4 text-neutral-600">Loading analytics...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
@@ -343,25 +393,33 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {(analytics?.popularItems || []).map((item, index) => (
-                <motion.div
-                  key={item.name}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
-                  className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg hover:bg-neutral-100 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center text-white font-bold">
-                      {index + 1}
+              {!analytics || analytics.popularItems.length === 0 ? (
+                <div className="text-center py-8 text-neutral-500">
+                  <TrendingUp className="w-12 h-12 mx-auto mb-2 text-neutral-300" />
+                  <p>No item data available yet</p>
+                  <p className="text-sm">Data will appear as customers interact with your menu</p>
+                </div>
+              ) : (
+                analytics.popularItems.slice(0, 5).map((item, index) => (
+                  <motion.div
+                    key={item.name}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                    className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg hover:bg-neutral-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center text-white font-bold">
+                        {index + 1}
+                      </div>
+                      <span className="font-medium text-neutral-900">{item.name}</span>
                     </div>
-                    <span className="font-medium text-neutral-900">{item.name}</span>
-                  </div>
-                  <span className="text-emerald-600 font-semibold">
-                    {item.orders} orders
-                  </span>
-                </motion.div>
-              ))}
+                    <span className="text-emerald-600 font-semibold">
+                      {item.orders} views
+                    </span>
+                  </motion.div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
