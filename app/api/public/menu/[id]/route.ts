@@ -16,6 +16,7 @@ export async function GET(
 
     console.log('=== Public Menu API ===');
     console.log('Identifier:', identifier);
+    console.log('Table:', tableNumber);
     console.log('Is valid slug?', isValidSlug(identifier));
     console.log('Is numeric?', /^\d+$/.test(identifier));
 
@@ -96,7 +97,7 @@ export async function GET(
       // Generate session ID from IP + User Agent (simple approach)
       const sessionId = Buffer.from(`${clientIp}-${userAgent.substring(0, 50)}`).toString('base64').substring(0, 64);
       
-      // Track QR scan if table number provided, otherwise track menu view
+      // Track QR scan if table number provided (table-specific QR), otherwise track menu view
       const eventType = tableNumber ? 'qr_scan' : 'menu_view';
       
       await pool.execute(

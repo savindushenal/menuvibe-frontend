@@ -55,7 +55,8 @@ export async function getUserSubscription(userId: number): Promise<UserSubscript
        FROM user_subscriptions us
        JOIN subscription_plans sp ON us.subscription_plan_id = sp.id
        WHERE us.user_id = ? 
-         AND (us.is_active = 1 OR us.status = 'active')
+         AND us.status = 'active'
+         AND (us.ends_at IS NULL OR us.ends_at > NOW())
        ORDER BY us.created_at DESC
        LIMIT 1`,
       [userId]
@@ -64,12 +65,6 @@ export async function getUserSubscription(userId: number): Promise<UserSubscript
     if (!subscription) {
       // If no subscription found, check if user exists and create free subscription
       console.log(`No active subscription found for user ${userId}`);
-      return null;
-    }
-
-    // Ensure subscription is actually active
-    if (subscription.is_active !== 1 && subscription.status !== 'active') {
-      console.log(`User ${userId} has subscription but it's not active: is_active=${subscription.is_active}, status=${subscription.status}`);
       return null;
     }
 
@@ -83,7 +78,7 @@ export async function getUserSubscription(userId: number): Promise<UserSubscript
       plan_slug: subscription.plan_slug,
       limits,
       subscription_id: subscription.subscription_id,
-      is_active: subscription.is_active === 1 || subscription.status === 'active',
+      is_active: true,
     };
   } catch (error) {
     console.error('Error fetching user subscription:', error);

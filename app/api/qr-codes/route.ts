@@ -95,7 +95,9 @@ export async function POST(request: NextRequest) {
       `SELECT us.*, sp.name as plan_name, sp.slug as plan_slug, sp.limits
        FROM user_subscriptions us
        JOIN subscription_plans sp ON us.subscription_plan_id = sp.id
-       WHERE us.user_id = ? AND (us.ends_at IS NULL OR us.ends_at > NOW())
+       WHERE us.user_id = ? 
+         AND us.status = 'active'
+         AND (us.ends_at IS NULL OR us.ends_at > NOW())
        ORDER BY us.created_at DESC
        LIMIT 1`,
       [user.id]
