@@ -55,6 +55,17 @@ export default function QRCodesPage() {
   const isEnterprise = planSlug === 'enterprise';
   const isPremium = isPro || isEnterprise; // Pro or Enterprise have premium features
 
+  // Debug logging
+  useEffect(() => {
+    console.log('=== QR Codes Page - Subscription Debug ===');
+    console.log('Subscription:', subscription);
+    console.log('Plan Slug:', planSlug);
+    console.log('Is Free:', isFree);
+    console.log('Is Pro:', isPro);
+    console.log('Is Enterprise:', isEnterprise);
+    console.log('QR Codes Count:', qrCodes.length);
+  }, [subscription, planSlug, qrCodes.length]);
+
   useEffect(() => {
     loadQRCodes();
     loadMenus();
@@ -193,12 +204,12 @@ export default function QRCodesPage() {
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Create QR Code</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
-              {isFree && qrCodes.length > 0 && (
+              {isFree && qrCodes.length >= 1 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
                   <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                   <div className="text-sm">
                     <p className="font-medium text-amber-900">Free Plan Limit Reached</p>
-                    <p className="text-amber-700 mt-1">You already have 1 QR code. Upgrade to Pro or Enterprise for unlimited QR codes with menu and table-specific features.</p>
+                    <p className="text-amber-700 mt-1">You already have {qrCodes.length} QR code(s). Upgrade to Pro or Enterprise for unlimited QR codes with menu and table-specific features.</p>
                   </div>
                 </div>
               )}
@@ -227,7 +238,7 @@ export default function QRCodesPage() {
                 <Input id="table" placeholder="e.g., Table 5" value={formData.table_number} onChange={(e) => setFormData({ ...formData, table_number: e.target.value })} disabled={isFree} />
                 {isFree && <p className="text-xs text-amber-600 mt-1"><Sparkles className="w-3 h-3 inline mr-1" />Upgrade to Pro or Enterprise for table-specific QR codes</p>}
               </div>
-              <Button onClick={handleCreate} className="w-full" disabled={isFree && qrCodes.length > 0}>Generate QR Code</Button>
+              <Button onClick={handleCreate} className="w-full" disabled={isFree && qrCodes.length >= 1}>Generate QR Code</Button>
             </div>
           </DialogContent>
         </Dialog>

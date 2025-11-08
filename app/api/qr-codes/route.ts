@@ -98,7 +98,13 @@ export async function POST(request: NextRequest) {
        WHERE us.user_id = ? 
          AND us.status = 'active'
          AND (us.ends_at IS NULL OR us.ends_at > NOW())
-       ORDER BY us.created_at DESC
+       ORDER BY 
+         CASE WHEN sp.slug = 'enterprise' THEN 1
+              WHEN sp.slug = 'pro' THEN 2
+              WHEN sp.slug = 'free' THEN 3
+              ELSE 4
+         END,
+         us.created_at DESC
        LIMIT 1`,
       [user.id]
     );
