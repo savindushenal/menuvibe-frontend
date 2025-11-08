@@ -149,6 +149,24 @@ export async function GET(request: NextRequest) {
        ORDER BY hour`
     );
 
+    // Category distribution (based on menu items in user's menus)
+    const categoryDistribution = await query<any>(
+      `SELECT 
+        mc.name as category_name,
+        COUNT(mi.id) as item_count,
+        COUNT(CASE WHEN ae.id IS NOT NULL THEN 1 END) as interactions
+       FROM menu_categories mc
+       JOIN menus m ON mc.menu_id = m.id
+       JOIN locations l ON m.location_id = l.id
+       LEFT JOIN menu_items mi ON mc.id = mi.category_id
+       LEFT JOIN analytics_events ae ON mi.id = ae.item_id ${dateFilter}
+       WHERE l.user_id = ?
+       GROUP BY mc.id, mc.name
+       HAVING item_count > 0
+       ORDER BY interactions DESC, item_count DESC`,
+      [user.id]
+    );
+
     return NextResponse.json({
       success: true,
       data: {
@@ -157,7 +175,8 @@ export async function GET(request: NextRequest) {
         popular_items: popularItems,
         popular_tables: popularTables,
         devices,
-        hourly_pattern: hourlyPattern
+        hourly_pattern: hourlyPattern,
+        category_distribution: categoryDistribution
       }
     });
   } catch (error) {

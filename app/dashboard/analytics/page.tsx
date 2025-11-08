@@ -35,16 +35,21 @@ interface AnalyticsStats {
     name: string;
     orders: number;
   }[];
+  categoryDistribution: {
+    name: string;
+    value: number;
+    color: string;
+  }[];
   eventsByType: {
     [key: string]: number;
   };
 }
 
-const categoryData = [
-  { name: 'Appetizers', value: 25, color: '#10b981' },
-  { name: 'Main Courses', value: 45, color: '#3b82f6' },
-  { name: 'Desserts', value: 15, color: '#f97316' },
-  { name: 'Beverages', value: 15, color: '#8b5cf6' },
+// Color palette for categories
+const CATEGORY_COLORS = [
+  '#10b981', '#3b82f6', '#f97316', '#8b5cf6', 
+  '#ec4899', '#14b8a6', '#f59e0b', '#6366f1',
+  '#ef4444', '#06b6d4', '#84cc16', '#a855f7'
 ];
 
 export default function AnalyticsPage() {
@@ -74,6 +79,12 @@ export default function AnalyticsPage() {
         const result = await response.json();
         if (result.success) {
           // Transform API data to match component expectations
+          const categoryData = result.data.category_distribution?.map((cat: any, index: number) => ({
+            name: cat.category_name,
+            value: cat.interactions || cat.item_count,
+            color: CATEGORY_COLORS[index % CATEGORY_COLORS.length]
+          })) || [];
+
           const transformedData: AnalyticsStats = {
             totalViews: result.data.overview?.total_views || 0,
             totalScans: result.data.overview?.total_scans || 0,
@@ -88,6 +99,7 @@ export default function AnalyticsPage() {
               name: item.name,
               orders: item.interactions || item.view_count || 0,
             })) || [],
+            categoryDistribution: categoryData,
             eventsByType: {}
           };
           setAnalytics(transformedData);
@@ -334,27 +346,37 @@ export default function AnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            {!analytics || analytics.categoryDistribution.length === 0 ? (
+              <div className="flex items-center justify-center h-[300px] text-neutral-500">
+                <div className="text-center">
+                  <TrendingUp className="w-12 h-12 mx-auto mb-2 text-neutral-300" />
+                  <p>No category data available</p>
+                  <p className="text-sm">Create menu categories to see distribution</p>
+                </div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={analytics.categoryDistribution}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) =>
+                      `${name} ${(percent * 100).toFixed(0)}%`
+                    }
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {analytics.categoryDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>
