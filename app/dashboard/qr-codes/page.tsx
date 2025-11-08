@@ -74,7 +74,7 @@ export default function QRCodesPage() {
   const loadQRCodes = async () => {
     try {
       setLoading(true);
-      const locationId = currentLocation?.id ? parseInt(currentLocation.id) : undefined;
+      const locationId = currentLocation?.id ? currentLocation.id.toString() : undefined;
       const response = await apiClient.getQRCodes(locationId);
       if (response.success) {
         setQrCodes(response.data.qr_codes || []);
