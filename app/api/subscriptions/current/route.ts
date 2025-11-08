@@ -30,22 +30,50 @@ export async function GET(request: NextRequest) {
       console.log(`No active subscription found for user ${user.id}`);
       return NextResponse.json({
         success: true,
-        data: { subscription: null },
+        data: {
+          plan: null,
+          usage: {
+            menus_count: 0,
+            menu_items_count: 0,
+            locations_count: 0
+          },
+          limits: {},
+          can_upgrade: true
+        },
       });
     }
 
     console.log(`Found subscription for user ${user.id}: ${subscription.name} (${subscription.slug})`);
 
     // Parse JSON fields
-    const parsedSubscription = {
-      ...subscription,
-      features: subscription.features ? JSON.parse(subscription.features) : {},
-      limits: subscription.limits ? JSON.parse(subscription.limits) : {},
+    const limits = subscription.limits ? JSON.parse(subscription.limits) : {};
+    const features = subscription.features ? JSON.parse(subscription.features) : {};
+
+    // Format response to match expected structure
+    const formattedResponse = {
+      plan: {
+        id: subscription.subscription_plan_id,
+        name: subscription.name,
+        slug: subscription.slug,
+        price: subscription.price,
+        billing_period: subscription.billing_period,
+        limits: limits,
+        features: features,
+        formatted_price: `$${subscription.price || 0}`
+      },
+      usage: {
+        // These will be populated by the frontend when needed
+        menus_count: 0,
+        menu_items_count: 0,
+        locations_count: 0
+      },
+      limits: limits,
+      can_upgrade: subscription.slug !== 'enterprise' && subscription.slug !== 'custom-enterprise'
     };
 
     return NextResponse.json({
       success: true,
-      data: { subscription: parsedSubscription },
+      data: formattedResponse,
     });
   } catch (error) {
     console.error('Error fetching user subscription:', error);
