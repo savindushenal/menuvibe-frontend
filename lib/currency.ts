@@ -1,4 +1,5 @@
 export const CURRENCY_SYMBOLS: Record<string, string> = {
+  LKR: 'Rs',
   USD: '$',
   EUR: '€',
   GBP: '£',
@@ -22,7 +23,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
 };
 
 export function getCurrencySymbol(currency?: string): string {
-  return CURRENCY_SYMBOLS[currency || 'USD'] || '$';
+  return CURRENCY_SYMBOLS[currency || 'LKR'] || 'Rs';
 }
 
 export function formatPrice(price: number | string, currency?: string): string {

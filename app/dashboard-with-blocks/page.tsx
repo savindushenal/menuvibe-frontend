@@ -310,7 +310,7 @@ function DashboardWithBlocks() {
             title="Add More Locations"
             description="Expand your business with multiple restaurant locations"
             benefits={[
-              "Manage up to 3 locations",
+              "Manage up to 5 locations",
               "Individual menus per location", 
               "Location-specific analytics",
               "Centralized dashboard"

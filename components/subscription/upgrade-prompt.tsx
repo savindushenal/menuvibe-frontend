@@ -56,7 +56,7 @@ export function UpgradePrompt({
       price: 29,
       billing_period: 'monthly',
       features: [
-        'Up to 3 locations',
+        'Up to 5 locations',
         'Up to 5 menus per location',
         'Up to 50 menu items per menu',
         'Photo uploads',

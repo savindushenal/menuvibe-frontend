@@ -173,7 +173,7 @@ export default function BlockedFeaturesDemo() {
                 title="Manage Multiple Locations"
                 description="Expand your restaurant business with location management tools"
                 benefits={[
-                  "Up to 3 locations",
+                  "Up to 5 locations",
                   "Individual menus per location",
                   "Location-specific analytics",
                   "Centralized management dashboard"

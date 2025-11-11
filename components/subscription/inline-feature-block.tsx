@@ -240,7 +240,7 @@ export function LocationBlock({ children, className, type = 'overlay' }: {
       title="Multiple Locations Locked"
       description="Manage multiple restaurant locations with Pro plan"
       benefits={[
-        "Up to 3 locations",
+        "Up to 5 locations",
         "Separate menus per location",
         "Location-specific analytics",
         "Centralized management"

@@ -27,7 +27,7 @@ const features: Feature[] = [
     custom: true,
   },
   {
-    name: 'Multiple Locations (up to 3)',
+    name: 'Multiple Locations (up to 5)',
     description: 'Manage multiple restaurant locations',
     free: false,
     pro: true,

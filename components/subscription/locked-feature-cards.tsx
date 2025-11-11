@@ -122,7 +122,7 @@ export function MultiLocationCard({ className }: { className?: string }) {
       description="Manage multiple restaurant locations from one dashboard"
       requiredPlan="pro"
       benefits={[
-        "Up to 3 locations (Pro) or 5 locations (Enterprise)",
+        "Up to 5 locations (Pro) or 5 locations (Enterprise)",
         "Centralized menu management across locations",
         "Location-specific QR codes and analytics",
         "Easy location switching interface"

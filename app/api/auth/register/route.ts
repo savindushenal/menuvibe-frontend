@@ -62,8 +62,8 @@ export async function POST(request: NextRequest) {
 
     if (freePlan.length > 0) {
       await query(
-        'INSERT INTO user_subscriptions (user_id, subscription_plan_id, status, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',
-        [userId, freePlan[0].id, 'active', 1]
+        'INSERT INTO user_subscriptions (user_id, subscription_plan_id, status, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())',
+        [userId, freePlan[0].id, 'active']
       );
     }
 

@@ -87,7 +87,19 @@ CREATE TABLE IF NOT EXISTS analytics_events (
   ip_address varchar(45) DEFAULT NULL,
   user_agent text DEFAULT NULL,
   referrer text DEFAULT NULL,
-  additional_data json DEFAULT NULL,
+  additional_data json DEFAULT NULL,[{
+	"resource": "/c:/Users/TWINS - TECH/Documents/GitHub/menuvibe/menuvibe-frontend/app/dashboard/subscription/page.tsx",
+	"owner": "typescript",
+	"code": "2341",
+	"severity": 8,
+	"message": "Property 'request' is private and only accessible within class 'ApiClient'.",
+	"source": "ts",
+	"startLineNumber": 114,
+	"startColumn": 40,
+	"endLineNumber": 114,
+	"endColumn": 47,
+	"origin": "extHost1"
+}]
   created_at timestamp NULL DEFAULT NULL,
   PRIMARY KEY (id),
   KEY idx_menu_id (menu_id),
