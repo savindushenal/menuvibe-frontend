@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
-import pool from '@/lib/db';
-import { ResultSetHeader } from 'mysql2';
+import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -9,7 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password, phone } = await request.json();
+    const { name, email, password, phone, restaurantName } = await request.json();
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -19,12 +17,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if email already exists
-    const existingUser = await query<any>(
-      'SELECT id FROM users WHERE email = ?',
-      [email]
-    );
+    const existingUser = await prisma.users.findUnique({
+      where: { email },
+      select: { id: true },
+    });
 
-    if (existingUser.length > 0) {
+    if (existingUser) {
       return NextResponse.json(
         { success: false, message: 'Email already registered' },
         { status: 409 }
@@ -34,48 +32,86 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
-    const [result] = await pool.execute<ResultSetHeader>(
-      'INSERT INTO users (name, email, password, phone, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())',
-      [name, email, hashedPassword, phone || null]
-    );
+    // Get the Free subscription plan
+    const freePlan = await prisma.subscription_plans.findFirst({
+      where: { name: 'Free' },
+      select: { id: true },
+    });
 
-    const userId = result.insertId;
+    // Create user with related records in a transaction
+    const user = await prisma.$transaction(async (tx) => {
+      // Create user
+      const newUser = await tx.users.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          phone: phone || null,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          created_at: true,
+        },
+      });
 
-    // Create default location
-    await query(
-      'INSERT INTO locations (user_id, name, is_default, created_at, updated_at) VALUES (?, ?, 1, NOW(), NOW())',
-      [userId, 'Main Location']
-    );
+      // Create default location
+      await tx.locations.create({
+        data: {
+          user_id: newUser.id,
+          name: restaurantName || 'Main Location',
+          address_line_1: 'Not set',
+          city: 'Not set',
+          state: 'Not set',
+          postal_code: '00000',
+          country: 'US',
+          is_default: true,
+        },
+      });
 
-    // Create user settings with basic columns only
-    await query(
-      'INSERT INTO user_settings (user_id, created_at, updated_at) VALUES (?, NOW(), NOW())',
-      [userId]
-    );
+      // Create business profile with restaurant name if provided
+      if (restaurantName) {
+        await tx.business_profiles.create({
+          data: {
+            user_id: newUser.id,
+            business_name: restaurantName,
+            business_type: 'restaurant',
+            address_line_1: 'Not set',
+            city: 'Not set',
+            state: 'Not set',
+            postal_code: '00000',
+            country: 'US',
+          },
+        });
+      }
 
-    // Assign free subscription
-    const freePlan = await query<any>(
-      'SELECT id FROM subscription_plans WHERE name = ? LIMIT 1',
-      ['Free']
-    );
+      // Create user settings
+      await tx.user_settings.create({
+        data: {
+          user_id: newUser.id,
+        },
+      });
 
-    if (freePlan.length > 0) {
-      await query(
-        'INSERT INTO user_subscriptions (user_id, subscription_plan_id, status, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())',
-        [userId, freePlan[0].id, 'active']
-      );
-    }
+      // Assign free subscription if available
+      if (freePlan) {
+        await tx.user_subscriptions.create({
+          data: {
+            user_id: newUser.id,
+            subscription_plan_id: freePlan.id,
+            status: 'active',
+            starts_at: new Date(),
+          },
+        });
+      }
 
-    // Get newly created user
-    const [user] = await query<any>(
-      'SELECT id, name, email, phone, created_at FROM users WHERE id = ?',
-      [userId]
-    );
+      return newUser;
+    });
 
     // Create JWT token
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id.toString(), email: user.email },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -84,7 +120,10 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Registration successful',
       data: {
-        user,
+        user: {
+          ...user,
+          id: user.id.toString(),
+        },
         token,
       },
     }, { status: 201 });

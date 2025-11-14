@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { QrCode, Plus, Download, Trash2, Eye, Sparkles, AlertCircle } from 'lucide-react';
+import { QrCode, Plus, Download, Trash2, Eye, Sparkles, AlertCircle, Edit, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -36,8 +36,10 @@ export default function QRCodesPage() {
   const [menus, setMenus] = useState<Menu[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedQR, setSelectedQR] = useState<QRCodeType | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { currentLocation } = useLocation();
   const { subscription, loading: subLoading } = useSubscription();
@@ -121,6 +123,7 @@ export default function QRCodesPage() {
     }
 
     try {
+      setIsSubmitting(true);
       const data: any = { name: formData.name.trim() };
       if (currentLocation?.id) data.location_id = parseInt(currentLocation.id);
       if (formData.menu_id) data.menu_id = parseInt(formData.menu_id);
@@ -135,7 +138,65 @@ export default function QRCodesPage() {
       }
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'Failed to create QR code', variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleEdit = async () => {
+    if (!selectedQR) return;
+
+    if (!formData.name.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter a name for the QR code',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!formData.menu_id) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please select a menu for the QR code',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const data: any = {
+        name: formData.name.trim(),
+        menu_id: parseInt(formData.menu_id),
+      };
+      if (formData.table_number) {
+        data.table_number = formData.table_number.trim();
+      }
+
+      const response = await apiClient.updateQRCode(selectedQR.id, data);
+      if (response.success) {
+        toast({ title: 'Success', description: 'QR code updated successfully' });
+        setIsEditOpen(false);
+        setSelectedQR(null);
+        setFormData({ name: '', menu_id: '', table_number: '' });
+        loadQRCodes();
+      }
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to update QR code', variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openEditDialog = (qrCode: QRCodeType) => {
+    setSelectedQR(qrCode);
+    setFormData({
+      name: qrCode.name,
+      menu_id: qrCode.menu_id?.toString() || '',
+      table_number: qrCode.table_number || '',
+    });
+    setIsEditOpen(true);
   };
 
   const handleDelete = async (id: number) => {
@@ -238,7 +299,16 @@ export default function QRCodesPage() {
                 <Input id="table" placeholder="e.g., Table 5" value={formData.table_number} onChange={(e) => setFormData({ ...formData, table_number: e.target.value })} disabled={isFree} />
                 {isFree && <p className="text-xs text-amber-600 mt-1"><Sparkles className="w-3 h-3 inline mr-1" />Upgrade to Pro or Enterprise for table-specific QR codes</p>}
               </div>
-              <Button onClick={handleCreate} className="w-full" disabled={isFree && qrCodes.length >= 1}>Generate QR Code</Button>
+              <Button onClick={handleCreate} className="w-full" disabled={isSubmitting || (isFree && qrCodes.length >= 1)}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Generate QR Code'
+                )}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -276,6 +346,9 @@ export default function QRCodesPage() {
                     <Button variant="outline" size="sm" onClick={() => { setSelectedQR(qrCode); setIsViewOpen(true); }} className="flex-1">
                       <Eye className="w-4 h-4 mr-1" />View
                     </Button>
+                    <Button variant="outline" size="sm" onClick={() => openEditDialog(qrCode)} className="flex-1">
+                      <Edit className="w-4 h-4 mr-1" />Edit
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => handleDownload(qrCode)} className="flex-1">
                       <Download className="w-4 h-4 mr-1" />Download
                     </Button>
@@ -289,6 +362,84 @@ export default function QRCodesPage() {
           ))}
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={(open) => {
+        setIsEditOpen(open);
+        if (!open) {
+          setSelectedQR(null);
+          setFormData({ name: '', menu_id: '', table_number: '' });
+        }
+      }}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Edit QR Code</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="edit-name">QR Code Name *</Label>
+              <Input 
+                id="edit-name" 
+                placeholder="e.g., Main Menu QR" 
+                value={formData.name} 
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                disabled={isSubmitting}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-menu">Select Menu *</Label>
+              <select 
+                id="edit-menu" 
+                className="w-full border border-gray-300 rounded-md p-2" 
+                value={formData.menu_id} 
+                onChange={(e) => setFormData({ ...formData, menu_id: e.target.value })} 
+                disabled={isSubmitting}
+                required
+              >
+                <option value="">Select a menu...</option>
+                {menus.map((menu) => (<option key={menu.id} value={menu.id}>{menu.name}</option>))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="edit-table">Table Number (Optional)</Label>
+              <Input 
+                id="edit-table" 
+                placeholder="e.g., Table 5" 
+                value={formData.table_number} 
+                onChange={(e) => setFormData({ ...formData, table_number: e.target.value })} 
+                disabled={isFree || isSubmitting} 
+              />
+              {isFree && <p className="text-xs text-amber-600 mt-1"><Sparkles className="w-3 h-3 inline mr-1" />Upgrade to Pro or Enterprise for table-specific QR codes</p>}
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsEditOpen(false);
+                  setSelectedQR(null);
+                  setFormData({ name: '', menu_id: '', table_number: '' });
+                }}
+                disabled={isSubmitting}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleEdit} 
+                className="flex-1" 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

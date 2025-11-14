@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne } from '@/lib/db';
+import prisma from '@/lib/prisma';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
@@ -11,10 +11,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user's location
-    const location = await queryOne<any>(
-      'SELECT id, order_form_config FROM locations WHERE user_id = ? LIMIT 1',
-      [user.id]
-    );
+    const location = await prisma.locations.findFirst({
+      where: { user_id: BigInt(user.id) },
+      select: { id: true, order_form_config: true }
+    });
 
     if (!location) {
       return NextResponse.json({ success: false, message: 'No location found' }, { status: 404 });
@@ -70,10 +70,10 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update location order form config
-    await query(
-      'UPDATE locations SET order_form_config = ? WHERE user_id = ?',
-      [JSON.stringify(config), user.id]
-    );
+    await prisma.locations.updateMany({
+      where: { user_id: BigInt(user.id) },
+      data: { order_form_config: JSON.stringify(config) }
+    });
 
     return NextResponse.json({ 
       success: true, 

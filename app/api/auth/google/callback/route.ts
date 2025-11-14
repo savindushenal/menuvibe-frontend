@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne } from '@/lib/db';
-import pool from '@/lib/db';
-import { ResultSetHeader } from 'mysql2';
+import prisma from '@/lib/prisma';
 import jwt from 'jsonwebtoken';
 
 // Force dynamic rendering for this route
@@ -86,71 +84,104 @@ export async function GET(request: NextRequest) {
     const googleUser: GoogleUserInfo = await userInfoResponse.json();
 
     // Check if user exists
-    let user = await queryOne<any>(
-      'SELECT * FROM users WHERE email = ? OR google_id = ?',
-      [googleUser.email, googleUser.id]
-    );
+    let user = await prisma.users.findFirst({
+      where: {
+        OR: [
+          { email: googleUser.email },
+          { google_id: googleUser.id },
+        ],
+      },
+    });
 
     let isNewUser = false;
 
     if (!user) {
-      // Create new user
+      // Create new user with all related records in a transaction
       isNewUser = true;
-      const [result] = await pool.execute<ResultSetHeader>(
-        'INSERT INTO users (name, email, google_id, email_verified_at, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW(), NOW())',
-        [googleUser.name, googleUser.email, googleUser.id]
-      );
 
-      const userId = result.insertId;
+      // Get the Free subscription plan
+      const freePlan = await prisma.subscription_plans.findFirst({
+        where: { name: 'Free' },
+        select: { id: true },
+      });
 
-      // Create default location with proper fields
-      await query(
-        `INSERT INTO locations 
-        (user_id, name, description, address_line_1, city, state, postal_code, country, is_default, is_active, created_at, updated_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, NOW(), NOW())`,
-        [userId, 'Main Location', 'Default location', 'Address not set', 'City', 'State', '00000', 'US']
-      );
+      user = await prisma.$transaction(async (tx) => {
+        // Create new user
+        const newUser = await tx.users.create({
+          data: {
+            name: googleUser.name,
+            email: googleUser.email,
+            google_id: googleUser.id,
+            email_verified_at: new Date(),
+          },
+        });
 
-      // Create empty business profile for onboarding
-      await query(
-        `INSERT INTO business_profiles 
-        (user_id, business_name, country, onboarding_completed, created_at, updated_at) 
-        VALUES (?, ?, ?, 0, NOW(), NOW())`,
-        [userId, googleUser.name || 'My Business', 'US']
-      );
+        // Create default location with proper fields
+        await tx.locations.create({
+          data: {
+            user_id: newUser.id,
+            name: 'Main Location',
+            description: 'Default location',
+            address_line_1: 'Address not set',
+            city: 'City',
+            state: 'State',
+            postal_code: '00000',
+            country: 'US',
+            is_default: true,
+            is_active: true,
+          },
+        });
 
-      // Create user settings with basic columns only
-      await query(
-        'INSERT INTO user_settings (user_id, created_at, updated_at) VALUES (?, NOW(), NOW())',
-        [userId]
-      );
+        // Create empty business profile for onboarding
+        await tx.business_profiles.create({
+          data: {
+            user_id: newUser.id,
+            business_name: googleUser.name || 'My Business',
+            business_type: 'restaurant',
+            address_line_1: 'Not set',
+            city: 'Not set',
+            state: 'Not set',
+            postal_code: '00000',
+            country: 'US',
+            onboarding_completed: false,
+          },
+        });
 
-      // Assign free subscription
-      const freePlan = await queryOne<any>(
-        'SELECT id FROM subscription_plans WHERE name = ? LIMIT 1',
-        ['Free']
-      );
+        // Create user settings
+        await tx.user_settings.create({
+          data: {
+            user_id: newUser.id,
+          },
+        });
 
-      if (freePlan) {
-        await query(
-          'INSERT INTO user_subscriptions (user_id, subscription_plan_id, status, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())',
-          [userId, freePlan.id, 'active']
-        );
-      }
+        // Assign free subscription if available
+        if (freePlan) {
+          await tx.user_subscriptions.create({
+            data: {
+              user_id: newUser.id,
+              subscription_plan_id: freePlan.id,
+              status: 'active',
+              starts_at: new Date(),
+            },
+          });
+        }
 
-      // Get newly created user
-      user = await queryOne<any>('SELECT * FROM users WHERE id = ?', [userId]);
+        return newUser;
+      });
     } else if (!user.google_id) {
       // Update existing user with Google ID
-      await query(
-        'UPDATE users SET google_id = ?, email_verified_at = NOW(), updated_at = NOW() WHERE id = ?',
-        [googleUser.id, user.id]
-      );
+      user = await prisma.users.update({
+        where: { id: user.id },
+        data: {
+          google_id: googleUser.id,
+          email_verified_at: new Date(),
+        },
+      });
     }
 
     // Create JWT token
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id.toString(), email: user.email },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -159,7 +190,7 @@ export async function GET(request: NextRequest) {
     const redirectUrl = new URL('/auth/google/callback', FRONTEND_URL);
     redirectUrl.searchParams.append('token', token);
     redirectUrl.searchParams.append('user', JSON.stringify({
-      id: user.id,
+      id: user.id.toString(),
       name: user.name,
       email: user.email,
     }));

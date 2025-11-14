@@ -1,31 +1,19 @@
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import prisma from '@/lib/prisma';
 
 export async function GET() {
   try {
-    const connection = await pool.getConnection();
-    await connection.ping();
-    connection.release();
+    await prisma.$queryRaw`SELECT 1`;
     
     return NextResponse.json({
       success: true,
-      message: 'Database connection successful',
-      config: {
-        host: process.env.DB_HOST,
-        database: process.env.DB_DATABASE,
-        user: process.env.DB_USERNAME,
-      }
+      message: 'Database connection successful (Prisma)'
     });
   } catch (error: any) {
     return NextResponse.json({
       success: false,
       message: 'Database connection failed',
-      error: error.message,
-      config: {
-        host: process.env.DB_HOST,
-        database: process.env.DB_DATABASE,
-        user: process.env.DB_USERNAME,
-      }
+      error: error.message
     }, { status: 500 });
   }
 }

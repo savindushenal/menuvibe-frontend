@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
-import { query, queryOne } from '@/lib/db';
+import prisma from '@/lib/prisma';
 
 // GET /api/menus/[id]/items/[itemId] - Get a specific menu item
 export async function GET(
@@ -11,13 +11,17 @@ export async function GET(
   if (!user) return unauthorized();
 
   try {
-    const item = await queryOne<any>(
-      `SELECT mi.* FROM menu_items mi
-       JOIN menus m ON mi.menu_id = m.id
-       JOIN locations l ON m.location_id = l.id
-       WHERE mi.id = ? AND mi.menu_id = ? AND l.user_id = ?`,
-      [params.itemId, params.id, user.id]
-    );
+    const item = await prisma.menu_items.findFirst({
+      where: {
+        id: BigInt(params.itemId),
+        menu_id: BigInt(params.id),
+        menus: {
+          locations: {
+            user_id: BigInt(user.id),
+          },
+        },
+      },
+    });
 
     if (!item) {
       return NextResponse.json(
@@ -28,7 +32,14 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: { menu_item: item },
+      data: { 
+        menu_item: {
+          ...item,
+          id: item.id.toString(),
+          menu_id: item.menu_id.toString(),
+          category_id: item.category_id?.toString() || null,
+        }
+      },
     });
   } catch (error) {
     console.error('Error fetching menu item:', error);
@@ -49,13 +60,17 @@ export async function PUT(
 
   try {
     // Verify item belongs to user
-    const item = await queryOne<any>(
-      `SELECT mi.* FROM menu_items mi
-       JOIN menus m ON mi.menu_id = m.id
-       JOIN locations l ON m.location_id = l.id
-       WHERE mi.id = ? AND mi.menu_id = ? AND l.user_id = ?`,
-      [params.itemId, params.id, user.id]
-    );
+    const item = await prisma.menu_items.findFirst({
+      where: {
+        id: BigInt(params.itemId),
+        menu_id: BigInt(params.id),
+        menus: {
+          locations: {
+            user_id: BigInt(user.id),
+          },
+        },
+      },
+    });
 
     if (!item) {
       return NextResponse.json(
@@ -73,7 +88,7 @@ export async function PUT(
     const price = priceValue ? parseFloat(priceValue) : undefined;
     const currency = formData.get('currency') as string;
     const categoryIdValue = formData.get('category_id') as string;
-    const category_id = categoryIdValue ? parseInt(categoryIdValue) : undefined;
+    const category_id = categoryIdValue ? BigInt(parseInt(categoryIdValue)) : undefined;
     const is_available = formData.get('is_available') ? formData.get('is_available') === '1' : undefined;
     const is_featured = formData.get('is_featured') ? formData.get('is_featured') === '1' : undefined;
     const image_url = formData.get('image_url') as string;
@@ -105,85 +120,41 @@ export async function PUT(
       }
     }
 
-    // Build update query
-    const updates: string[] = [];
-    const values: any[] = [];
+    // Build update data object
+    const updateData: any = {};
 
-    if (name !== undefined) {
-      updates.push('name = ?');
-      values.push(name);
-    }
-    if (description !== undefined) {
-      updates.push('description = ?');
-      values.push(description);
-    }
-    if (price !== undefined) {
-      updates.push('price = ?');
-      values.push(price);
-    }
-    if (currency !== undefined) {
-      updates.push('currency = ?');
-      values.push(currency);
-    }
-    if (category_id !== undefined) {
-      updates.push('category_id = ?');
-      values.push(category_id);
-    }
-    if (is_available !== undefined) {
-      updates.push('is_available = ?');
-      values.push(is_available);
-    }
-    if (is_featured !== undefined) {
-      updates.push('is_featured = ?');
-      values.push(is_featured);
-    }
-    if (allergens !== undefined) {
-      updates.push('allergens = ?');
-      values.push(allergens ? JSON.stringify(allergens) : null);
-    }
-    if (dietary_info !== undefined) {
-      updates.push('dietary_info = ?');
-      values.push(dietary_info ? JSON.stringify(dietary_info) : null);
-    }
-    if (image_url !== undefined) {
-      updates.push('image_url = ?');
-      values.push(image_url);
-    }
-    if (card_color !== undefined) {
-      updates.push('card_color = ?');
-      values.push(card_color);
-    }
-    if (heading_color !== undefined) {
-      updates.push('heading_color = ?');
-      values.push(heading_color);
-    }
-    if (text_color !== undefined) {
-      updates.push('text_color = ?');
-      values.push(text_color);
-    }
-    if (sort_order !== undefined) {
-      updates.push('sort_order = ?');
-      values.push(sort_order);
-    }
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (price !== undefined) updateData.price = price;
+    if (currency !== undefined) updateData.currency = currency;
+    if (category_id !== undefined) updateData.category_id = category_id;
+    if (is_available !== undefined) updateData.is_available = is_available;
+    if (is_featured !== undefined) updateData.is_featured = is_featured;
+    if (allergens !== undefined) updateData.allergens = allergens ? JSON.stringify(allergens) : null;
+    if (dietary_info !== undefined) updateData.dietary_info = dietary_info ? JSON.stringify(dietary_info) : null;
+    if (image_url !== undefined) updateData.image_url = image_url;
+    if (card_color !== undefined) updateData.card_color = card_color;
+    if (heading_color !== undefined) updateData.heading_color = heading_color;
+    if (text_color !== undefined) updateData.text_color = text_color;
+    if (sort_order !== undefined) updateData.sort_order = sort_order;
 
-    updates.push('updated_at = NOW()');
-    values.push(params.itemId);
-
-    await query(
-      `UPDATE menu_items SET ${updates.join(', ')} WHERE id = ?`,
-      values
-    );
-
-    // Get updated item
-    const updatedItem = await queryOne<any>(
-      'SELECT * FROM menu_items WHERE id = ?',
-      [params.itemId]
-    );
+    // Update menu item
+    const updatedItem = await prisma.menu_items.update({
+      where: { id: BigInt(params.itemId) },
+      data: updateData,
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Menu item updated successfully',
-      data: { menu_item: updatedItem },
+      data: { 
+        menu_item: {
+          ...updatedItem,
+          id: updatedItem.id.toString(),
+          menu_id: updatedItem.menu_id.toString(),
+          category_id: updatedItem.category_id?.toString() || null,
+        }
+      },
     });
   } catch (error) {
     console.error('Error updating menu item:', error);
@@ -204,13 +175,17 @@ export async function DELETE(
 
   try {
     // Verify item belongs to user
-    const item = await queryOne<any>(
-      `SELECT mi.* FROM menu_items mi
-       JOIN menus m ON mi.menu_id = m.id
-       JOIN locations l ON m.location_id = l.id
-       WHERE mi.id = ? AND mi.menu_id = ? AND l.user_id = ?`,
-      [params.itemId, params.id, user.id]
-    );
+    const item = await prisma.menu_items.findFirst({
+      where: {
+        id: BigInt(params.itemId),
+        menu_id: BigInt(params.id),
+        menus: {
+          locations: {
+            user_id: BigInt(user.id),
+          },
+        },
+      },
+    });
 
     if (!item) {
       return NextResponse.json(
@@ -219,7 +194,9 @@ export async function DELETE(
       );
     }
 
-    await query('DELETE FROM menu_items WHERE id = ?', [params.itemId]);
+    await prisma.menu_items.delete({
+      where: { id: BigInt(params.itemId) },
+    });
 
     return NextResponse.json({
       success: true,

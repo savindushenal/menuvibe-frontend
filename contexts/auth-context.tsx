@@ -116,13 +116,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (name: string, email: string, password: string, passwordConfirmation: string) => {
+  const register = async (name: string, email: string, password: string, passwordConfirmation: string, restaurantName?: string) => {
     try {
       const response = await apiClient.register({
         name,
         email,
         password,
         password_confirmation: passwordConfirmation,
+        restaurantName,
       });
       
       if (response.success && response.data) {

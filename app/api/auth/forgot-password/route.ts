@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import prisma from '@/lib/prisma';
 
 // POST /api/auth/forgot-password
 export async function POST(request: NextRequest) {
@@ -14,14 +14,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user exists
-    const users = await query<any>(
-      'SELECT id, email, name FROM users WHERE email = ?',
-      [email]
-    );
+    const user = await prisma.users.findUnique({
+      where: { email },
+      select: { id: true, email: true, name: true }
+    });
 
     // Always return success to prevent email enumeration
     // In a real app, you would send an email here
-    if (users.length > 0) {
+    if (user) {
       // TODO: Generate reset token and send email
       // For now, we'll just log it
       console.log(`Password reset requested for: ${email}`);

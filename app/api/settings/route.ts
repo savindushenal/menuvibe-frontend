@@ -1,35 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
-import { query, queryOne } from '@/lib/db';
-import pool from '@/lib/db';
-import { ResultSetHeader } from 'mysql2';
+import prisma from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   const user = await getUserFromToken(request);
   if (!user) return unauthorized();
 
   try {
-    const settings = await queryOne<any>(
-      'SELECT * FROM user_settings WHERE user_id = ?',
-      [user.id]
-    );
+    let settings = await prisma.user_settings.findFirst({
+      where: { user_id: BigInt(user.id) },
+    });
 
     if (!settings) {
-      // Create default settings if they don't exist - use only basic columns
-      const [result] = await pool.execute<ResultSetHeader>(
-        `INSERT INTO user_settings (user_id, created_at, updated_at)
-         VALUES (?, NOW(), NOW())`,
-        [user.id]
-      );
-
-      const newSettings = await queryOne<any>(
-        'SELECT * FROM user_settings WHERE id = ?',
-        [result.insertId]
-      );
+      // Create default settings if they don't exist
+      settings = await prisma.user_settings.create({
+        data: {
+          user_id: BigInt(user.id),
+        },
+      });
 
       // Add default values for missing columns
       const defaultSettings = {
-        ...newSettings,
+        ...settings,
+        id: settings.id.toString(),
+        user_id: settings.user_id.toString(),
         theme: 'light',
         language: 'en',
         currency: 'USD',
@@ -46,11 +40,13 @@ export async function GET(request: NextRequest) {
     // Add default values for any missing columns
     const settingsWithDefaults = {
       ...settings,
-      theme: settings.theme || 'light',
-      language: settings.language || 'en',
-      currency: settings.currency || 'USD',
-      notifications_enabled: settings.notifications_enabled !== undefined ? !!settings.notifications_enabled : true,
-      email_notifications: settings.email_notifications !== undefined ? !!settings.email_notifications : true
+      id: settings.id.toString(),
+      user_id: settings.user_id.toString(),
+      theme: 'light',
+      language: 'en',
+      currency: 'USD',
+      notifications_enabled: true,
+      email_notifications: settings.email_notifications
     };
 
     return NextResponse.json({
@@ -75,27 +71,24 @@ export async function PUT(request: NextRequest) {
     const { theme, language, currency, notifications_enabled, email_notifications } = body;
 
     // Check if settings exist
-    const existing = await queryOne<any>(
-      'SELECT id FROM user_settings WHERE user_id = ?',
-      [user.id]
-    );
+    const existing = await prisma.user_settings.findFirst({
+      where: { user_id: BigInt(user.id) },
+      select: { id: true },
+    });
 
     if (!existing) {
-      // Create new settings with basic columns only
-      const [result] = await pool.execute<ResultSetHeader>(
-        `INSERT INTO user_settings (user_id, created_at, updated_at)
-         VALUES (?, NOW(), NOW())`,
-        [user.id]
-      );
-
-      const newSettings = await queryOne<any>(
-        'SELECT * FROM user_settings WHERE id = ?',
-        [result.insertId]
-      );
+      // Create new settings
+      const newSettings = await prisma.user_settings.create({
+        data: {
+          user_id: BigInt(user.id),
+        },
+      });
 
       // Return settings with client-side values since we can't store them in DB
       const settingsWithValues = {
         ...newSettings,
+        id: newSettings.id.toString(),
+        user_id: newSettings.user_id.toString(),
         theme: theme || 'light',
         language: language || 'en',
         currency: currency || 'USD',
@@ -110,20 +103,19 @@ export async function PUT(request: NextRequest) {
       });
     }
 
-    // For existing settings, just update the timestamp since we can't update the theme/language columns
-    await query(
-      `UPDATE user_settings SET updated_at = NOW() WHERE user_id = ?`,
-      [user.id]
-    );
-
-    const updatedSettings = await queryOne<any>(
-      'SELECT * FROM user_settings WHERE user_id = ?',
-      [user.id]
-    );
+    // For existing settings, just update the timestamp
+    const updatedSettings = await prisma.user_settings.update({
+      where: { id: existing.id },
+      data: {
+        updated_at: new Date(),
+      },
+    });
 
     // Return settings with client-provided values
     const settingsWithValues = {
       ...updatedSettings,
+      id: updatedSettings.id.toString(),
+      user_id: updatedSettings.user_id.toString(),
       theme: theme || 'light',
       language: language || 'en', 
       currency: currency || 'USD',

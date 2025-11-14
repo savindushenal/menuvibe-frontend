@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken } from '@/lib/auth';
-import { query, queryOne } from '@/lib/db';
-import pool from '@/lib/db';
+import prisma from '@/lib/prisma';
 import { put } from '@vercel/blob';
 
 export async function GET(request: NextRequest) {
@@ -14,10 +13,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const profile = await queryOne<any>(
-      'SELECT * FROM business_profiles WHERE user_id = ?',
-      [authUser.id]
-    );
+    const profile = await prisma.business_profiles.findFirst({
+      where: { user_id: BigInt(authUser.id) },
+    });
 
     if (!profile) {
       return NextResponse.json({
@@ -27,30 +25,17 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Parse JSON fields
-    try {
-      if (profile.operating_hours) {
-        profile.operating_hours = typeof profile.operating_hours === 'string' 
-          ? JSON.parse(profile.operating_hours) 
-          : profile.operating_hours;
-      }
-      if (profile.services) {
-        profile.services = typeof profile.services === 'string' 
-          ? JSON.parse(profile.services) 
-          : profile.services;
-      }
-      if (profile.social_media) {
-        profile.social_media = typeof profile.social_media === 'string' 
-          ? JSON.parse(profile.social_media) 
-          : profile.social_media;
-      }
-    } catch (e) {
-      console.error('Error parsing business profile JSON:', e);
-    }
-
+    // Parse JSON fields for frontend
     return NextResponse.json({
       success: true,
-      data: profile
+      data: {
+        ...profile,
+        id: profile.id.toString(),
+        user_id: profile.user_id.toString(),
+        operating_hours: profile.operating_hours ? JSON.parse(profile.operating_hours as string) : null,
+        services: profile.services ? JSON.parse(profile.services as string) : null,
+        social_media: profile.social_media ? JSON.parse(profile.social_media as string) : null,
+      }
     });
   } catch (error) {
     console.error('Error fetching business profile:', error);
@@ -72,10 +57,10 @@ export async function POST(request: NextRequest) {
 
   try {
     // Check if profile already exists
-    const existing = await queryOne<any>(
-      'SELECT id FROM business_profiles WHERE user_id = ?',
-      [authUser.id]
-    );
+    const existing = await prisma.business_profiles.findFirst({
+      where: { user_id: BigInt(authUser.id) },
+      select: { id: true },
+    });
 
     if (existing) {
       return NextResponse.json(
@@ -151,41 +136,40 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new profile
-    const [result]: any = await pool.execute(
-      `INSERT INTO business_profiles 
-      (user_id, business_name, business_type, description, address_line_1, address_line_2, city, state, country, postal_code, phone, email, website, logo_url, cuisine_type, seating_capacity, operating_hours, services, social_media, created_at, updated_at) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [
-        authUser.id, 
-        business_name || null, 
-        business_type || null, 
-        description || null,
-        address_line_1 || null, 
-        address_line_2 || null,
-        city || null, 
-        state || null, 
-        country || 'US', 
-        postal_code || null, 
-        phone || null, 
-        email || null, 
-        website || null, 
-        logo_url || null,
-        cuisine_type || null,
-        seating_capacity || null,
-        operating_hours ? JSON.stringify(operating_hours) : null,
-        services ? JSON.stringify(services) : null,
-        social_media ? JSON.stringify(social_media) : null
-      ]
-    );
-
-    const profile = await queryOne<any>(
-      'SELECT * FROM business_profiles WHERE id = ?',
-      [result.insertId]
-    );
+    const profile = await prisma.business_profiles.create({
+      data: {
+        user_id: BigInt(authUser.id),
+        business_name: business_name || null,
+        business_type: business_type || null,
+        description: description || null,
+        address_line_1: address_line_1 || null,
+        address_line_2: address_line_2 || null,
+        city: city || null,
+        state: state || null,
+        country: country || 'US',
+        postal_code: postal_code || null,
+        phone: phone || null,
+        email: email || null,
+        website: website || null,
+        logo_url: logo_url || null,
+        cuisine_type: cuisine_type || null,
+        seating_capacity: seating_capacity || null,
+        operating_hours: operating_hours ? JSON.stringify(operating_hours) : null,
+        services: services ? JSON.stringify(services) : null,
+        social_media: social_media ? JSON.stringify(social_media) : null,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      data: profile,
+      data: {
+        ...profile,
+        id: profile.id.toString(),
+        user_id: profile.user_id.toString(),
+        operating_hours: profile.operating_hours ? JSON.parse(profile.operating_hours as string) : null,
+        services: profile.services ? JSON.parse(profile.services as string) : null,
+        social_media: profile.social_media ? JSON.parse(profile.social_media as string) : null,
+      },
       message: 'Business profile created successfully'
     }, { status: 201 });
   } catch (error: any) {
@@ -236,10 +220,10 @@ export async function PUT(request: NextRequest) {
     let logo_url = formData.get('logo_url') as string | null;
 
     // Check if profile exists
-    const existing = await queryOne<any>(
-      'SELECT id, logo_url FROM business_profiles WHERE user_id = ?',
-      [authUser.id]
-    );
+    const existing = await prisma.business_profiles.findFirst({
+      where: { user_id: BigInt(authUser.id) },
+      select: { id: true, logo_url: true },
+    });
 
     if (!existing) {
       return NextResponse.json(
@@ -278,46 +262,42 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update profile
-    await query(
-      `UPDATE business_profiles 
-      SET business_name = ?, business_type = ?, description = ?, address_line_1 = ?, address_line_2 = ?, 
-          city = ?, state = ?, country = ?, postal_code = ?, phone = ?, email = ?, website = ?, 
-          logo_url = ?, primary_color = ?, secondary_color = ?, cuisine_type = ?, seating_capacity = ?, 
-          operating_hours = ?, services = ?, social_media = ?, updated_at = NOW()
-      WHERE user_id = ?`,
-      [
-        business_name || null, 
-        business_type || null, 
-        description || null,
-        address_line_1 || null,
-        address_line_2 || null,
-        city || null, 
-        state || null, 
-        country || 'US', 
-        postal_code || null, 
-        phone || null, 
-        email || null, 
-        website || null, 
-        logo_url || null,
-        primary_color || null,
-        secondary_color || null,
-        cuisine_type || null,
-        seating_capacity || null,
-        operating_hours ? JSON.stringify(operating_hours) : null,
-        services ? JSON.stringify(services) : null,
-        social_media ? JSON.stringify(social_media) : null,
-        authUser.id
-      ]
-    );
-
-    const profile = await queryOne<any>(
-      'SELECT * FROM business_profiles WHERE user_id = ?',
-      [authUser.id]
-    );
+    const profile = await prisma.business_profiles.update({
+      where: { id: existing.id },
+      data: {
+        business_name: business_name || null,
+        business_type: business_type || null,
+        description: description || null,
+        address_line_1: address_line_1 || null,
+        address_line_2: address_line_2 || null,
+        city: city || null,
+        state: state || null,
+        country: country || 'US',
+        postal_code: postal_code || null,
+        phone: phone || null,
+        email: email || null,
+        website: website || null,
+        logo_url: logo_url || null,
+        primary_color: primary_color || null,
+        secondary_color: secondary_color || null,
+        cuisine_type: cuisine_type || null,
+        seating_capacity: seating_capacity || null,
+        operating_hours: operating_hours ? JSON.stringify(operating_hours) : null,
+        services: services ? JSON.stringify(services) : null,
+        social_media: social_media ? JSON.stringify(social_media) : null,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      data: profile,
+      data: {
+        ...profile,
+        id: profile.id.toString(),
+        user_id: profile.user_id.toString(),
+        operating_hours: profile.operating_hours ? JSON.parse(profile.operating_hours as string) : null,
+        services: profile.services ? JSON.parse(profile.services as string) : null,
+        social_media: profile.social_media ? JSON.parse(profile.social_media as string) : null,
+      },
       message: 'Business profile updated successfully'
     });
   } catch (error) {

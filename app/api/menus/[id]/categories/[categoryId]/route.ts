@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
-import { query, queryOne } from '@/lib/db';
+import prisma from '@/lib/prisma';
 
 // PUT /api/menus/[id]/categories/[categoryId] - Update a category
 export async function PUT(
@@ -12,13 +12,17 @@ export async function PUT(
 
   try {
     // Verify category belongs to user
-    const category = await queryOne<any>(
-      `SELECT mc.* FROM menu_categories mc
-       JOIN menus m ON mc.menu_id = m.id
-       JOIN locations l ON m.location_id = l.id
-       WHERE mc.id = ? AND mc.menu_id = ? AND l.user_id = ?`,
-      [params.categoryId, params.id, user.id]
-    );
+    const category = await prisma.menu_categories.findFirst({
+      where: {
+        id: BigInt(params.categoryId),
+        menu_id: BigInt(params.id),
+        menus: {
+          locations: {
+            user_id: BigInt(user.id),
+          },
+        },
+      },
+    });
 
     if (!category) {
       return NextResponse.json(
@@ -30,41 +34,28 @@ export async function PUT(
     const body = await request.json();
     const { name, description, sort_order } = body;
 
-    // Build update query
-    const updates: string[] = [];
-    const values: any[] = [];
+    // Build update data
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (sort_order !== undefined) updateData.sort_order = sort_order;
 
-    if (name !== undefined) {
-      updates.push('name = ?');
-      values.push(name);
-    }
-    if (description !== undefined) {
-      updates.push('description = ?');
-      values.push(description);
-    }
-    if (sort_order !== undefined) {
-      updates.push('sort_order = ?');
-      values.push(sort_order);
-    }
-
-    updates.push('updated_at = NOW()');
-    values.push(params.categoryId);
-
-    await query(
-      `UPDATE menu_categories SET ${updates.join(', ')} WHERE id = ?`,
-      values
-    );
-
-    // Get updated category
-    const updatedCategory = await queryOne<any>(
-      'SELECT * FROM menu_categories WHERE id = ?',
-      [params.categoryId]
-    );
+    // Update category
+    const updatedCategory = await prisma.menu_categories.update({
+      where: { id: BigInt(params.categoryId) },
+      data: updateData,
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Category updated successfully',
-      data: { category: updatedCategory },
+      data: { 
+        category: {
+          ...updatedCategory,
+          id: updatedCategory.id.toString(),
+          menu_id: updatedCategory.menu_id.toString(),
+        }
+      },
     });
   } catch (error) {
     console.error('Error updating category:', error);
@@ -85,13 +76,17 @@ export async function DELETE(
 
   try {
     // Verify category belongs to user
-    const category = await queryOne<any>(
-      `SELECT mc.* FROM menu_categories mc
-       JOIN menus m ON mc.menu_id = m.id
-       JOIN locations l ON m.location_id = l.id
-       WHERE mc.id = ? AND mc.menu_id = ? AND l.user_id = ?`,
-      [params.categoryId, params.id, user.id]
-    );
+    const category = await prisma.menu_categories.findFirst({
+      where: {
+        id: BigInt(params.categoryId),
+        menu_id: BigInt(params.id),
+        menus: {
+          locations: {
+            user_id: BigInt(user.id),
+          },
+        },
+      },
+    });
 
     if (!category) {
       return NextResponse.json(
@@ -101,19 +96,20 @@ export async function DELETE(
     }
 
     // Check if category has menu items
-    const items = await query<any>(
-      'SELECT id FROM menu_items WHERE category_id = ? LIMIT 1',
-      [params.categoryId]
-    );
+    const itemCount = await prisma.menu_items.count({
+      where: { category_id: BigInt(params.categoryId) },
+    });
 
-    if (items.length > 0) {
+    if (itemCount > 0) {
       return NextResponse.json(
         { success: false, message: 'Cannot delete category with existing menu items' },
         { status: 400 }
       );
     }
 
-    await query('DELETE FROM menu_categories WHERE id = ?', [params.categoryId]);
+    await prisma.menu_categories.delete({
+      where: { id: BigInt(params.categoryId) },
+    });
 
     return NextResponse.json({
       success: true,

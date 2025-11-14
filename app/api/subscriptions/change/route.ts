@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
-import { query, queryOne } from '@/lib/db';
-import pool from '@/lib/db';
-import { ResultSetHeader } from 'mysql2';
+import prisma from '@/lib/prisma';
 
 // POST /api/subscriptions/change - Upgrade or downgrade subscription
 export async function POST(request: NextRequest) {
@@ -21,10 +19,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the new plan
-    const newPlan = await queryOne<any>(
-      'SELECT * FROM subscription_plans WHERE id = ? AND is_active = 1',
-      [plan_id]
-    );
+    const newPlan = await prisma.subscription_plans.findUnique({
+      where: { 
+        id: BigInt(plan_id),
+        is_active: true
+      }
+    });
 
     if (!newPlan) {
       return NextResponse.json(
@@ -34,64 +34,70 @@ export async function POST(request: NextRequest) {
     }
 
     // Get current subscription
-    const currentSubscription = await queryOne<any>(
-      `SELECT us.*, sp.name as current_plan_name, sp.slug as current_plan_slug, sp.price as current_price
-       FROM user_subscriptions us
-       JOIN subscription_plans sp ON us.subscription_plan_id = sp.id
-       WHERE us.user_id = ? AND us.status = 'active'
-       ORDER BY us.created_at DESC LIMIT 1`,
-      [user.id]
-    );
+    const currentSubscription = await prisma.user_subscriptions.findFirst({
+      where: {
+        user_id: BigInt(user.id),
+        status: 'active'
+      },
+      include: {
+        subscription_plans: true
+      },
+      orderBy: { created_at: 'desc' }
+    });
 
     // Determine if upgrade or downgrade
     const isUpgrade = currentSubscription 
-      ? newPlan.price > currentSubscription.current_price 
+      ? Number(newPlan.price) > Number(currentSubscription.subscription_plans.price)
       : true;
 
     const changeType = isUpgrade ? 'upgrade' : 'downgrade';
 
     // Deactivate current subscription
     if (currentSubscription) {
-      await query(
-        'UPDATE user_subscriptions SET status = ?, ends_at = NOW(), updated_at = NOW() WHERE id = ?',
-        ['cancelled', currentSubscription.id]
-      );
+      await prisma.user_subscriptions.update({
+        where: { id: currentSubscription.id },
+        data: {
+          status: 'cancelled',
+          ends_at: new Date()
+        }
+      });
     }
 
     // Create new subscription
-    const [result] = await pool.execute<ResultSetHeader>(
-      `INSERT INTO user_subscriptions 
-       (user_id, subscription_plan_id, status, starts_at, is_active, created_at, updated_at) 
-       VALUES (?, ?, 'active', NOW(), 1, NOW(), NOW())`,
-      [user.id, plan_id]
-    );
-
-    // Get the newly created subscription with plan details
-    const newSubscription = await queryOne<any>(
-      `SELECT us.*, sp.name, sp.slug, sp.price, sp.billing_period, sp.features, sp.limits
-       FROM user_subscriptions us
-       JOIN subscription_plans sp ON us.subscription_plan_id = sp.id
-       WHERE us.id = ?`,
-      [result.insertId]
-    );
+    const newSubscription = await prisma.user_subscriptions.create({
+      data: {
+        user_id: BigInt(user.id),
+        subscription_plan_id: newPlan.id,
+        status: 'active',
+        starts_at: new Date(),
+        is_active: true
+      },
+      include: {
+        subscription_plans: true
+      }
+    });
 
     // Parse JSON fields
-    if (newSubscription) {
-      newSubscription.features = newSubscription.features 
-        ? JSON.parse(newSubscription.features) 
-        : {};
-      newSubscription.limits = newSubscription.limits 
-        ? JSON.parse(newSubscription.limits) 
-        : {};
-    }
+    const formattedSubscription = {
+      ...newSubscription,
+      id: newSubscription.id.toString(),
+      user_id: newSubscription.user_id.toString(),
+      subscription_plan_id: newSubscription.subscription_plan_id.toString(),
+      features: typeof newSubscription.subscription_plans.features === 'string'
+        ? JSON.parse(newSubscription.subscription_plans.features)
+        : newSubscription.subscription_plans.features,
+      limits: typeof newSubscription.subscription_plans.limits === 'string'
+        ? JSON.parse(newSubscription.subscription_plans.limits)
+        : newSubscription.subscription_plans.limits
+    };
 
     return NextResponse.json({
       success: true,
       message: `Successfully ${changeType}d to ${newPlan.name} plan`,
       data: {
-        subscription: newSubscription,
+        subscription: formattedSubscription,
         change_type: changeType,
-        previous_plan: currentSubscription?.current_plan_name || 'None',
+        previous_plan: currentSubscription?.subscription_plans.name || 'None',
         new_plan: newPlan.name
       }
     }, { status: 200 });

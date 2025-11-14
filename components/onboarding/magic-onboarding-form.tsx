@@ -89,6 +89,7 @@ export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardin
   const [logo, setLogo] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [internalSubmitting, setInternalSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<OnboardingData>({
     business_name: '',
     business_type: '',
@@ -107,6 +108,45 @@ export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardin
     services: [],
     operating_hours: {},
   });
+
+  // Load existing business profile data
+  React.useEffect(() => {
+    const loadBusinessProfile = async () => {
+      try {
+        const response = await apiClient.getBusinessProfile();
+        if (response.success && response.data) {
+          const profile = response.data;
+          setFormData({
+            business_name: profile.business_name || '',
+            business_type: profile.business_type || '',
+            description: profile.description || '',
+            phone: profile.phone || '',
+            email: profile.email || '',
+            website: profile.website || '',
+            address_line_1: profile.address_line_1 || '',
+            address_line_2: profile.address_line_2 || '',
+            city: profile.city || '',
+            state: profile.state || '',
+            postal_code: profile.postal_code || '',
+            country: profile.country || 'US',
+            cuisine_type: profile.cuisine_type || '',
+            seating_capacity: profile.seating_capacity || '',
+            services: Array.isArray(profile.services) ? profile.services : [],
+            operating_hours: profile.operating_hours || {},
+          });
+          if (profile.logo_url) {
+            setLogo(profile.logo_url);
+          }
+        }
+      } catch (error) {
+        console.log('No existing business profile found, starting fresh');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBusinessProfile();
+  }, []);
 
   const totalSteps = 4;
   const progress = ((currentStep + 1) / totalSteps) * 100;
@@ -619,62 +659,73 @@ export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardin
       </CardHeader>
 
       <CardContent className="pb-8">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentStep}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-[400px]"
-          >
-            <div className="mb-6">
-              <div className="flex items-center space-x-3 mb-4">
-                {React.createElement(steps[currentStep].icon, { 
-                  className: "w-8 h-8 text-blue-600" 
-                })}
-                <h2 className="text-xl font-semibold">{steps[currentStep].title}</h2>
-              </div>
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading your profile...</p>
             </div>
-            
-            {steps[currentStep].content}
-          </motion.div>
-        </AnimatePresence>
+          </div>
+        ) : (
+          <>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentStep}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="min-h-[400px]"
+              >
+                <div className="mb-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    {React.createElement(steps[currentStep].icon, { 
+                      className: "w-8 h-8 text-blue-600" 
+                    })}
+                    <h2 className="text-xl font-semibold">{steps[currentStep].title}</h2>
+                  </div>
+                </div>
+                
+                {steps[currentStep].content}
+              </motion.div>
+            </AnimatePresence>
 
-        <div className="flex justify-between items-center mt-8 pt-6 border-t">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={currentStep === 0}
-            className="flex items-center space-x-2"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span>Previous</span>
-          </Button>
+            <div className="flex justify-between items-center mt-8 pt-6 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 0}
+                className="flex items-center space-x-2"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span>Previous</span>
+              </Button>
 
-          {currentStep === totalSteps - 1 ? (
-            <Button
-              type="button"
-              onClick={handleSubmit}
-              disabled={internalSubmitting || isSubmitting || !isFormValid()}
-              className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-            >
-              <Check className="w-4 h-4" />
-              <span>{(internalSubmitting || isSubmitting) ? 'Setting up...' : 'Complete Setup'}</span>
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              onClick={handleNext}
-              disabled={currentStep === 0 && (!formData.business_name || !formData.business_type)}
-              className="flex items-center space-x-2"
-            >
-              <span>Next</span>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
+              {currentStep === totalSteps - 1 ? (
+                <Button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={internalSubmitting || isSubmitting || !isFormValid()}
+                  className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{(internalSubmitting || isSubmitting) ? 'Setting up...' : 'Complete Setup'}</span>
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={currentStep === 0 && (!formData.business_name || !formData.business_type)}
+                  className="flex items-center space-x-2"
+                >
+                  <span>Next</span>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );

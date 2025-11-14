@@ -3,7 +3,7 @@
  * Server-side only (uses database)
  */
 
-import { queryOne } from './db';
+import prisma from './prisma';
 import { slugify, generatePublicId, extractPublicIdFromSlug, isValidSlug } from './slug-utils';
 
 // Re-export client-safe utilities
@@ -26,10 +26,10 @@ export async function generateMenuSlug(
     let isUnique = false;
     let attempts = 0;
     while (!isUnique && attempts < 10) {
-      const existing = await queryOne<any>(
-        'SELECT id FROM menus WHERE public_id = ?',
-        [publicId]
-      );
+      const existing = await prisma.menus.findFirst({
+        where: { public_id: publicId },
+        select: { id: true }
+      });
       
       if (!existing) {
         isUnique = true;
@@ -46,10 +46,10 @@ export async function generateMenuSlug(
   const baseSlug = `${locationSlug}-${menuSlug}-${publicId}`;
 
   // Ensure slug is unique (should be because of public_id, but double-check)
-  const existing = await queryOne<any>(
-    'SELECT id FROM menus WHERE slug = ?',
-    [baseSlug]
-  );
+  const existing = await prisma.menus.findFirst({
+    where: { slug: baseSlug },
+    select: { id: true }
+  });
 
   if (existing) {
     // Extremely rare, but if collision happens, add timestamp

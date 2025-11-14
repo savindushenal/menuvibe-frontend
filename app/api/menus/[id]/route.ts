@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
-import { query, queryOne } from '@/lib/db';
+import prisma from '@/lib/prisma';
 
 // GET /api/menus/[id] - Get a specific menu
 export async function GET(
@@ -11,12 +11,19 @@ export async function GET(
   if (!user) return unauthorized();
 
   try {
-    const menu = await queryOne<any>(
-      `SELECT m.* FROM menus m
-       JOIN locations l ON m.location_id = l.id
-       WHERE m.id = ? AND l.user_id = ?`,
-      [params.id, user.id]
-    );
+    const menu = await prisma.menus.findFirst({
+      where: {
+        id: BigInt(params.id),
+        locations: {
+          user_id: BigInt(user.id),
+        },
+      },
+      include: {
+        menu_items: {
+          orderBy: { sort_order: 'asc' },
+        },
+      },
+    });
 
     if (!menu) {
       return NextResponse.json(
@@ -25,15 +32,20 @@ export async function GET(
       );
     }
 
-    // Get menu items
-    const items = await query<any>(
-      'SELECT * FROM menu_items WHERE menu_id = ? ORDER BY sort_order ASC',
-      [menu.id]
-    );
-
     return NextResponse.json({
       success: true,
-      data: { menu: { ...menu, items } },
+      data: { 
+        menu: {
+          ...menu,
+          id: menu.id.toString(),
+          location_id: menu.location_id.toString(),
+          items: menu.menu_items.map(item => ({
+            ...item,
+            id: item.id.toString(),
+            menu_id: item.menu_id.toString(),
+          })),
+        } 
+      },
     });
   } catch (error) {
     console.error('Error fetching menu:', error);
@@ -65,12 +77,14 @@ export async function PUT(
     const sort_order = sortOrderValue ? parseInt(sortOrderValue) : undefined;
 
     // Verify menu belongs to user
-    const menu = await queryOne<any>(
-      `SELECT m.* FROM menus m
-       JOIN locations l ON m.location_id = l.id
-       WHERE m.id = ? AND l.user_id = ?`,
-      [params.id, user.id]
-    );
+    const menu = await prisma.menus.findFirst({
+      where: {
+        id: BigInt(params.id),
+        locations: {
+          user_id: BigInt(user.id),
+        },
+      },
+    });
 
     if (!menu) {
       return NextResponse.json(
@@ -79,63 +93,43 @@ export async function PUT(
       );
     }
 
-    // Build update query dynamically
-    const updates: string[] = [];
-    const values: any[] = [];
+    // Build update data object
+    const updateData: any = {};
 
-    if (name !== undefined) {
-      updates.push('name = ?');
-      values.push(name);
-    }
-    if (description !== undefined) {
-      updates.push('description = ?');
-      values.push(description);
-    }
-    if (style !== undefined) {
-      updates.push('style = ?');
-      values.push(style);
-    }
-    if (currency !== undefined) {
-      updates.push('currency = ?');
-      values.push(currency);
-    }
-    if (is_active !== undefined) {
-      updates.push('is_active = ?');
-      values.push(is_active);
-    }
-    if (is_featured !== undefined) {
-      updates.push('is_featured = ?');
-      values.push(is_featured);
-    }
-    if (sort_order !== undefined) {
-      updates.push('sort_order = ?');
-      values.push(sort_order);
-    }
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (style !== undefined) updateData.style = style;
+    if (currency !== undefined) updateData.currency = currency;
+    if (is_active !== undefined) updateData.is_active = is_active;
+    if (is_featured !== undefined) updateData.is_featured = is_featured;
+    if (sort_order !== undefined) updateData.sort_order = sort_order;
 
-    updates.push('updated_at = NOW()');
-    values.push(params.id);
-
-    await query(
-      `UPDATE menus SET ${updates.join(', ')} WHERE id = ?`,
-      values
-    );
-
-    // Get updated menu
-    const updatedMenu = await queryOne<any>(
-      'SELECT * FROM menus WHERE id = ?',
-      [params.id]
-    );
-
-    // Get menu items
-    const items = await query<any>(
-      'SELECT * FROM menu_items WHERE menu_id = ? ORDER BY sort_order ASC',
-      [params.id]
-    );
+    // Update menu
+    const updatedMenu = await prisma.menus.update({
+      where: { id: BigInt(params.id) },
+      data: updateData,
+      include: {
+        menu_items: {
+          orderBy: { sort_order: 'asc' },
+        },
+      },
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Menu updated successfully',
-      data: { menu: { ...updatedMenu, items } },
+      data: { 
+        menu: {
+          ...updatedMenu,
+          id: updatedMenu.id.toString(),
+          location_id: updatedMenu.location_id.toString(),
+          items: updatedMenu.menu_items.map(item => ({
+            ...item,
+            id: item.id.toString(),
+            menu_id: item.menu_id.toString(),
+          })),
+        } 
+      },
     });
   } catch (error) {
     console.error('Error updating menu:', error);
@@ -156,12 +150,14 @@ export async function DELETE(
 
   try {
     // Verify menu belongs to user
-    const menu = await queryOne<any>(
-      `SELECT m.* FROM menus m
-       JOIN locations l ON m.location_id = l.id
-       WHERE m.id = ? AND l.user_id = ?`,
-      [params.id, user.id]
-    );
+    const menu = await prisma.menus.findFirst({
+      where: {
+        id: BigInt(params.id),
+        locations: {
+          user_id: BigInt(user.id),
+        },
+      },
+    });
 
     if (!menu) {
       return NextResponse.json(
@@ -170,14 +166,10 @@ export async function DELETE(
       );
     }
 
-    // Delete menu items first
-    await query('DELETE FROM menu_items WHERE menu_id = ?', [params.id]);
-
-    // Delete menu categories
-    await query('DELETE FROM menu_categories WHERE menu_id = ?', [params.id]);
-
-    // Delete menu
-    await query('DELETE FROM menus WHERE id = ?', [params.id]);
+    // Delete menu (cascade delete will handle menu_items and menu_categories)
+    await prisma.menus.delete({
+      where: { id: BigInt(params.id) },
+    });
 
     return NextResponse.json({
       success: true,

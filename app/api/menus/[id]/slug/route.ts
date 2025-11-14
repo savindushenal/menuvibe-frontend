@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { queryOne } from '@/lib/db';
+import prisma from '@/lib/prisma';
 
 /**
  * GET /api/menus/[id]/slug
@@ -21,10 +21,10 @@ export async function GET(
     }
 
     // Get menu slug
-    const menu = await queryOne<any>(
-      'SELECT id, slug, name FROM menus WHERE id = ?',
-      [menuId]
-    );
+    const menu = await prisma.menus.findUnique({
+      where: { id: BigInt(menuId) },
+      select: { id: true, slug: true, name: true },
+    });
 
     if (!menu) {
       return NextResponse.json(

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
-import { query, queryOne } from '@/lib/db';
+import prisma from '@/lib/prisma';
 
 export async function GET(
   request: NextRequest,
@@ -10,10 +10,12 @@ export async function GET(
   if (!user) return unauthorized();
 
   try {
-    const location = await queryOne<any>(
-      'SELECT * FROM locations WHERE id = ? AND user_id = ?',
-      [params.id, user.id]
-    );
+    const location = await prisma.locations.findFirst({
+      where: {
+        id: BigInt(params.id),
+        user_id: BigInt(user.id),
+      },
+    });
 
     if (!location) {
       return NextResponse.json(
@@ -24,7 +26,14 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: location
+      data: {
+        ...location,
+        id: location.id.toString(),
+        user_id: location.user_id.toString(),
+        operating_hours: location.operating_hours ? JSON.parse(location.operating_hours as string) : null,
+        services: location.services ? JSON.parse(location.services as string) : null,
+        social_media: location.social_media ? JSON.parse(location.social_media as string) : null,
+      }
     });
   } catch (error) {
     console.error('Error fetching location:', error);
@@ -71,10 +80,12 @@ export async function PUT(
     } = body;
 
     // Check if location exists and belongs to user
-    const location = await queryOne<any>(
-      'SELECT * FROM locations WHERE id = ? AND user_id = ?',
-      [params.id, user.id]
-    );
+    const location = await prisma.locations.findFirst({
+      where: {
+        id: BigInt(params.id),
+        user_id: BigInt(user.id),
+      },
+    });
 
     if (!location) {
       return NextResponse.json(
@@ -85,59 +96,59 @@ export async function PUT(
 
     // If setting as default, remove default from others
     if (is_default) {
-      await query(
-        'UPDATE locations SET is_default = 0 WHERE user_id = ? AND id != ?',
-        [user.id, params.id]
-      );
+      await prisma.locations.updateMany({
+        where: {
+          user_id: BigInt(user.id),
+          id: { not: BigInt(params.id) },
+        },
+        data: { is_default: false },
+      });
     }
 
-    // Build update query dynamically based on provided fields
-    const updates: string[] = [];
-    const values: any[] = [];
+    // Build update data object
+    const updateData: any = {};
 
-    if (name !== undefined) { updates.push('name = ?'); values.push(name); }
-    if (description !== undefined) { updates.push('description = ?'); values.push(description); }
-    if (phone !== undefined) { updates.push('phone = ?'); values.push(phone || null); }
-    if (email !== undefined) { updates.push('email = ?'); values.push(email || null); }
-    if (website !== undefined) { updates.push('website = ?'); values.push(website || null); }
-    if (address_line_1 !== undefined) { updates.push('address_line_1 = ?'); values.push(address_line_1); }
-    if (address_line_2 !== undefined) { updates.push('address_line_2 = ?'); values.push(address_line_2 || null); }
-    if (city !== undefined) { updates.push('city = ?'); values.push(city); }
-    if (state !== undefined) { updates.push('state = ?'); values.push(state); }
-    if (postal_code !== undefined) { updates.push('postal_code = ?'); values.push(postal_code); }
-    if (country !== undefined) { updates.push('country = ?'); values.push(country); }
-    if (cuisine_type !== undefined) { updates.push('cuisine_type = ?'); values.push(cuisine_type || null); }
-    if (seating_capacity !== undefined) { updates.push('seating_capacity = ?'); values.push(seating_capacity || null); }
-    if (operating_hours !== undefined) { updates.push('operating_hours = ?'); values.push(operating_hours ? JSON.stringify(operating_hours) : null); }
-    if (services !== undefined) { updates.push('services = ?'); values.push(services ? JSON.stringify(services) : null); }
-    if (logo_url !== undefined) { updates.push('logo_url = ?'); values.push(logo_url || null); }
-    if (primary_color !== undefined) { updates.push('primary_color = ?'); values.push(primary_color || null); }
-    if (secondary_color !== undefined) { updates.push('secondary_color = ?'); values.push(secondary_color || null); }
-    if (social_media !== undefined) { updates.push('social_media = ?'); values.push(social_media ? JSON.stringify(social_media) : null); }
-    if (latitude !== undefined) { updates.push('latitude = ?'); values.push(latitude || null); }
-    if (longitude !== undefined) { updates.push('longitude = ?'); values.push(longitude || null); }
-    if (is_active !== undefined) { updates.push('is_active = ?'); values.push(is_active ? 1 : 0); }
-    if (is_default !== undefined) { updates.push('is_default = ?'); values.push(is_default ? 1 : 0); }
-
-    updates.push('updated_at = NOW()');
-    values.push(params.id, user.id);
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (phone !== undefined) updateData.phone = phone || null;
+    if (email !== undefined) updateData.email = email || null;
+    if (website !== undefined) updateData.website = website || null;
+    if (address_line_1 !== undefined) updateData.address_line_1 = address_line_1;
+    if (address_line_2 !== undefined) updateData.address_line_2 = address_line_2 || null;
+    if (city !== undefined) updateData.city = city;
+    if (state !== undefined) updateData.state = state;
+    if (postal_code !== undefined) updateData.postal_code = postal_code;
+    if (country !== undefined) updateData.country = country;
+    if (cuisine_type !== undefined) updateData.cuisine_type = cuisine_type || null;
+    if (seating_capacity !== undefined) updateData.seating_capacity = seating_capacity || null;
+    if (operating_hours !== undefined) updateData.operating_hours = operating_hours ? JSON.stringify(operating_hours) : null;
+    if (services !== undefined) updateData.services = services ? JSON.stringify(services) : null;
+    if (logo_url !== undefined) updateData.logo_url = logo_url || null;
+    if (primary_color !== undefined) updateData.primary_color = primary_color || null;
+    if (secondary_color !== undefined) updateData.secondary_color = secondary_color || null;
+    if (social_media !== undefined) updateData.social_media = social_media ? JSON.stringify(social_media) : null;
+    if (latitude !== undefined) updateData.latitude = latitude || null;
+    if (longitude !== undefined) updateData.longitude = longitude || null;
+    if (is_active !== undefined) updateData.is_active = is_active;
+    if (is_default !== undefined) updateData.is_default = is_default;
 
     // Update location
-    await query(
-      `UPDATE locations SET ${updates.join(', ')} WHERE id = ? AND user_id = ?`,
-      values
-    );
-
-    // Get updated location
-    const updatedLocation = await queryOne<any>(
-      'SELECT * FROM locations WHERE id = ?',
-      [params.id]
-    );
+    const updatedLocation = await prisma.locations.update({
+      where: { id: BigInt(params.id) },
+      data: updateData,
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Location updated successfully',
-      data: updatedLocation
+      data: {
+        ...updatedLocation,
+        id: updatedLocation.id.toString(),
+        user_id: updatedLocation.user_id.toString(),
+        operating_hours: updatedLocation.operating_hours ? JSON.parse(updatedLocation.operating_hours as string) : null,
+        services: updatedLocation.services ? JSON.parse(updatedLocation.services as string) : null,
+        social_media: updatedLocation.social_media ? JSON.parse(updatedLocation.social_media as string) : null,
+      }
     });
   } catch (error) {
     console.error('Error updating location:', error);
@@ -157,10 +168,12 @@ export async function DELETE(
 
   try {
     // Check if location exists and belongs to user
-    const location = await queryOne<any>(
-      'SELECT * FROM locations WHERE id = ? AND user_id = ?',
-      [params.id, user.id]
-    );
+    const location = await prisma.locations.findFirst({
+      where: {
+        id: BigInt(params.id),
+        user_id: BigInt(user.id),
+      },
+    });
 
     if (!location) {
       return NextResponse.json(
@@ -178,10 +191,9 @@ export async function DELETE(
     }
 
     // Delete location
-    await query(
-      'DELETE FROM locations WHERE id = ? AND user_id = ?',
-      [params.id, user.id]
-    );
+    await prisma.locations.delete({
+      where: { id: BigInt(params.id) },
+    });
 
     return NextResponse.json({
       success: true,

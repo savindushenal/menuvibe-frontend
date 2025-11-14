@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
-import { query, queryOne } from '@/lib/db';
+import prisma from '@/lib/prisma';
 
 export async function POST(
   request: NextRequest,
@@ -11,10 +11,12 @@ export async function POST(
 
   try {
     // Check if location exists and belongs to user
-    const location = await queryOne<any>(
-      'SELECT * FROM locations WHERE id = ? AND user_id = ?',
-      [params.id, user.id]
-    );
+    const location = await prisma.locations.findFirst({
+      where: {
+        id: BigInt(params.id),
+        user_id: BigInt(user.id),
+      },
+    });
 
     if (!location) {
       return NextResponse.json(
@@ -24,26 +26,27 @@ export async function POST(
     }
 
     // Remove default from all locations
-    await query(
-      'UPDATE locations SET is_default = 0 WHERE user_id = ?',
-      [user.id]
-    );
+    await prisma.locations.updateMany({
+      where: { user_id: BigInt(user.id) },
+      data: { is_default: false },
+    });
 
     // Set this location as default
-    await query(
-      'UPDATE locations SET is_default = 1, updated_at = NOW() WHERE id = ? AND user_id = ?',
-      [params.id, user.id]
-    );
-
-    const updatedLocation = await queryOne<any>(
-      'SELECT * FROM locations WHERE id = ?',
-      [params.id]
-    );
+    const updatedLocation = await prisma.locations.update({
+      where: { id: BigInt(params.id) },
+      data: { is_default: true },
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Default location updated successfully',
-      data: { location: updatedLocation }
+      data: { 
+        location: {
+          ...updatedLocation,
+          id: updatedLocation.id.toString(),
+          user_id: updatedLocation.user_id.toString(),
+        }
+      }
     });
   } catch (error) {
     console.error('Error setting default location:', error);

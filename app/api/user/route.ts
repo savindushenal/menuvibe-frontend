@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken } from '@/lib/auth';
-import { queryOne } from '@/lib/db';
+import prisma from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   // Get user from token
@@ -14,10 +14,17 @@ export async function GET(request: NextRequest) {
 
   try {
     // Get user details
-    const user = await queryOne<any>(
-      'SELECT id, name, email, email_verified_at, created_at, updated_at FROM users WHERE id = ?',
-      [authUser.id]
-    );
+    const user = await prisma.users.findUnique({
+      where: { id: BigInt(authUser.id) },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        email_verified_at: true,
+        created_at: true,
+        updated_at: true,
+      },
+    });
 
     if (!user) {
       return NextResponse.json(
@@ -26,45 +33,49 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get user's subscription
-    const subscription = await queryOne<any>(
-      `SELECT 
-        us.id,
-        us.status,
-        us.starts_at,
-        us.ends_at,
-        sp.name as plan_name,
-        sp.price,
-        sp.billing_period,
-        sp.features,
-        sp.limits
-      FROM user_subscriptions us
-      JOIN subscription_plans sp ON us.subscription_plan_id = sp.id
-      WHERE us.user_id = ? AND us.status = 'active'
-      ORDER BY us.created_at DESC
-      LIMIT 1`,
-      [user.id]
-    );
+    // Get user's subscription with plan details
+    const subscription = await prisma.user_subscriptions.findFirst({
+      where: {
+        user_id: user.id,
+        status: 'active',
+      },
+      include: {
+        subscription_plans: {
+          select: {
+            name: true,
+            price: true,
+            billing_period: true,
+            features: true,
+            limits: true,
+          },
+        },
+      },
+      orderBy: {
+        created_at: 'desc',
+      },
+    });
 
-    // Parse JSON fields in subscription
-    if (subscription) {
-      try {
-        subscription.features = typeof subscription.features === 'string' 
-          ? JSON.parse(subscription.features) 
-          : subscription.features;
-        subscription.limits = typeof subscription.limits === 'string' 
-          ? JSON.parse(subscription.limits) 
-          : subscription.limits;
-      } catch (e) {
-        console.error('Error parsing subscription JSON:', e);
-      }
-    }
+    // Format subscription data
+    const formattedSubscription = subscription ? {
+      id: subscription.id.toString(),
+      status: subscription.status,
+      starts_at: subscription.starts_at,
+      ends_at: subscription.ends_at,
+      plan_name: subscription.subscription_plans.name,
+      price: subscription.subscription_plans.price,
+      billing_period: subscription.subscription_plans.billing_period,
+      features: subscription.subscription_plans.features,
+      limits: subscription.subscription_plans.limits,
+    } : null;
 
     return NextResponse.json({
       success: true,
       data: {
-        user,
-        subscription: subscription || null
+        user: {
+          ...user,
+          id: user.id.toString(),
+        },
+        subscription: formattedSubscription
       }
     });
   } catch (error) {

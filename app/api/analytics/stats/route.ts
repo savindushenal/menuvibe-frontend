@@ -1,6 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
-import { query, queryOne } from '@/lib/db';
+import prisma from '@/lib/prisma';
+
+// GET /api/analytics/stats - Get analytics statistics for a user's menus
+export async function GET(request: NextRequest) {
+  const user = await getUserFromToken(request);
+  if (!user) return unauthorized();
+
+  try {
+    // Return placeholder data - requires analytics_events table in Prisma schema
+    return NextResponse.json({
+      success: true,
+      data: {
+        overview: { total_scans: 0, total_views: 0, total_orders: 0, unique_visitors: 0 },
+        timeline: [],
+        popular_items: [],
+        popular_tables: [],
+        devices: [],
+        hourly_pattern: [],
+        category_distribution: []
+      },
+      message: 'Analytics feature requires analytics_events table in database schema'
+    });
+  } catch (error) {
+    console.error('Error fetching analytics stats:', error);
+    return NextResponse.json(
+      { success: false, message: 'Failed to fetch analytics' },
+      { status: 500 }
+    );
+  }
+}
 
 // GET /api/analytics/stats - Get analytics statistics for a user's menus
 export async function GET(request: NextRequest) {

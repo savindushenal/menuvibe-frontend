@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
-import { queryOne } from '@/lib/db';
+import prisma from '@/lib/prisma';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
@@ -23,12 +23,24 @@ export async function getUserFromToken(request: NextRequest): Promise<AuthUser |
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; email: string };
     
-    const user = await queryOne<AuthUser>(
-      'SELECT id, name, email, phone FROM users WHERE id = ?',
-      [decoded.userId]
-    );
+    const user = await prisma.users.findUnique({
+      where: { id: BigInt(decoded.userId) },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+      },
+    });
 
-    return user;
+    if (!user) return null;
+
+    return {
+      id: Number(user.id),
+      email: user.email,
+      name: user.name,
+      phone: user.phone || undefined,
+    };
   } catch (error) {
     console.error('Token verification error:', error);
     return null;

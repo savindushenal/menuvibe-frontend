@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne } from '@/lib/db';
+import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -17,10 +17,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user by email
-    const user = await queryOne<any>(
-      'SELECT * FROM users WHERE email = ?',
-      [email]
-    );
+    const user = await prisma.users.findUnique({
+      where: { email },
+    });
 
     if (!user) {
       return NextResponse.json(
@@ -30,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    const isValidPassword = await bcrypt.compare(password, user.password || '');
     if (!isValidPassword) {
       return NextResponse.json(
         { success: false, message: 'Invalid credentials' },
@@ -39,47 +38,84 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user's default location
-    const location = await queryOne<any>(
-      'SELECT * FROM locations WHERE user_id = ? AND is_default = 1 LIMIT 1',
-      [user.id]
-    );
+    const location = await prisma.locations.findFirst({
+      where: {
+        user_id: user.id,
+        is_default: true,
+      },
+    });
 
     // Get user settings
-    const settings = await queryOne<any>(
-      'SELECT * FROM user_settings WHERE user_id = ?',
-      [user.id]
-    );
+    const settings = await prisma.user_settings.findFirst({
+      where: { user_id: user.id },
+    });
 
-    // Get subscription
-    const subscription = await queryOne<any>(
-      `SELECT us.*, sp.name, sp.price, sp.billing_period, sp.features, sp.limits
-       FROM user_subscriptions us
-       JOIN subscription_plans sp ON us.subscription_plan_id = sp.id
-       WHERE us.user_id = ? AND us.status = 'active'
-       ORDER BY us.created_at DESC LIMIT 1`,
-      [user.id]
-    );
+    // Get subscription with plan details
+    const subscription = await prisma.user_subscriptions.findFirst({
+      where: {
+        user_id: user.id,
+        status: 'active',
+      },
+      include: {
+        subscription_plans: {
+          select: {
+            name: true,
+            price: true,
+            billing_period: true,
+            features: true,
+            limits: true,
+          },
+        },
+      },
+      orderBy: {
+        created_at: 'desc',
+      },
+    });
 
     // Create JWT token
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id.toString(), email: user.email },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
     // Remove password from response
-    delete user.password;
+    const { password: _, ...userWithoutPassword } = user;
+
+    // Format subscription data to match old structure
+    const formattedSubscription = subscription ? {
+      ...subscription,
+      name: subscription.subscription_plans.name,
+      price: subscription.subscription_plans.price,
+      billing_period: subscription.subscription_plans.billing_period,
+      features: subscription.subscription_plans.features,
+      limits: subscription.subscription_plans.limits,
+    } : null;
 
     return NextResponse.json({
       success: true,
       message: 'Login successful',
       data: {
         user: {
-          ...user,
-          default_location: location,
-          settings,
+          ...userWithoutPassword,
+          id: userWithoutPassword.id.toString(),
+          default_location: location ? {
+            ...location,
+            id: location.id.toString(),
+            user_id: location.user_id.toString(),
+          } : null,
+          settings: settings ? {
+            ...settings,
+            id: settings.id.toString(),
+            user_id: settings.user_id.toString(),
+          } : null,
         },
-        subscription,
+        subscription: formattedSubscription ? {
+          ...formattedSubscription,
+          id: formattedSubscription.id.toString(),
+          user_id: formattedSubscription.user_id.toString(),
+          subscription_plan_id: formattedSubscription.subscription_plan_id.toString(),
+        } : null,
         token,
       },
     });

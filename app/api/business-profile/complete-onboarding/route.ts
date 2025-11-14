@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken } from '@/lib/auth';
-import { query, queryOne } from '@/lib/db';
-import pool from '@/lib/db';
-import { ResultSetHeader } from 'mysql2';
+import prisma from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   const authUser = await getUserFromToken(request);
@@ -15,10 +13,9 @@ export async function POST(request: NextRequest) {
 
   try {
     // Check if profile exists
-    const profile = await queryOne<any>(
-      'SELECT * FROM business_profiles WHERE user_id = ?',
-      [authUser.id]
-    );
+    const profile = await prisma.business_profiles.findFirst({
+      where: { user_id: BigInt(authUser.id) }
+    });
 
     if (!profile) {
       return NextResponse.json(
@@ -28,10 +25,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already has locations
-    const existingLocations = await query<any>(
-      'SELECT id FROM locations WHERE user_id = ?',
-      [authUser.id]
-    );
+    const existingLocations = await prisma.locations.findMany({
+      where: { user_id: BigInt(authUser.id) },
+      select: { id: true }
+    });
 
     // If no locations exist, create a default location from business profile data
     if (existingLocations.length === 0) {
@@ -75,38 +72,34 @@ export async function POST(request: NextRequest) {
 
         try {
           // Create default location
-          const [locationResult] = await pool.execute<ResultSetHeader>(
-            `INSERT INTO locations 
-            (user_id, name, description, phone, email, website, address_line_1, address_line_2, 
-             city, state, postal_code, country, cuisine_type, seating_capacity, operating_hours, 
-             services, logo_url, primary_color, secondary_color, social_media, is_active, is_default, 
-             created_at, updated_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, NOW(), NOW())`,
-            [
-              authUser.id,
-              profile.business_name,
-              profile.description,
-              profile.phone,
-              profile.email,
-              profile.website,
-              profile.address_line_1,
-              profile.address_line_2,
-              profile.city,
-              profile.state,
-              profile.postal_code,
-              profile.country || 'US',
-              profile.cuisine_type,
-              profile.seating_capacity,
-              operating_hours ? JSON.stringify(operating_hours) : null,
-              services ? JSON.stringify(services) : null,
-              profile.logo_url,
-              profile.primary_color,
-              profile.secondary_color,
-              social_media ? JSON.stringify(social_media) : null
-            ]
-          );
+          const newLocation = await prisma.locations.create({
+            data: {
+              user_id: BigInt(authUser.id),
+              name: profile.business_name,
+              description: profile.description,
+              phone: profile.phone,
+              email: profile.email,
+              website: profile.website,
+              address_line_1: profile.address_line_1,
+              address_line_2: profile.address_line_2,
+              city: profile.city,
+              state: profile.state,
+              postal_code: profile.postal_code,
+              country: profile.country || 'US',
+              cuisine_type: profile.cuisine_type,
+              seating_capacity: profile.seating_capacity,
+              operating_hours: operating_hours ? JSON.stringify(operating_hours) : null,
+              services: services ? JSON.stringify(services) : null,
+              logo_url: profile.logo_url,
+              primary_color: profile.primary_color,
+              secondary_color: profile.secondary_color,
+              social_media: social_media ? JSON.stringify(social_media) : null,
+              is_active: true,
+              is_default: true,
+            }
+          });
 
-          console.log('Default location created with ID:', locationResult.insertId);
+          console.log('Default location created with ID:', newLocation.id.toString());
         } catch (locationError) {
           console.error('Error creating default location:', locationError);
           // Don't fail the entire onboarding if location creation fails
@@ -116,19 +109,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Mark onboarding as complete
-    await query(
-      'UPDATE business_profiles SET onboarding_completed = 1, onboarding_completed_at = NOW(), updated_at = NOW() WHERE user_id = ?',
-      [authUser.id]
-    );
+    await prisma.business_profiles.update({
+      where: { id: profile.id },
+      data: {
+        onboarding_completed: true,
+        onboarding_completed_at: new Date(),
+      }
+    });
 
-    const updatedProfile = await queryOne<any>(
-      'SELECT * FROM business_profiles WHERE user_id = ?',
-      [authUser.id]
-    );
+    const updatedProfile = await prisma.business_profiles.findFirst({
+      where: { user_id: BigInt(authUser.id) }
+    });
 
     return NextResponse.json({
       success: true,
-      data: updatedProfile,
+      data: updatedProfile ? {
+        ...updatedProfile,
+        id: updatedProfile.id.toString(),
+        user_id: updatedProfile.user_id.toString(),
+      } : null,
       message: 'Onboarding completed successfully and default location created'
     });
   } catch (error) {

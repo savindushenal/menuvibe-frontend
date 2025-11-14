@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
-import { queryOne } from '@/lib/db';
+import prisma from '@/lib/prisma';
 
 // GET /api/subscription/current - Get current user's subscription
 export async function GET(request: NextRequest) {
@@ -8,14 +8,24 @@ export async function GET(request: NextRequest) {
   if (!user) return unauthorized();
 
   try {
-    const subscription = await queryOne<any>(
-      `SELECT us.*, sp.name, sp.price, sp.billing_period, sp.features, sp.limits
-       FROM user_subscriptions us
-       JOIN subscription_plans sp ON us.subscription_plan_id = sp.id
-       WHERE us.user_id = ? AND us.status = 'active'
-       ORDER BY us.created_at DESC LIMIT 1`,
-      [user.id]
-    );
+    const subscription = await prisma.user_subscriptions.findFirst({
+      where: {
+        user_id: BigInt(user.id),
+        status: 'active'
+      },
+      include: {
+        subscription_plans: {
+          select: {
+            name: true,
+            price: true,
+            billing_period: true,
+            features: true,
+            limits: true
+          }
+        }
+      },
+      orderBy: { created_at: 'desc' }
+    });
 
     if (!subscription) {
       return NextResponse.json({
@@ -24,21 +34,26 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Parse JSON fields
-    try {
-      subscription.features = typeof subscription.features === 'string' 
-        ? JSON.parse(subscription.features) 
-        : subscription.features;
-      subscription.limits = typeof subscription.limits === 'string' 
-        ? JSON.parse(subscription.limits) 
-        : subscription.limits;
-    } catch (e) {
-      console.error('Error parsing subscription JSON:', e);
-    }
+    // Parse JSON fields and format response
+    const formattedSubscription = {
+      ...subscription,
+      id: subscription.id.toString(),
+      user_id: subscription.user_id.toString(),
+      subscription_plan_id: subscription.subscription_plan_id.toString(),
+      name: subscription.subscription_plans.name,
+      price: subscription.subscription_plans.price,
+      billing_period: subscription.subscription_plans.billing_period,
+      features: typeof subscription.subscription_plans.features === 'string'
+        ? JSON.parse(subscription.subscription_plans.features)
+        : subscription.subscription_plans.features,
+      limits: typeof subscription.subscription_plans.limits === 'string'
+        ? JSON.parse(subscription.subscription_plans.limits)
+        : subscription.subscription_plans.limits
+    };
 
     return NextResponse.json({
       success: true,
-      data: { subscription },
+      data: { subscription: formattedSubscription },
     });
   } catch (error) {
     console.error('Error fetching current subscription:', error);

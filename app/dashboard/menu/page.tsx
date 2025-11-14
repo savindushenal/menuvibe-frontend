@@ -37,6 +37,7 @@ import { LoadingSpinner } from '@/components/loading/spinner';
 
 // Currency options
 const currencies = [
+  { code: 'LKR', symbol: 'Rs', name: 'Sri Lankan Rupee' },
   { code: 'USD', symbol: '$', name: 'US Dollar' },
   { code: 'EUR', symbol: '€', name: 'Euro' },
   { code: 'GBP', symbol: '£', name: 'British Pound' },
@@ -308,7 +309,7 @@ export default function MenuManagementPage() {
     name: '',
     description: '',
     style: 'modern',
-    currency: 'USD',
+    currency: 'LKR',
   });
 
   const [categoryForm, setCategoryForm] = useState({
@@ -451,7 +452,7 @@ export default function MenuManagementPage() {
           description: `${menuForm.name} has been created successfully.`,
         });
         setIsAddMenuOpen(false);
-        setMenuForm({ id: 0, name: '', description: '', style: 'modern', currency: 'USD' });
+        setMenuForm({ id: 0, name: '', description: '', style: 'modern', currency: 'LKR' });
         loadMenus();
       }
     } catch (error: any) {

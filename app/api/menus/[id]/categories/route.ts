@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
-import { query, queryOne } from '@/lib/db';
-import pool from '@/lib/db';
-import { ResultSetHeader } from 'mysql2';
+import prisma from '@/lib/prisma';
 
 // GET /api/menus/[id]/categories - Get all categories for a menu
 export async function GET(
@@ -14,12 +12,14 @@ export async function GET(
 
   try {
     // Verify menu belongs to user
-    const menu = await queryOne<any>(
-      `SELECT m.* FROM menus m
-       JOIN locations l ON m.location_id = l.id
-       WHERE m.id = ? AND l.user_id = ?`,
-      [params.id, user.id]
-    );
+    const menu = await prisma.menus.findFirst({
+      where: {
+        id: BigInt(params.id),
+        locations: {
+          user_id: BigInt(user.id),
+        },
+      },
+    });
 
     if (!menu) {
       return NextResponse.json(
@@ -29,14 +29,23 @@ export async function GET(
     }
 
     // Get all categories
-    const categories = await query<any>(
-      'SELECT * FROM menu_categories WHERE menu_id = ? ORDER BY sort_order ASC, created_at DESC',
-      [params.id]
-    );
+    const categories = await prisma.menu_categories.findMany({
+      where: { menu_id: BigInt(params.id) },
+      orderBy: [
+        { sort_order: 'asc' },
+        { created_at: 'desc' },
+      ],
+    });
 
     return NextResponse.json({
       success: true,
-      data: { categories },
+      data: { 
+        categories: categories.map(cat => ({
+          ...cat,
+          id: cat.id.toString(),
+          menu_id: cat.menu_id.toString(),
+        }))
+      },
     });
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -57,12 +66,14 @@ export async function POST(
 
   try {
     // Verify menu belongs to user
-    const menu = await queryOne<any>(
-      `SELECT m.* FROM menus m
-       JOIN locations l ON m.location_id = l.id
-       WHERE m.id = ? AND l.user_id = ?`,
-      [params.id, user.id]
-    );
+    const menu = await prisma.menus.findFirst({
+      where: {
+        id: BigInt(params.id),
+        locations: {
+          user_id: BigInt(user.id),
+        },
+      },
+    });
 
     if (!menu) {
       return NextResponse.json(
@@ -75,22 +86,25 @@ export async function POST(
     const { name, description, sort_order } = body;
 
     // Insert category
-    const [result] = await pool.execute<ResultSetHeader>(
-      `INSERT INTO menu_categories (menu_id, name, description, sort_order, created_at, updated_at)
-       VALUES (?, ?, ?, ?, NOW(), NOW())`,
-      [params.id, name, description || null, sort_order || 0]
-    );
-
-    // Get created category
-    const category = await queryOne<any>(
-      'SELECT * FROM menu_categories WHERE id = ?',
-      [result.insertId]
-    );
+    const category = await prisma.menu_categories.create({
+      data: {
+        menu_id: BigInt(params.id),
+        name,
+        description: description || null,
+        sort_order: sort_order || 0,
+      },
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Category created successfully',
-      data: { category },
+      data: { 
+        category: {
+          ...category,
+          id: category.id.toString(),
+          menu_id: category.menu_id.toString(),
+        }
+      },
     }, { status: 201 });
   } catch (error) {
     console.error('Error creating category:', error);

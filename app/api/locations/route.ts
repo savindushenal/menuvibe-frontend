@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
-import { query } from '@/lib/db';
-import pool from '@/lib/db';
-import { ResultSetHeader } from 'mysql2';
+import prisma from '@/lib/prisma';
 import { getRemainingQuota } from '@/lib/permissions';
 
 // GET /api/locations - Get all locations for the authenticated user
@@ -11,17 +9,30 @@ export async function GET(request: NextRequest) {
   if (!user) return unauthorized();
 
   try {
-    const locations = await query<any>(
-      'SELECT * FROM locations WHERE user_id = ? ORDER BY is_default DESC, created_at DESC',
-      [user.id]
-    );
+    const locations = await prisma.locations.findMany({
+      where: { user_id: BigInt(user.id) },
+      orderBy: [
+        { is_default: 'desc' },
+        { created_at: 'desc' },
+      ],
+    });
+
+    // Convert BigInt to string and parse JSON fields
+    const serializedLocations = locations.map(location => ({
+      ...location,
+      id: location.id.toString(),
+      user_id: location.user_id.toString(),
+      operating_hours: location.operating_hours ? JSON.parse(location.operating_hours as string) : null,
+      services: location.services ? JSON.parse(location.services as string) : null,
+      social_media: location.social_media ? JSON.parse(location.social_media as string) : null,
+    }));
 
     // Get dynamic quota from subscription
     const quota = await getRemainingQuota(user.id, 'locations');
 
     return NextResponse.json({
       success: true,
-      data: locations,
+      data: serializedLocations,
       meta: {
         can_add_location: quota.unlimited || quota.remaining > 0,
         remaining_quota: quota.remaining,
@@ -99,59 +110,56 @@ export async function POST(request: NextRequest) {
 
     // If setting as default, remove default from others
     if (is_default) {
-      await query(
-        'UPDATE locations SET is_default = 0 WHERE user_id = ?',
-        [user.id]
-      );
+      await prisma.locations.updateMany({
+        where: { user_id: BigInt(user.id) },
+        data: { is_default: false },
+      });
     }
 
     // Insert location
-    const [result] = await pool.execute<ResultSetHeader>(
-      `INSERT INTO locations (
-        user_id, name, description, phone, email, website,
-        address_line_1, address_line_2, city, state, postal_code, country,
-        cuisine_type, seating_capacity, operating_hours, services,
-        logo_url, primary_color, secondary_color, social_media,
-        latitude, longitude, is_active, is_default, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [
-        user.id, 
-        name, 
-        description || null,
-        phone || null, 
-        email || null, 
-        website || null,
+    const location = await prisma.locations.create({
+      data: {
+        user_id: BigInt(user.id),
+        name,
+        description,
+        phone,
+        email,
+        website,
         address_line_1,
-        address_line_2 || null,
+        address_line_2,
         city,
         state,
         postal_code,
         country,
-        cuisine_type || null,
-        seating_capacity || null,
-        operating_hours ? JSON.stringify(operating_hours) : null,
-        services ? JSON.stringify(services) : null,
-        logo_url || null,
-        primary_color || null,
-        secondary_color || null,
-        social_media ? JSON.stringify(social_media) : null,
-        latitude || null,
-        longitude || null,
-        is_active !== undefined ? (is_active ? 1 : 0) : 1,
-        is_default ? 1 : 0
-      ]
-    );
+        cuisine_type,
+        seating_capacity,
+        operating_hours: operating_hours ? JSON.stringify(operating_hours) : null,
+        services: services ? JSON.stringify(services) : null,
+        logo_url,
+        primary_color,
+        secondary_color,
+        social_media: social_media ? JSON.stringify(social_media) : null,
+        latitude,
+        longitude,
+        is_active: is_active !== undefined ? is_active : true,
+        is_default: is_default ? true : false,
+      },
+    });
 
-    // Get created location
-    const [location] = await query<any>(
-      'SELECT * FROM locations WHERE id = ?',
-      [result.insertId]
-    );
+    // Convert BigInt to string and parse JSON fields
+    const serializedLocation = {
+      ...location,
+      id: location.id.toString(),
+      user_id: location.user_id.toString(),
+      operating_hours: location.operating_hours ? JSON.parse(location.operating_hours as string) : null,
+      services: location.services ? JSON.parse(location.services as string) : null,
+      social_media: location.social_media ? JSON.parse(location.social_media as string) : null,
+    };
 
     return NextResponse.json({
       success: true,
       message: 'Location created successfully',
-      data: location,
+      data: serializedLocation,
     }, { status: 201 });
   } catch (error) {
     console.error('Error creating location:', error);

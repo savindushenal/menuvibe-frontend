@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
-import { query, queryOne } from '@/lib/db';
-import pool from '@/lib/db';
-import { ResultSetHeader } from 'mysql2';
+import prisma from '@/lib/prisma';
 import { canCreateMenuItem, canAccessFeature } from '@/lib/permissions';
 
 // GET /api/menus/[id]/items - Get all items for a menu
@@ -15,12 +13,14 @@ export async function GET(
 
   try {
     // Verify menu belongs to user
-    const menu = await queryOne<any>(
-      `SELECT m.* FROM menus m
-       JOIN locations l ON m.location_id = l.id
-       WHERE m.id = ? AND l.user_id = ?`,
-      [params.id, user.id]
-    );
+    const menu = await prisma.menus.findFirst({
+      where: {
+        id: BigInt(params.id),
+        locations: {
+          user_id: BigInt(user.id),
+        },
+      },
+    });
 
     if (!menu) {
       return NextResponse.json(
@@ -30,14 +30,24 @@ export async function GET(
     }
 
     // Get all menu items
-    const items = await query<any>(
-      'SELECT * FROM menu_items WHERE menu_id = ? ORDER BY sort_order ASC, created_at DESC',
-      [params.id]
-    );
+    const items = await prisma.menu_items.findMany({
+      where: { menu_id: BigInt(params.id) },
+      orderBy: [
+        { sort_order: 'asc' },
+        { created_at: 'desc' },
+      ],
+    });
 
     return NextResponse.json({
       success: true,
-      data: { menu_items: items },
+      data: { 
+        menu_items: items.map(item => ({
+          ...item,
+          id: item.id.toString(),
+          menu_id: item.menu_id.toString(),
+          category_id: item.category_id?.toString() || null,
+        }))
+      },
     });
   } catch (error) {
     console.error('Error fetching menu items:', error);
@@ -58,12 +68,14 @@ export async function POST(
 
   try {
     // Verify menu belongs to user
-    const menu = await queryOne<any>(
-      `SELECT m.* FROM menus m
-       JOIN locations l ON m.location_id = l.id
-       WHERE m.id = ? AND l.user_id = ?`,
-      [params.id, user.id]
-    );
+    const menu = await prisma.menus.findFirst({
+      where: {
+        id: BigInt(params.id),
+        locations: {
+          user_id: BigInt(user.id),
+        },
+      },
+    });
 
     if (!menu) {
       return NextResponse.json(
@@ -96,7 +108,7 @@ export async function POST(
     const price = priceValue ? parseFloat(priceValue) : 0;
     const currency = formData.get('currency') as string;
     const categoryIdValue = formData.get('category_id') as string;
-    const category_id = categoryIdValue ? parseInt(categoryIdValue) : null;
+    const category_id = categoryIdValue ? BigInt(parseInt(categoryIdValue)) : null;
     const is_available = formData.get('is_available') === '1';
     const is_featured = formData.get('is_featured') === '1';
     const is_spicy = formData.get('is_spicy') === '1';
@@ -169,45 +181,40 @@ export async function POST(
     }
 
     // Log menu item data for debugging
-    console.log('Creating menu item:', { name, price, category_id });
+    console.log('Creating menu item:', { name, price, category_id: category_id?.toString() });
 
     // Insert menu item
-    const [result] = await pool.execute<ResultSetHeader>(
-      `INSERT INTO menu_items (
-        menu_id, name, description, price, currency, category_id,
-        is_available, is_featured, allergens, dietary_info,
-        image_url, card_color, heading_color, text_color,
-        sort_order, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [
-        params.id,
+    const item = await prisma.menu_items.create({
+      data: {
+        menu_id: BigInt(params.id),
         name,
-        description || null,
+        description: description || null,
         price,
-        currency || menu.currency || 'USD',
+        currency: currency || menu.currency || 'USD',
         category_id,
-        is_available !== undefined ? is_available : true,
-        is_featured !== undefined ? is_featured : false,
-        allergens ? JSON.stringify(allergens) : null,
-        dietary_info ? JSON.stringify(dietary_info) : null,
-        image_url || null,
-        card_color || null,
-        heading_color || null,
-        text_color || null,
-        sort_order || 0,
-      ]
-    );
-
-    // Get created item
-    const item = await queryOne<any>(
-      'SELECT * FROM menu_items WHERE id = ?',
-      [result.insertId]
-    );
+        is_available: is_available !== undefined ? is_available : true,
+        is_featured: is_featured !== undefined ? is_featured : false,
+        allergens: allergens ? JSON.stringify(allergens) : null,
+        dietary_info: dietary_info ? JSON.stringify(dietary_info) : null,
+        image_url: image_url || null,
+        card_color: card_color || null,
+        heading_color: heading_color || null,
+        text_color: text_color || null,
+        sort_order: sort_order || 0,
+      },
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Menu item created successfully',
-      data: { menu_item: item },
+      data: { 
+        menu_item: {
+          ...item,
+          id: item.id.toString(),
+          menu_id: item.menu_id.toString(),
+          category_id: item.category_id?.toString() || null,
+        }
+      },
     }, { status: 201 });
   } catch (error) {
     console.error('Error creating menu item:', error instanceof Error ? error.message : String(error));

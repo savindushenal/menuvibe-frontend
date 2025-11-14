@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 interface ApiResponse<T = any> {
   success: boolean;
@@ -105,7 +105,7 @@ class ApiClient {
   }
 
   // Auth endpoints
-  async register(data: { name: string; email: string; password: string; password_confirmation: string }): Promise<ApiResponse<AuthData>> {
+  async register(data: { name: string; email: string; password: string; password_confirmation: string; restaurantName?: string }): Promise<ApiResponse<AuthData>> {
     return this.request<AuthData>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),

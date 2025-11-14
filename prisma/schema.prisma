@@ -1,0 +1,395 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model analytics_events {
+  id              BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  menu_id         BigInt?     @db.UnsignedBigInt
+  location_id     BigInt?     @db.UnsignedBigInt
+  qr_code_id      BigInt?     @db.UnsignedBigInt
+  item_id         BigInt?     @db.UnsignedBigInt
+  table_number    String?     @db.VarChar(50)
+  event_type      String      @db.VarChar(50)
+  event_data      String?     @db.LongText
+  session_id      String?     @db.VarChar(255)
+  ip_address      String?     @db.VarChar(45)
+  user_agent      String?     @db.Text
+  referrer        String?     @db.Text
+  additional_data String?     @db.LongText
+  created_at      DateTime?   @db.Timestamp(0)
+  locations       locations?  @relation(fields: [location_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_analytics_location")
+  menus           menus?      @relation(fields: [menu_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_analytics_menu")
+  menu_items      menu_items? @relation(fields: [item_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_analytics_menu_item")
+  qr_codes        qr_codes?   @relation(fields: [qr_code_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_analytics_qr_code")
+
+  @@index([created_at], map: "idx_created_at")
+  @@index([event_type], map: "idx_event_type")
+  @@index([item_id], map: "idx_item_id")
+  @@index([location_id], map: "idx_location_id")
+  @@index([menu_id], map: "idx_menu_id")
+  @@index([qr_code_id], map: "idx_qr_code_id")
+  @@index([session_id], map: "idx_session_id")
+  @@index([table_number], map: "idx_table_number")
+}
+
+model business_profiles {
+  id                      BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id                 BigInt    @db.UnsignedBigInt
+  business_name           String    @db.VarChar(255)
+  business_type           String    @db.VarChar(255)
+  description             String?   @db.Text
+  phone                   String?   @db.VarChar(255)
+  email                   String?   @db.VarChar(255)
+  website                 String?   @db.VarChar(255)
+  address_line_1          String    @db.VarChar(255)
+  address_line_2          String?   @db.VarChar(255)
+  city                    String    @db.VarChar(255)
+  state                   String    @db.VarChar(255)
+  postal_code             String    @db.VarChar(255)
+  country                 String    @default("US") @db.VarChar(255)
+  cuisine_type            String?   @db.VarChar(255)
+  seating_capacity        Int?
+  operating_hours         String?   @db.LongText
+  services                String?   @db.LongText
+  onboarding_completed    Boolean   @default(false)
+  onboarding_completed_at DateTime? @db.Timestamp(0)
+  logo_url                String?   @db.VarChar(255)
+  primary_color           String?   @db.VarChar(7)
+  secondary_color         String?   @db.VarChar(7)
+  social_media            String?   @db.LongText
+  created_at              DateTime? @db.Timestamp(0)
+  updated_at              DateTime? @db.Timestamp(0)
+  users                   users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "business_profiles_user_id_foreign")
+
+  @@index([business_type], map: "business_profiles_business_type_index")
+  @@index([onboarding_completed], map: "business_profiles_onboarding_completed_index")
+  @@index([user_id], map: "business_profiles_user_id_index")
+}
+
+model locations {
+  id                BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id           BigInt             @db.UnsignedBigInt
+  name              String             @db.VarChar(255)
+  description       String?            @db.Text
+  is_active         Boolean            @default(true)
+  sort_order        Int                @default(0)
+  phone             String?            @db.VarChar(255)
+  email             String?            @db.VarChar(255)
+  website           String?            @db.VarChar(255)
+  address_line_1    String             @db.VarChar(255)
+  address_line_2    String?            @db.VarChar(255)
+  city              String             @db.VarChar(255)
+  state             String             @db.VarChar(255)
+  postal_code       String             @db.VarChar(255)
+  country           String             @db.VarChar(255)
+  cuisine_type      String?            @db.VarChar(255)
+  seating_capacity  Int?
+  operating_hours   String?            @db.LongText
+  services          String?            @db.LongText
+  logo_url          String?            @db.VarChar(255)
+  primary_color     String?            @db.VarChar(255)
+  secondary_color   String?            @db.VarChar(255)
+  social_media      String?            @db.LongText
+  latitude          Decimal?           @db.Decimal(10, 8)
+  longitude         Decimal?           @db.Decimal(11, 8)
+  is_default        Boolean            @default(false)
+  created_at        DateTime?          @db.Timestamp(0)
+  updated_at        DateTime?          @db.Timestamp(0)
+  settings          String?            @db.LongText
+  order_form_config String?            @db.LongText
+  analytics_events  analytics_events[]
+  users             users              @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "locations_user_id_foreign")
+  menus             menus[]
+  orders            orders[]
+  qr_codes          qr_codes[]
+
+  @@index([user_id, is_active], map: "locations_user_id_is_active_index")
+  @@index([user_id, is_default], map: "locations_user_id_is_default_index")
+}
+
+model menu_categories {
+  id               BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  menu_id          BigInt       @db.UnsignedBigInt
+  name             String       @db.VarChar(255)
+  description      String?      @db.Text
+  background_color String       @default("#10b981") @db.VarChar(7)
+  text_color       String       @default("#ffffff") @db.VarChar(7)
+  heading_color    String       @default("#ffffff") @db.VarChar(7)
+  sort_order       Int          @default(0)
+  is_active        Boolean      @default(true)
+  created_at       DateTime?    @db.Timestamp(0)
+  updated_at       DateTime?    @db.Timestamp(0)
+  menus            menus        @relation(fields: [menu_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "menu_categories_menu_id_foreign")
+  menu_items       menu_items[]
+
+  @@index([menu_id, sort_order], map: "menu_categories_menu_id_sort_order_index")
+}
+
+model menu_items {
+  id               BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  menu_id          BigInt             @db.UnsignedBigInt
+  category_id      BigInt             @db.UnsignedBigInt
+  name             String             @db.VarChar(255)
+  description      String?            @db.Text
+  price            Decimal            @db.Decimal(8, 2)
+  currency         String             @default("USD") @db.VarChar(3)
+  card_color       String?            @db.VarChar(7)
+  text_color       String?            @db.VarChar(7)
+  heading_color    String?            @db.VarChar(7)
+  image_url        String?            @db.VarChar(255)
+  is_available     Boolean            @default(true)
+  is_featured      Boolean            @default(false)
+  sort_order       Int                @default(0)
+  allergens        String?            @db.LongText
+  dietary_info     String?            @db.LongText
+  preparation_time Int?
+  is_spicy         Boolean            @default(false)
+  spice_level      Int?
+  variations       String?            @db.LongText
+  created_at       DateTime?          @db.Timestamp(0)
+  updated_at       DateTime?          @db.Timestamp(0)
+  analytics_events analytics_events[]
+  menu_categories  menu_categories    @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "menu_items_category_id_foreign")
+  menus            menus              @relation(fields: [menu_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "menu_items_menu_id_foreign")
+  order_items      order_items[]
+
+  @@index([category_id], map: "menu_items_category_id_index")
+  @@index([is_featured], map: "menu_items_is_featured_index")
+  @@index([menu_id, is_available], map: "menu_items_menu_id_is_available_index")
+  @@index([menu_id, sort_order], map: "menu_items_menu_id_sort_order_index")
+}
+
+model menus {
+  id                 BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  location_id        BigInt             @db.UnsignedBigInt
+  name               String             @db.VarChar(255)
+  slug               String             @unique(map: "unique_slug") @db.VarChar(255)
+  public_id          String             @unique(map: "unique_public_id") @db.VarChar(12)
+  description        String?            @db.Text
+  style              String             @default("modern") @db.VarChar(50)
+  currency           String             @default("USD") @db.VarChar(3)
+  is_active          Boolean            @default(true)
+  sort_order         Int                @default(0)
+  availability_hours String?            @db.LongText
+  is_featured        Boolean            @default(false)
+  image_url          String?            @db.VarChar(255)
+  created_at         DateTime?          @db.Timestamp(0)
+  updated_at         DateTime?          @db.Timestamp(0)
+  settings           String?            @db.LongText
+  analytics_events   analytics_events[]
+  menu_categories    menu_categories[]
+  menu_items         menu_items[]
+  locations          locations          @relation(fields: [location_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "menus_location_id_foreign")
+  orders             orders[]
+  qr_codes           qr_codes[]
+
+  @@index([public_id], map: "idx_public_id")
+  @@index([is_active], map: "menus_business_profile_id_is_active_index")
+  @@index([sort_order], map: "menus_business_profile_id_sort_order_index")
+  @@index([location_id], map: "menus_location_id_foreign")
+}
+
+model migrations {
+  id        Int    @id @default(autoincrement()) @db.UnsignedInt
+  migration String @db.VarChar(255)
+  batch     Int
+}
+
+model order_items {
+  id                   BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  order_id             BigInt     @db.UnsignedBigInt
+  menu_item_id         BigInt     @db.UnsignedBigInt
+  quantity             Int        @default(1)
+  price                Decimal    @db.Decimal(10, 2)
+  item_name            String     @db.VarChar(255)
+  special_instructions String?    @db.Text
+  created_at           DateTime?  @db.Timestamp(0)
+  menu_items           menu_items @relation(fields: [menu_item_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_order_items_menu_item")
+  orders               orders     @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_order_items_order")
+
+  @@index([menu_item_id], map: "idx_menu_item_id")
+  @@index([order_id], map: "idx_order_id")
+}
+
+model orders {
+  id             BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  menu_id        BigInt         @db.UnsignedBigInt
+  location_id    BigInt         @db.UnsignedBigInt
+  qr_code_id     BigInt?        @db.UnsignedBigInt
+  customer_name  String         @db.VarChar(255)
+  customer_phone String         @db.VarChar(50)
+  customer_email String?        @db.VarChar(255)
+  table_number   String?        @db.VarChar(50)
+  session_id     String?        @db.VarChar(255)
+  total_amount   Decimal        @db.Decimal(10, 2)
+  notes          String?        @db.Text
+  custom_fields  String?        @db.LongText
+  status         orders_status? @default(pending)
+  order_date     DateTime?      @default(now()) @db.Timestamp(0)
+  confirmed_at   DateTime?      @db.Timestamp(0)
+  ready_at       DateTime?      @db.Timestamp(0)
+  completed_at   DateTime?      @db.Timestamp(0)
+  created_at     DateTime?      @db.Timestamp(0)
+  updated_at     DateTime?      @db.Timestamp(0)
+  loyalty_number String?        @db.VarChar(50)
+  order_items    order_items[]
+  locations      locations      @relation(fields: [location_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_orders_location")
+  menus          menus          @relation(fields: [menu_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "fk_orders_menu")
+  qr_codes       qr_codes?      @relation(fields: [qr_code_id], references: [id], onUpdate: Restrict, map: "fk_orders_qr_code")
+
+  @@index([location_id], map: "idx_location_id")
+  @@index([menu_id], map: "idx_menu_id")
+  @@index([order_date], map: "idx_order_date")
+  @@index([qr_code_id], map: "idx_qr_code_id")
+  @@index([session_id], map: "idx_session_id")
+  @@index([status], map: "idx_status")
+  @@index([table_number], map: "idx_table_number")
+}
+
+model personal_access_tokens {
+  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  tokenable_type String    @db.VarChar(255)
+  tokenable_id   BigInt    @db.UnsignedBigInt
+  name           String    @db.VarChar(255)
+  token          String    @unique(map: "personal_access_tokens_token_unique") @db.VarChar(64)
+  abilities      String?   @db.Text
+  last_used_at   DateTime? @db.Timestamp(0)
+  expires_at     DateTime? @db.Timestamp(0)
+  created_at     DateTime? @db.Timestamp(0)
+  updated_at     DateTime? @db.Timestamp(0)
+
+  @@index([tokenable_type, tokenable_id], map: "personal_access_tokens_tokenable_type_tokenable_id_index")
+}
+
+model qr_codes {
+  id               BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  location_id      BigInt             @db.UnsignedBigInt
+  menu_id          BigInt?            @db.UnsignedBigInt
+  name             String             @db.VarChar(255)
+  table_number     String?            @db.VarChar(255)
+  qr_url           String             @db.Text
+  qr_image         String             @db.LongText
+  scan_count       Int                @default(0)
+  last_scanned_at  DateTime?          @db.Timestamp(0)
+  created_at       DateTime?          @db.Timestamp(0)
+  updated_at       DateTime?          @db.Timestamp(0)
+  analytics_events analytics_events[]
+  orders           orders[]
+  locations        locations          @relation(fields: [location_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "qr_codes_location_id_foreign")
+  menus            menus?             @relation(fields: [menu_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "qr_codes_menu_id_foreign")
+
+  @@index([location_id, menu_id], map: "qr_codes_location_id_menu_id_index")
+  @@index([menu_id], map: "qr_codes_menu_id_foreign")
+  @@index([table_number], map: "qr_codes_table_number_index")
+}
+
+model subscription_plans {
+  id                 BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  name               String               @db.VarChar(255)
+  slug               String               @unique(map: "subscription_plans_slug_unique") @db.VarChar(255)
+  description        String?              @db.Text
+  price              Decimal              @db.Decimal(8, 2)
+  setup_fee          Decimal?             @db.Decimal(8, 2)
+  billing_period     String               @default("monthly") @db.VarChar(255)
+  contract_months    Int?
+  custom_features    String?              @db.Text
+  custom_limits      String?              @db.LongText
+  features           String               @db.LongText
+  limits             String               @db.LongText
+  is_active          Boolean              @default(true)
+  is_custom          Boolean              @default(false)
+  sort_order         Int                  @default(0)
+  created_at         DateTime?            @db.Timestamp(0)
+  updated_at         DateTime?            @db.Timestamp(0)
+  user_subscriptions user_subscriptions[]
+}
+
+model user_settings {
+  id                         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id                    BigInt    @db.UnsignedBigInt
+  email_notifications        Boolean   @default(true)
+  push_notifications         Boolean   @default(true)
+  weekly_reports             Boolean   @default(false)
+  marketing_emails           Boolean   @default(false)
+  order_notifications        Boolean   @default(true)
+  inventory_alerts           Boolean   @default(true)
+  team_updates               Boolean   @default(true)
+  two_factor_enabled         Boolean   @default(false)
+  two_factor_secret          String?   @db.VarChar(255)
+  two_factor_recovery_codes  String?   @db.LongText
+  login_notifications        Boolean   @default(true)
+  suspicious_activity_alerts Boolean   @default(true)
+  profile_public             Boolean   @default(false)
+  analytics_tracking         Boolean   @default(true)
+  data_collection            Boolean   @default(true)
+  timezone                   String    @default("UTC") @db.VarChar(255)
+  date_format                String    @default("Y-m-d") @db.VarChar(255)
+  time_format                String    @default("H:i") @db.VarChar(255)
+  language                   String    @default("en") @db.VarChar(255)
+  currency                   String    @default("USD") @db.VarChar(255)
+  working_hours              String?   @db.LongText
+  auto_accept_orders         Boolean   @default(false)
+  order_preparation_time     Int       @default(30)
+  weekend_mode               Boolean   @default(false)
+  created_at                 DateTime? @db.Timestamp(0)
+  updated_at                 DateTime? @db.Timestamp(0)
+  users                      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "user_settings_user_id_foreign")
+
+  @@index([user_id], map: "user_settings_user_id_index")
+}
+
+model user_subscriptions {
+  id                       BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id                  BigInt             @db.UnsignedBigInt
+  subscription_plan_id     BigInt             @db.UnsignedBigInt
+  starts_at                DateTime           @db.Timestamp(0)
+  ends_at                  DateTime?          @db.Timestamp(0)
+  trial_ends_at            DateTime?          @db.Timestamp(0)
+  is_active                Boolean            @default(true)
+  status                   String             @default("active") @db.VarChar(255)
+  payment_method           String?            @db.VarChar(255)
+  external_subscription_id String?            @db.VarChar(255)
+  last_payment_at          DateTime?          @db.Timestamp(0)
+  next_payment_at          DateTime?          @db.Timestamp(0)
+  created_at               DateTime?          @db.Timestamp(0)
+  updated_at               DateTime?          @db.Timestamp(0)
+  subscription_plans       subscription_plans @relation(fields: [subscription_plan_id], references: [id], onUpdate: Restrict, map: "user_subscriptions_subscription_plan_id_foreign")
+  users                    users              @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "user_subscriptions_user_id_foreign")
+
+  @@index([ends_at], map: "user_subscriptions_ends_at_index")
+  @@index([status], map: "user_subscriptions_status_index")
+  @@index([subscription_plan_id], map: "user_subscriptions_subscription_plan_id_index")
+  @@index([user_id, is_active], map: "user_subscriptions_user_id_is_active_index")
+}
+
+model users {
+  id                 BigInt               @id @default(autoincrement()) @db.UnsignedBigInt
+  name               String               @db.VarChar(255)
+  email              String               @unique(map: "users_email_unique") @db.VarChar(255)
+  phone              String?              @db.VarChar(255)
+  email_verified_at  DateTime?            @db.Timestamp(0)
+  password           String?              @db.VarChar(255)
+  google_id          String?              @db.VarChar(255)
+  remember_token     String?              @db.VarChar(100)
+  created_at         DateTime?            @db.Timestamp(0)
+  updated_at         DateTime?            @db.Timestamp(0)
+  business_profiles  business_profiles[]
+  locations          locations[]
+  user_settings      user_settings[]
+  user_subscriptions user_subscriptions[]
+}
+
+enum orders_status {
+  pending
+  confirmed
+  preparing
+  ready
+  completed
+  cancelled
+}

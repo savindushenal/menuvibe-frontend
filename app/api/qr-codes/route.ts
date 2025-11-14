@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
-import { query, queryOne } from '@/lib/db';
-import pool from '@/lib/db';
+import prisma from '@/lib/prisma';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import QRCode from 'qrcode';
 import { canCreateQRCode, canAccessFeature } from '@/lib/permissions';
@@ -18,15 +17,19 @@ export async function GET(request: NextRequest) {
     let location;
     
     if (locationId) {
-      location = await queryOne<any>(
-        'SELECT * FROM locations WHERE id = ? AND user_id = ?',
-        [locationId, user.id]
-      );
+      location = await prisma.locations.findFirst({
+        where: {
+          id: BigInt(locationId),
+          user_id: BigInt(user.id),
+        },
+      });
     } else {
-      location = await queryOne<any>(
-        'SELECT * FROM locations WHERE user_id = ? AND is_default = 1 LIMIT 1',
-        [user.id]
-      );
+      location = await prisma.locations.findFirst({
+        where: {
+          user_id: BigInt(user.id),
+          is_default: true,
+        },
+      });
     }
 
     if (!location) {
@@ -37,19 +40,31 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get all QR codes for this location
-    const qrCodes = await query<any>(
-      `SELECT qr.*, m.name as menu_name 
-       FROM qr_codes qr
-       LEFT JOIN menus m ON qr.menu_id = m.id
-       WHERE qr.location_id = ?
-       ORDER BY qr.created_at DESC`,
-      [location.id]
-    );
+    // Get all QR codes for this location with menu name
+    const qrCodes = await prisma.qr_codes.findMany({
+      where: { location_id: location.id },
+      include: {
+        menus: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    // Format response
+    const formattedQrCodes = qrCodes.map(qr => ({
+      ...qr,
+      id: qr.id.toString(),
+      location_id: qr.location_id.toString(),
+      menu_id: qr.menu_id?.toString() || null,
+      menu_name: qr.menus?.name || null,
+    }));
 
     return NextResponse.json({
       success: true,
-      data: { qr_codes: qrCodes }
+      data: { qr_codes: formattedQrCodes }
     });
   } catch (error) {
     console.error('Error fetching QR codes:', error);
@@ -72,15 +87,19 @@ export async function POST(request: NextRequest) {
     // Get location
     let location;
     if (location_id) {
-      location = await queryOne<any>(
-        'SELECT * FROM locations WHERE id = ? AND user_id = ?',
-        [location_id, user.id]
-      );
+      location = await prisma.locations.findFirst({
+        where: {
+          id: BigInt(location_id),
+          user_id: BigInt(user.id),
+        },
+      });
     } else {
-      location = await queryOne<any>(
-        'SELECT * FROM locations WHERE user_id = ? AND is_default = 1 LIMIT 1',
-        [user.id]
-      );
+      location = await prisma.locations.findFirst({
+        where: {
+          user_id: BigInt(user.id),
+          is_default: true,
+        },
+      });
     }
 
     if (!location) {
@@ -91,26 +110,29 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user's subscription
-    const subscription = await queryOne<any>(
-      `SELECT us.*, sp.name as plan_name, sp.slug as plan_slug, sp.limits
-       FROM user_subscriptions us
-       JOIN subscription_plans sp ON us.subscription_plan_id = sp.id
-       WHERE us.user_id = ? 
-         AND us.status = 'active'
-         AND (us.ends_at IS NULL OR us.ends_at > NOW())
-       ORDER BY 
-         CASE WHEN sp.slug = 'enterprise' THEN 1
-              WHEN sp.slug = 'pro' THEN 2
-              WHEN sp.slug = 'free' THEN 3
-              ELSE 4
-         END,
-         us.created_at DESC
-       LIMIT 1`,
-      [user.id]
-    );
+    const subscription = await prisma.user_subscriptions.findFirst({
+      where: {
+        user_id: BigInt(user.id),
+        status: 'active',
+        OR: [
+          { ends_at: null },
+          { ends_at: { gt: new Date() } },
+        ],
+      },
+      include: {
+        subscription_plans: {
+          select: {
+            name: true,
+            slug: true,
+            limits: true,
+          },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+    });
 
     // Determine plan type (Free, Pro, or Enterprise)
-    const planSlug = subscription?.plan_slug || 'free';
+    const planSlug = subscription?.subscription_plans.slug || 'free';
     const isFree = planSlug === 'free';
     const isPro = planSlug === 'pro';
     const isEnterprise = planSlug === 'enterprise';
@@ -124,11 +146,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify menu belongs to user
-    const menu = await queryOne<any>(
-      `SELECT m.* FROM menus m
-       WHERE m.id = ? AND m.location_id = ?`,
-      [menu_id, location.id]
-    );
+    const menu = await prisma.menus.findFirst({
+      where: {
+        id: BigInt(menu_id),
+        location_id: location.id,
+      },
+    });
 
     if (!menu) {
       return NextResponse.json(
@@ -155,16 +178,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Note: Custom QR code design check removed - feature not in current request body
-    // If you want to add custom_design, include it in the request body first
-
     // Get menu with slug for URL generation
-    const menuWithSlug = await queryOne<any>(
-      `SELECT m.id, m.slug, m.name
-       FROM menus m
-       WHERE m.id = ?`,
-      [menu_id]
-    );
+    const menuWithSlug = await prisma.menus.findUnique({
+      where: { id: BigInt(menu_id) },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+      },
+    });
 
     if (!menuWithSlug || !menuWithSlug.slug) {
       return NextResponse.json(
@@ -192,21 +214,29 @@ export async function POST(request: NextRequest) {
     });
 
     // Insert QR code record
-    const [result] = await pool.execute<ResultSetHeader>(
-      `INSERT INTO qr_codes (location_id, menu_id, name, table_number, qr_url, qr_image, scan_count, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, 0, NOW(), NOW())`,
-      [location.id, menu_id || null, name, table_number || null, qrUrl, qrDataUrl]
-    );
-
-    const qrCode = await queryOne<any>(
-      'SELECT * FROM qr_codes WHERE id = ?',
-      [result.insertId]
-    );
+    const qrCode = await prisma.qr_codes.create({
+      data: {
+        location_id: location.id,
+        menu_id: menu_id ? BigInt(menu_id) : null,
+        name,
+        table_number: table_number || null,
+        qr_url: qrUrl,
+        qr_image: qrDataUrl,
+        scan_count: 0,
+      },
+    });
 
     return NextResponse.json({
       success: true,
       message: 'QR code created successfully',
-      data: { qr_code: qrCode }
+      data: { 
+        qr_code: {
+          ...qrCode,
+          id: qrCode.id.toString(),
+          location_id: qrCode.location_id.toString(),
+          menu_id: qrCode.menu_id?.toString() || null,
+        }
+      }
     }, { status: 201 });
   } catch (error) {
     console.error('Error creating QR code:', error);

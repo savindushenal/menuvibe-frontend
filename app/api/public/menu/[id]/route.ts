@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne } from '@/lib/db';
-import pool from '@/lib/db';
-import { ResultSetHeader } from 'mysql2';
+import prisma from '@/lib/prisma';
 import { isValidSlug } from '@/lib/slug-utils';
 
 // GET /api/public/menu/[id] - Public menu view (supports both slug and numeric ID)
@@ -17,10 +15,148 @@ export async function GET(
     console.log('=== Public Menu API ===');
     console.log('Identifier:', identifier);
     console.log('Table:', tableNumber);
-    console.log('Is valid slug?', isValidSlug(identifier));
-    console.log('Is numeric?', /^\d+$/.test(identifier));
 
     let menu;
+
+    // Check if identifier is a slug or numeric ID
+    if (isValidSlug(identifier)) {
+      console.log('Looking up by SLUG:', identifier);
+      menu = await prisma.menus.findFirst({
+        where: { slug: identifier },
+        include: {
+          locations: {
+            include: {
+              business_profiles: {
+                select: {
+                  business_name: true,
+                  logo_url: true
+                }
+              }
+            }
+          }
+        }
+      });
+    } else if (/^\d+$/.test(identifier)) {
+      console.log('Looking up by NUMERIC ID:', identifier);
+      menu = await prisma.menus.findFirst({
+        where: { id: BigInt(identifier) },
+        include: {
+          locations: {
+            include: {
+              business_profiles: {
+                select: {
+                  business_name: true,
+                  logo_url: true
+                }
+              }
+            }
+          }
+        }
+      });
+    } else {
+      console.log('INVALID identifier format:', identifier);
+      return NextResponse.json(
+        { success: false, message: 'Invalid menu identifier' },
+        { status: 400 }
+      );
+    }
+
+    if (!menu) {
+      console.log(`Menu ${identifier} not found in database`);
+      return NextResponse.json(
+        { success: false, message: 'Menu not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get categories
+    const categories = await prisma.menu_categories.findMany({
+      where: { menu_id: menu.id },
+      orderBy: { sort_order: 'asc' }
+    });
+
+    // Get menu items (only available ones for public view)
+    const items = await prisma.menu_items.findMany({
+      where: {
+        menu_id: menu.id,
+        is_available: true
+      },
+      include: {
+        menu_categories: {
+          select: {
+            name: true,
+            background_color: true
+          }
+        }
+      },
+      orderBy: { sort_order: 'asc' }
+    });
+
+    // Parse dietary_info JSON and convert BigInt to string
+    const formattedItems = items.map(item => ({
+      ...item,
+      id: item.id.toString(),
+      menu_id: item.menu_id.toString(),
+      category_id: item.category_id?.toString() || null,
+      price: Number(item.price),
+      dietary_info: item.dietary_info ? (typeof item.dietary_info === 'string' ? JSON.parse(item.dietary_info) : item.dietary_info) : []
+    }));
+
+    const formattedCategories = categories.map(cat => ({
+      ...cat,
+      id: cat.id.toString(),
+      menu_id: cat.menu_id.toString()
+    }));
+
+    // Format menu response
+    const formattedMenu = {
+      ...menu,
+      id: menu.id.toString(),
+      location_id: menu.location_id.toString(),
+      restaurant_name: menu.locations.business_profiles[0]?.business_name || menu.locations.name,
+      logo_url: menu.locations.logo_url || menu.locations.business_profiles[0]?.logo_url,
+      location_name: menu.locations.name,
+      primary_color: menu.locations.primary_color,
+      secondary_color: menu.locations.secondary_color,
+      phone: menu.locations.phone,
+      email: menu.locations.email,
+      website: menu.locations.website,
+      settings: menu.locations.settings ? (typeof menu.locations.settings === 'string' ? JSON.parse(menu.locations.settings) : menu.locations.settings) : {},
+      order_form_config: menu.locations.order_form_config ? (typeof menu.locations.order_form_config === 'string' ? JSON.parse(menu.locations.order_form_config) : menu.locations.order_form_config) : {}
+    };
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        menu: formattedMenu,
+        categories: formattedCategories,
+        items: formattedItems
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching public menu:', error);
+    return NextResponse.json(
+      { success: false, message: 'Failed to fetch menu' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/public/menu/[id] - Place order (requires analytics_events and orders tables)
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  return NextResponse.json(
+    { 
+      success: false, 
+      message: 'Online ordering requires additional database tables (orders, order_items, analytics_events)',
+      requiresUpgrade: false
+    },
+    { status: 501 }
+  );
+}
+
 
     // Check if identifier is a slug or numeric ID
     if (isValidSlug(identifier)) {

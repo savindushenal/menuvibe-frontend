@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
-import { query, queryOne } from '@/lib/db';
-import pool from '@/lib/db';
-import { ResultSetHeader } from 'mysql2';
+import prisma from '@/lib/prisma';
 import { canCreateMenu } from '@/lib/permissions';
 import { generateMenuSlug } from '@/lib/slug';
 
@@ -20,16 +18,20 @@ export async function GET(request: NextRequest) {
     
     if (locationId) {
       // Get specific location
-      location = await queryOne<any>(
-        'SELECT * FROM locations WHERE id = ? AND user_id = ?',
-        [locationId, user.id]
-      );
+      location = await prisma.locations.findFirst({
+        where: {
+          id: BigInt(locationId),
+          user_id: BigInt(user.id),
+        },
+      });
     } else {
       // Get user's default location
-      location = await queryOne<any>(
-        'SELECT * FROM locations WHERE user_id = ? AND is_default = 1 LIMIT 1',
-        [user.id]
-      );
+      location = await prisma.locations.findFirst({
+        where: {
+          user_id: BigInt(user.id),
+          is_default: true,
+        },
+      });
     }
 
     if (!location) {
@@ -41,39 +43,35 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get menus with their items
-    const menus = await query<any>(
-      `SELECT m.*, 
-        (SELECT JSON_ARRAYAGG(
-          JSON_OBJECT(
-            'id', mi.id,
-            'name', mi.name,
-            'description', mi.description,
-            'price', mi.price,
-            'currency', mi.currency,
-            'image_url', mi.image_url,
-            'is_available', mi.is_available,
-            'is_featured', mi.is_featured,
-            'category_id', mi.category_id,
-            'allergens', mi.allergens,
-            'dietary_info', mi.dietary_info,
-            'card_color', mi.card_color,
-            'text_color', mi.text_color,
-            'heading_color', mi.heading_color,
-            'sort_order', mi.sort_order
-          )
-        ) FROM menu_items mi WHERE mi.menu_id = m.id) as items
-       FROM menus m
-       WHERE m.location_id = ?
-       ORDER BY m.sort_order ASC, m.created_at DESC`,
-      [location.id]
-    );
+    // Get menus with their items using Prisma
+    const menus = await prisma.menus.findMany({
+      where: { location_id: location.id },
+      include: {
+        menu_items: {
+          orderBy: { sort_order: 'asc' },
+        },
+      },
+      orderBy: [
+        { sort_order: 'asc' },
+        { created_at: 'desc' },
+      ],
+    });
 
-    // Parse JSON items
-    const menusWithItems = menus.map(menu => ({
-      ...menu,
-      items: menu.items ? JSON.parse(menu.items) : [],
-    }));
+    // Format the response and convert BigInt to strings
+    const menusWithItems = menus.map((menu: any) => {
+      const { menu_items, ...menuData } = menu;
+      return {
+        ...menuData,
+        id: menu.id.toString(),
+        location_id: menu.location_id.toString(),
+        items: menu_items.map((item: any) => ({
+          ...item,
+          id: item.id.toString(),
+          menu_id: item.menu_id.toString(),
+          category_id: item.category_id?.toString() || null,
+        })),
+      };
+    });
 
     return NextResponse.json({
       success: true,
@@ -106,10 +104,12 @@ export async function POST(request: NextRequest) {
     const sort_order = sortOrderValue ? parseInt(sortOrderValue) : 0;
 
     // Get user's default location
-    const location = await queryOne<any>(
-      'SELECT * FROM locations WHERE user_id = ? AND is_default = 1 LIMIT 1',
-      [user.id]
-    );
+    const location = await prisma.locations.findFirst({
+      where: {
+        user_id: BigInt(user.id),
+        is_default: true,
+      },
+    });
 
     if (!location) {
       return NextResponse.json(
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
     }
 
     // DYNAMIC PERMISSION CHECK - Check subscription limits from database
-    const permissionCheck = await canCreateMenu(user.id, location.id);
+    const permissionCheck = await canCreateMenu(user.id, Number(location.id));
     
     if (!permissionCheck.allowed) {
       return NextResponse.json(
@@ -140,36 +140,33 @@ export async function POST(request: NextRequest) {
       location.name
     );
 
-    // Insert menu
-    const [result] = await pool.execute<ResultSetHeader>(
-      `INSERT INTO menus (location_id, name, slug, public_id, description, style, currency, is_active, is_featured, sort_order, created_at, updated_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [
-        location.id,
+    // Insert menu using Prisma
+    const menu = await prisma.menus.create({
+      data: {
+        location_id: location.id,
         name,
         slug,
-        publicId,
-        description || null,
-        style || 'modern',
-        currency || 'USD',
-        is_active !== undefined ? is_active : true,
-        is_featured !== undefined ? is_featured : false,
-        sort_order || 0,
-      ]
-    );
+        public_id: publicId,
+        description: description || null,
+        style: style || 'modern',
+        currency: currency || 'USD',
+        is_active: is_active !== undefined ? is_active : true,
+        is_featured: is_featured !== undefined ? is_featured : false,
+        sort_order: sort_order || 0,
+      },
+    });
 
-    const menuId = result.insertId;
-
-    // Get created menu
-    const menu = await queryOne<any>(
-      'SELECT * FROM menus WHERE id = ?',
-      [menuId]
-    );
+    // Convert BigInt fields to strings for JSON serialization
+    const serializedMenu = {
+      ...menu,
+      id: menu.id.toString(),
+      location_id: menu.location_id.toString(),
+    };
 
     return NextResponse.json({
       success: true,
       message: 'Menu created successfully',
-      data: { menu: { ...menu, items: [] } },
+      data: { menu: { ...serializedMenu, items: [] } },
     }, { status: 201 });
   } catch (error) {
     console.error('Error creating menu:', error);

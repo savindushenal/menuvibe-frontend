@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromToken, unauthorized } from '@/lib/auth';
-import { query, queryOne } from '@/lib/db';
-import pool from '@/lib/db';
-import { ResultSetHeader } from 'mysql2';
+import prisma from '@/lib/prisma';
 
 /**
  * GET /api/subscription/check
@@ -14,21 +12,24 @@ export async function GET(request: NextRequest) {
 
   try {
     // Check for active subscription
-    const activeSubscription = await queryOne<any>(
-      `SELECT 
-        us.id,
-        us.status,
-        us.is_active,
-        sp.name as plan_name,
-        sp.slug as plan_slug
-       FROM user_subscriptions us
-       JOIN subscription_plans sp ON us.subscription_plan_id = sp.id
-       WHERE us.user_id = ? 
-         AND (us.is_active = 1 OR us.status = 'active')
-       ORDER BY us.created_at DESC
-       LIMIT 1`,
-      [user.id]
-    );
+    const activeSubscription = await prisma.user_subscriptions.findFirst({
+      where: {
+        user_id: BigInt(user.id),
+        OR: [
+          { is_active: true },
+          { status: 'active' }
+        ]
+      },
+      include: {
+        subscription_plans: {
+          select: {
+            name: true,
+            slug: true
+          }
+        }
+      },
+      orderBy: { created_at: 'desc' }
+    });
 
     if (activeSubscription) {
       return NextResponse.json({
@@ -36,7 +37,13 @@ export async function GET(request: NextRequest) {
         message: 'User has active subscription',
         data: {
           has_subscription: true,
-          subscription: activeSubscription,
+          subscription: {
+            id: activeSubscription.id.toString(),
+            status: activeSubscription.status,
+            is_active: activeSubscription.is_active,
+            plan_name: activeSubscription.subscription_plans.name,
+            plan_slug: activeSubscription.subscription_plans.slug
+          },
         },
       });
     }
@@ -45,10 +52,13 @@ export async function GET(request: NextRequest) {
     console.log(`No active subscription for user ${user.id}, creating Free plan...`);
 
     // Get Free plan
-    const freePlan = await queryOne<any>(
-      'SELECT id, name FROM subscription_plans WHERE slug = ? AND is_active = 1 LIMIT 1',
-      ['free']
-    );
+    const freePlan = await prisma.subscription_plans.findFirst({
+      where: {
+        slug: 'free',
+        is_active: true
+      },
+      select: { id: true, name: true }
+    });
 
     if (!freePlan) {
       return NextResponse.json(
@@ -62,39 +72,45 @@ export async function GET(request: NextRequest) {
     }
 
     // Deactivate any old subscriptions
-    await query(
-      'UPDATE user_subscriptions SET is_active = 0, status = ? WHERE user_id = ?',
-      ['cancelled', user.id]
-    );
+    await prisma.user_subscriptions.updateMany({
+      where: { user_id: BigInt(user.id) },
+      data: {
+        is_active: false,
+        status: 'cancelled'
+      }
+    });
 
     // Create new Free subscription
-    const [result] = await pool.execute<ResultSetHeader>(
-      `INSERT INTO user_subscriptions 
-       (user_id, subscription_plan_id, status, is_active, starts_at, created_at, updated_at) 
-       VALUES (?, ?, 'active', 1, NOW(), NOW(), NOW())`,
-      [user.id, freePlan.id]
-    );
-
-    // Get newly created subscription
-    const newSubscription = await queryOne<any>(
-      `SELECT 
-        us.id,
-        us.status,
-        us.is_active,
-        sp.name as plan_name,
-        sp.slug as plan_slug
-       FROM user_subscriptions us
-       JOIN subscription_plans sp ON us.subscription_plan_id = sp.id
-       WHERE us.id = ?`,
-      [result.insertId]
-    );
+    const newSubscription = await prisma.user_subscriptions.create({
+      data: {
+        user_id: BigInt(user.id),
+        subscription_plan_id: freePlan.id,
+        status: 'active',
+        is_active: true,
+        starts_at: new Date()
+      },
+      include: {
+        subscription_plans: {
+          select: {
+            name: true,
+            slug: true
+          }
+        }
+      }
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Free subscription created successfully',
       data: {
         has_subscription: true,
-        subscription: newSubscription,
+        subscription: {
+          id: newSubscription.id.toString(),
+          status: newSubscription.status,
+          is_active: newSubscription.is_active,
+          plan_name: newSubscription.subscription_plans.name,
+          plan_slug: newSubscription.subscription_plans.slug
+        },
         auto_created: true,
       },
     }, { status: 201 });
@@ -127,10 +143,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the plan
-    const plan = await queryOne<any>(
-      'SELECT id, name, slug FROM subscription_plans WHERE slug = ? AND is_active = 1',
-      [plan_slug]
-    );
+    const plan = await prisma.subscription_plans.findFirst({
+      where: {
+        slug: plan_slug,
+        is_active: true
+      },
+      select: { id: true, name: true, slug: true, limits: true, features: true }
+    });
 
     if (!plan) {
       return NextResponse.json(
@@ -140,37 +159,40 @@ export async function POST(request: NextRequest) {
     }
 
     // Deactivate old subscriptions
-    await query(
-      'UPDATE user_subscriptions SET is_active = 0, status = ?, ends_at = NOW() WHERE user_id = ?',
-      ['cancelled', user.id]
-    );
+    await prisma.user_subscriptions.updateMany({
+      where: { user_id: BigInt(user.id) },
+      data: {
+        is_active: false,
+        status: 'cancelled',
+        ends_at: new Date()
+      }
+    });
 
     // Create new subscription
-    const [result] = await pool.execute<ResultSetHeader>(
-      `INSERT INTO user_subscriptions 
-       (user_id, subscription_plan_id, status, is_active, starts_at, created_at, updated_at) 
-       VALUES (?, ?, 'active', 1, NOW(), NOW(), NOW())`,
-      [user.id, plan.id]
-    );
-
-    // Get newly created subscription
-    const newSubscription = await queryOne<any>(
-      `SELECT 
-        us.*,
-        sp.name as plan_name,
-        sp.slug as plan_slug,
-        sp.limits,
-        sp.features
-       FROM user_subscriptions us
-       JOIN subscription_plans sp ON us.subscription_plan_id = sp.id
-       WHERE us.id = ?`,
-      [result.insertId]
-    );
+    const newSubscription = await prisma.user_subscriptions.create({
+      data: {
+        user_id: BigInt(user.id),
+        subscription_plan_id: plan.id,
+        status: 'active',
+        is_active: true,
+        starts_at: new Date()
+      },
+      include: {
+        subscription_plans: true
+      }
+    });
 
     return NextResponse.json({
       success: true,
       message: `${plan.name} subscription activated successfully`,
-      data: { subscription: newSubscription },
+      data: {
+        subscription: {
+          ...newSubscription,
+          id: newSubscription.id.toString(),
+          user_id: newSubscription.user_id.toString(),
+          subscription_plan_id: newSubscription.subscription_plan_id.toString()
+        }
+      },
     }, { status: 201 });
   } catch (error) {
     console.error('Error activating subscription:', error);

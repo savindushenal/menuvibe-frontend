@@ -84,22 +84,37 @@ export default function RestaurantProfilePage() {
       
       if (response.success && response.data) {
         const profile = response.data;
-        setBusinessProfile(profile);
+        
+        // Parse JSON fields if they're strings
+        const parsedProfile = {
+          ...profile,
+          services: typeof profile.services === 'string' 
+            ? JSON.parse(profile.services || '[]') 
+            : (profile.services || []),
+          operating_hours: typeof profile.operating_hours === 'string'
+            ? JSON.parse(profile.operating_hours || '{}')
+            : (profile.operating_hours || {}),
+          social_media: typeof profile.social_media === 'string'
+            ? JSON.parse(profile.social_media || '{}')
+            : (profile.social_media || {}),
+        };
+        
+        setBusinessProfile(parsedProfile);
         
         // Initialize form data
         setFormData({
-          business_name: profile.business_name || '',
-          description: profile.description || '',
-          phone: profile.phone || '',
-          email: profile.email || '',
-          website: profile.website || '',
-          primaryColor: profile.primary_color || '#10b981',
-          secondaryColor: profile.secondary_color || '#3b82f6',
+          business_name: parsedProfile.business_name || '',
+          description: parsedProfile.description || '',
+          phone: parsedProfile.phone || '',
+          email: parsedProfile.email || '',
+          website: parsedProfile.website || '',
+          primaryColor: parsedProfile.primary_color || '#10b981',
+          secondaryColor: parsedProfile.secondary_color || '#3b82f6',
         });
         
-        if (profile.logo_url) {
-          console.log('Loading logo from URL:', profile.logo_url);
-          setLogo(profile.logo_url);
+        if (parsedProfile.logo_url) {
+          console.log('Loading logo from URL:', parsedProfile.logo_url);
+          setLogo(parsedProfile.logo_url);
           setLogoError(false);
         }
       }

@@ -6,9 +6,7 @@
  * dynamically, avoiding hardcoded restrictions in the codebase.
  */
 
-import { query, queryOne } from './db';
-import pool from './db';
-import { ResultSetHeader } from 'mysql2';
+import prisma from '@/lib/prisma';
 
 export interface SubscriptionLimits {
   max_locations: number;
@@ -44,29 +42,33 @@ export interface UserSubscriptionInfo {
  */
 export async function getUserSubscription(userId: number): Promise<UserSubscriptionInfo | null> {
   try {
-    const subscription = await queryOne<any>(
-      `SELECT 
-        us.id as subscription_id,
-        us.is_active,
-        us.status,
-        sp.name as plan_name,
-        sp.slug as plan_slug,
-        sp.limits
-       FROM user_subscriptions us
-       JOIN subscription_plans sp ON us.subscription_plan_id = sp.id
-       WHERE us.user_id = ? 
-         AND us.status = 'active'
-         AND (us.ends_at IS NULL OR us.ends_at > NOW())
-       ORDER BY 
-         CASE WHEN sp.slug = 'enterprise' THEN 1
-              WHEN sp.slug = 'pro' THEN 2
-              WHEN sp.slug = 'free' THEN 3
-              ELSE 4
-         END,
-         us.created_at DESC
-       LIMIT 1`,
-      [userId]
-    );
+    const subscription = await prisma.user_subscriptions.findFirst({
+      where: {
+        user_id: BigInt(userId),
+        status: 'active',
+        OR: [
+          { ends_at: null },
+          { ends_at: { gt: new Date() } }
+        ]
+      },
+      include: {
+        subscription_plans: {
+          select: {
+            name: true,
+            slug: true,
+            limits: true,
+          }
+        }
+      },
+      orderBy: [
+        {
+          subscription_plans: {
+            slug: 'asc' // This will order enterprise, free, pro
+          }
+        },
+        { created_at: 'desc' }
+      ]
+    });
 
     if (!subscription) {
       // If no subscription found, check if user exists and create free subscription
@@ -75,15 +77,15 @@ export async function getUserSubscription(userId: number): Promise<UserSubscript
     }
 
     // Parse JSON limits from database
-    const limits: SubscriptionLimits = typeof subscription.limits === 'string'
-      ? JSON.parse(subscription.limits)
-      : subscription.limits;
+    const limits: SubscriptionLimits = typeof subscription.subscription_plans.limits === 'string'
+      ? JSON.parse(subscription.subscription_plans.limits)
+      : subscription.subscription_plans.limits as any;
 
     return {
-      plan_name: subscription.plan_name,
-      plan_slug: subscription.plan_slug,
+      plan_name: subscription.subscription_plans.name,
+      plan_slug: subscription.subscription_plans.slug,
       limits,
-      subscription_id: subscription.subscription_id,
+      subscription_id: Number(subscription.id),
       is_active: true,
     };
   } catch (error) {
@@ -102,38 +104,55 @@ async function getUserSubscriptionOrCreateFree(userId: number): Promise<UserSubs
     // Try to auto-create Free subscription
     try {
       // Get Free plan
-      const freePlan = await queryOne<any>(
-        'SELECT id, name, slug, limits FROM subscription_plans WHERE slug = ? AND is_active = 1 LIMIT 1',
-        ['free']
-      );
+      const freePlan = await prisma.subscription_plans.findFirst({
+        where: {
+          slug: 'free',
+          is_active: true
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          limits: true
+        }
+      });
 
       if (freePlan) {
         // Deactivate old subscriptions
-        await query(
-          'UPDATE user_subscriptions SET is_active = 0, status = ? WHERE user_id = ?',
-          ['cancelled', userId]
-        );
+        await prisma.user_subscriptions.updateMany({
+          where: { user_id: BigInt(userId) },
+          data: {
+            is_active: false,
+            status: 'cancelled'
+          }
+        });
 
         // Create Free subscription
-        const [result] = await pool.execute<ResultSetHeader>(
-          `INSERT INTO user_subscriptions 
-           (user_id, subscription_plan_id, status, is_active, starts_at, created_at, updated_at) 
-           VALUES (?, ?, 'active', 1, NOW(), NOW(), NOW())`,
-          [userId, freePlan.id]
-        );
+        const newSubscription = await prisma.user_subscriptions.create({
+          data: {
+            user_id: BigInt(userId),
+            subscription_plan_id: freePlan.id,
+            status: 'active',
+            is_active: true,
+            starts_at: new Date(),
+          },
+          select: {
+            id: true
+          }
+        });
 
         console.log(`Auto-created Free subscription for user ${userId}`);
         
         // Return the newly created subscription
         const limits: SubscriptionLimits = typeof freePlan.limits === 'string'
           ? JSON.parse(freePlan.limits)
-          : freePlan.limits;
+          : freePlan.limits as any;
 
         subscription = {
           plan_name: freePlan.name,
           plan_slug: freePlan.slug,
           limits,
-          subscription_id: result.insertId,
+          subscription_id: Number(newSubscription.id),
           is_active: true,
         };
       }
@@ -155,18 +174,40 @@ export async function getUserUsage(userId: number): Promise<{
   qr_codes_count: number;
 }> {
   try {
-    const [locationsResult, menusResult, itemsResult, qrCodesResult] = await Promise.all([
-      queryOne<any>('SELECT COUNT(*) as count FROM locations WHERE user_id = ?', [userId]),
-      queryOne<any>('SELECT COUNT(*) as count FROM menus m JOIN locations l ON m.location_id = l.id WHERE l.user_id = ?', [userId]),
-      queryOne<any>('SELECT COUNT(*) as count FROM menu_items mi JOIN menus m ON mi.menu_id = m.id JOIN locations l ON m.location_id = l.id WHERE l.user_id = ?', [userId]),
-      queryOne<any>('SELECT COUNT(*) as count FROM qr_codes q JOIN locations l ON q.location_id = l.id WHERE l.user_id = ?', [userId]),
+    const [locationsCount, menusCount, itemsCount, qrCodesCount] = await Promise.all([
+      prisma.locations.count({
+        where: { user_id: BigInt(userId) }
+      }),
+      prisma.menus.count({
+        where: {
+          locations: {
+            user_id: BigInt(userId)
+          }
+        }
+      }),
+      prisma.menu_items.count({
+        where: {
+          menus: {
+            locations: {
+              user_id: BigInt(userId)
+            }
+          }
+        }
+      }),
+      prisma.qr_codes.count({
+        where: {
+          locations: {
+            user_id: BigInt(userId)
+          }
+        }
+      }),
     ]);
 
     return {
-      locations_count: locationsResult?.count || 0,
-      menus_count: menusResult?.count || 0,
-      menu_items_count: itemsResult?.count || 0,
-      qr_codes_count: qrCodesResult?.count || 0,
+      locations_count: locationsCount,
+      menus_count: menusCount,
+      menu_items_count: itemsCount,
+      qr_codes_count: qrCodesCount,
     };
   } catch (error) {
     console.error('Error fetching user usage:', error);
@@ -184,11 +225,10 @@ export async function getUserUsage(userId: number): Promise<{
  */
 export async function getLocationMenusCount(locationId: number): Promise<number> {
   try {
-    const result = await queryOne<any>(
-      'SELECT COUNT(*) as count FROM menus WHERE location_id = ?',
-      [locationId]
-    );
-    return result?.count || 0;
+    const count = await prisma.menus.count({
+      where: { location_id: BigInt(locationId) }
+    });
+    return count;
   } catch (error) {
     console.error('Error fetching location menus count:', error);
     return 0;
