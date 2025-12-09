@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { MapPin, Store, Coffee } from 'lucide-react';
+import { Clock, Coffee } from 'lucide-react';
 import { TableInfo } from '../page';
 
 interface HeroSectionProps {
@@ -30,28 +30,30 @@ export default function HeroSection({ tableInfo }: HeroSectionProps) {
       <div className="absolute bottom-0 left-0 w-64 h-64 bg-red-500/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
 
       {/* Main content */}
-      <div className="relative z-10 px-5 sm:px-6 lg:px-12 py-8 md:py-12 lg:py-16">
+      <div className="relative z-10 px-5 sm:px-6 lg:px-12 py-5 md:py-12 lg:py-16">
         <div className="max-w-5xl mx-auto">
           
           {/* Two column layout on desktop */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-12">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-12">
             
             {/* Left: Main content */}
             <div className="flex-1">
-              {/* Location pill */}
+              {/* Open status */}
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm px-3 py-1.5 rounded-full mb-4"
+                className="inline-flex items-center gap-2 mb-2 md:mb-4"
               >
-                <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-white/90 text-xs font-medium">Open • 8 AM – 11 PM</span>
+                <Clock className="w-4 h-4 text-white/70" />
+                <span className="text-white font-medium text-sm">Open</span>
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                <span className="text-white/70 text-sm">Closes 11.00PM</span>
               </motion.div>
 
               {/* Greeting */}
               <motion.h1 
-                className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-3"
+                className="text-2xl sm:text-3xl md:text-5xl font-bold text-white"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 }}
@@ -60,44 +62,13 @@ export default function HeroSection({ tableInfo }: HeroSectionProps) {
               </motion.h1>
               
               <motion.p 
-                className="text-white/80 text-lg md:text-xl font-light mb-6"
+                className="text-white/80 text-base md:text-xl font-light mt-2 md:mt-3"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
                 What would you like today?
               </motion.p>
-
-              {/* Location/Table info card */}
-              <motion.div 
-                className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25 }}
-              >
-                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                  {isTableView ? (
-                    <MapPin className="w-5 h-5 text-white" />
-                  ) : (
-                    <Store className="w-5 h-5 text-white" />
-                  )}
-                </div>
-                <div>
-                  {isTableView ? (
-                    <>
-                      <p className="text-white font-semibold text-sm">
-                        Table {tableInfo.table}{tableInfo.floor ? ` • ${tableInfo.floor}` : ''}
-                      </p>
-                      <p className="text-white/60 text-xs">Order here, we'll bring it to you</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-white font-semibold text-sm">Barista Moratuwa</p>
-                      <p className="text-white/60 text-xs">Pickup or dine-in available</p>
-                    </>
-                  )}
-                </div>
-              </motion.div>
             </div>
 
             {/* Right: Stats card - desktop only */}
@@ -135,23 +106,23 @@ export default function HeroSection({ tableInfo }: HeroSectionProps) {
 
           {/* Mobile stats row */}
           <motion.div 
-            className="flex lg:hidden items-center justify-between mt-6 pt-5 border-t border-white/10"
+            className="flex lg:hidden items-center justify-between mt-4 pt-4 border-t border-white/10"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.35 }}
           >
             <div className="text-center flex-1">
-              <p className="text-xl font-bold text-white">50+</p>
+              <p className="text-lg font-bold text-white">50+</p>
               <p className="text-[10px] text-white/50 uppercase">Items</p>
             </div>
-            <div className="w-px h-8 bg-white/20" />
+            <div className="w-px h-6 bg-white/20" />
             <div className="text-center flex-1">
-              <p className="text-xl font-bold text-white">4.9 ★</p>
+              <p className="text-lg font-bold text-white">4.9 ★</p>
               <p className="text-[10px] text-white/50 uppercase">Rating</p>
             </div>
-            <div className="w-px h-8 bg-white/20" />
+            <div className="w-px h-6 bg-white/20" />
             <div className="text-center flex-1">
-              <p className="text-xl font-bold text-white">~5m</p>
+              <p className="text-lg font-bold text-white">~5m</p>
               <p className="text-[10px] text-white/50 uppercase">Wait</p>
             </div>
           </motion.div>

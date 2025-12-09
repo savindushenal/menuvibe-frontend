@@ -17,6 +17,7 @@ import Footer from './components/Footer';
 export interface TableInfo {
   table: string;
   floor?: string;
+  location?: string;
 }
 
 interface CartItem {
@@ -209,12 +210,17 @@ export default function BaristaDemo() {
   // Get table info from URL query params
   const tableParam = searchParams.get('table');
   const floorParam = searchParams.get('floor');
+  const locationParam = searchParams.get('location');
   
   // Parse table info - if table param exists, it's a table-specific view
   const tableInfo: TableInfo | null = tableParam ? {
     table: tableParam,
     floor: floorParam || undefined,
+    location: locationParam || 'Barista',
   } : null;
+  
+  // Location name (from query or default)
+  const locationName = locationParam || 'Barista Moratuwa';
 
   const [activeCategory, setActiveCategory] = useState('coffee');
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
@@ -324,11 +330,12 @@ export default function BaristaDemo() {
         cartCount={cartCount} 
         onCartClick={() => setIsCartOpen(true)}
         tableInfo={tableInfo}
+        locationName={locationName}
       />
       
       <HeroSection tableInfo={tableInfo} />
       
-      <ChristmasOffer />
+      <ChristmasOffer onItemClick={handleItemClick} />
       
       <TopPicks onItemClick={handleItemClick} />
       

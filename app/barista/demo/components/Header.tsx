@@ -10,61 +10,78 @@ interface HeaderProps {
   cartCount: number;
   onCartClick: () => void;
   tableInfo: TableInfo | null;
+  locationName: string;
 }
 
-export default function Header({ cartCount, onCartClick, tableInfo }: HeaderProps) {
+export default function Header({ cartCount, onCartClick, tableInfo, locationName }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <>
       <motion.header 
-        className="sticky top-0 z-50 bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-12 py-3 md:py-4"
+        className="sticky top-0 z-50 bg-white border-b border-gray-100"
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.3 }}
       >
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          {/* Hamburger Menu - Hidden on large screens */}
-          <button 
-            onClick={() => setIsMenuOpen(true)}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors lg:hidden"
-          >
-            <Menu className="w-6 h-6 text-barista-dark" />
-          </button>
-          
-          {/* Desktop Navigation - Hidden on mobile */}
-          <nav className="hidden lg:flex items-center gap-8">
-            <a href="#" className="text-barista-dark hover:text-barista-orange font-medium transition-colors">Menu</a>
-            <a href="#" className="text-gray-500 hover:text-barista-orange transition-colors">Specials</a>
-            <a href="#" className="text-gray-500 hover:text-barista-orange transition-colors">About</a>
-          </nav>
-          
-          {/* Logo */}
-          <BaristaLogo variant="dark" size="md" className="lg:absolute lg:left-1/2 lg:-translate-x-1/2" />
-          
-          {/* Right side actions */}
-          <div className="flex items-center gap-2 md:gap-4">
-            {/* Search - Desktop only */}
-            <button className="hidden md:flex p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <Search className="w-5 h-5 text-barista-dark" />
+        {/* Location Bar */}
+        <div className="bg-barista-dark text-white px-4 sm:px-6 lg:px-12 py-1.5">
+          <div className="flex items-center justify-center gap-2 max-w-7xl mx-auto">
+            <MapPin className="w-3.5 h-3.5 text-barista-orange" />
+            <span className="text-xs font-medium">
+              {tableInfo 
+                ? `${locationName} • Table ${tableInfo.table}${tableInfo.floor ? ` (${tableInfo.floor})` : ''}`
+                : locationName
+              }
+            </span>
+          </div>
+        </div>
+        
+        {/* Main Header */}
+        <div className="px-4 sm:px-6 lg:px-12 py-3 md:py-4">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            {/* Hamburger Menu - Hidden on large screens */}
+            <button 
+              onClick={() => setIsMenuOpen(true)}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors lg:hidden"
+            >
+              <Menu className="w-6 h-6 text-barista-dark" />
             </button>
             
-            {/* Cart */}
-            <button 
-              onClick={onCartClick}
-              className="relative p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <ShoppingBag className="w-6 h-6 text-barista-dark" />
-              {cartCount > 0 && (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute -top-1 -right-1 bg-barista-red text-white text-xs w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center font-semibold"
-                >
-                  {cartCount}
-                </motion.span>
-              )}
-            </button>
+            {/* Desktop Navigation - Hidden on mobile */}
+            <nav className="hidden lg:flex items-center gap-8">
+              <a href="#" className="text-barista-dark hover:text-barista-orange font-medium transition-colors">Menu</a>
+              <a href="#" className="text-gray-500 hover:text-barista-orange transition-colors">Specials</a>
+              <a href="#" className="text-gray-500 hover:text-barista-orange transition-colors">About</a>
+            </nav>
+            
+            {/* Logo */}
+            <BaristaLogo variant="dark" size="md" className="lg:absolute lg:left-1/2 lg:-translate-x-1/2" />
+            
+            {/* Right side actions */}
+            <div className="flex items-center gap-2 md:gap-4">
+              {/* Search - Desktop only */}
+              <button className="hidden md:flex p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <Search className="w-5 h-5 text-barista-dark" />
+              </button>
+              
+              {/* Cart */}
+              <button 
+                onClick={onCartClick}
+                className="relative p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <ShoppingBag className="w-6 h-6 text-barista-dark" />
+                {cartCount > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1 -right-1 bg-barista-red text-white text-xs w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center font-semibold"
+                  >
+                    {cartCount}
+                  </motion.span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </motion.header>

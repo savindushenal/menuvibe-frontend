@@ -22,14 +22,14 @@ interface CartSheetProps {
 }
 
 const upsellItem: MenuItem = {
-  id: 'brownie-upsell',
-  name: 'Chocolate Brownie',
-  price: 650,
-  description: 'Rich, fudgy chocolate brownie',
-  image: '/images/barista/brownie.jpg',
-  rating: 4.8,
-  reviews: 28,
-  category: 'Sweets',
+  id: 'sandwich-upsell',
+  name: 'Smoked Chicken Sandwich',
+  price: 850,
+  description: 'Tender smoked chicken with fresh greens',
+  image: '/barista/smoked-chicken.jpg',
+  rating: 4.9,
+  reviews: 42,
+  category: 'Sandwiches',
 };
 
 export default function CartSheet({ 
@@ -159,7 +159,15 @@ export default function CartSheet({
                 </div>
               ) : (
                 <div className="space-y-4 lg:space-y-6">
-                  {cartItems.map((cartItem) => (
+                  {cartItems.map((cartItem) => {
+                    // Calculate item total with customizations
+                    const customizationsTotal = cartItem.customizations.reduce((sum, name) => {
+                      const customization = cartItem.item.customizations?.find(c => c.name === name);
+                      return sum + (customization?.price || 0);
+                    }, 0);
+                    const itemTotal = (cartItem.item.price + customizationsTotal) * cartItem.quantity;
+                    
+                    return (
                     <motion.div
                       key={cartItem.item.id}
                       layout
@@ -168,45 +176,58 @@ export default function CartSheet({
                       className="flex gap-4"
                     >
                       {/* Image */}
-                      <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-barista-warmGray to-orange-50 rounded-xl flex items-center justify-center text-2xl lg:text-3xl flex-shrink-0">
-                        {cartItem.item.category === 'Coffee' ? '☕' : cartItem.item.category === 'Sweets' ? '🍫' : '🥐'}
+                      <div className="relative w-16 h-16 lg:w-20 lg:h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+                        <Image
+                          src={cartItem.item.image}
+                          alt={cartItem.item.name}
+                          fill
+                          className="object-cover"
+                        />
                       </div>
                       
                       {/* Details */}
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h3 className="font-semibold text-barista-dark lg:text-lg">{cartItem.item.name}</h3>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-barista-dark lg:text-lg truncate">{cartItem.item.name}</h3>
                             {cartItem.customizations.length > 0 && (
-                              <p className="text-xs lg:text-sm text-gray-500 mt-0.5">
-                                {cartItem.customizations.join(', ')}
-                              </p>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {cartItem.customizations.map((custom, idx) => (
+                                  <span 
+                                    key={idx} 
+                                    className="text-[10px] lg:text-xs bg-orange-50 text-barista-orange px-2 py-0.5 rounded-full"
+                                  >
+                                    {custom}
+                                  </span>
+                                ))}
+                              </div>
                             )}
                           </div>
-                          <p className="font-bold text-barista-orange lg:text-lg">
-                            LKR {(cartItem.item.price * cartItem.quantity).toLocaleString()}
+                          <p className="font-bold text-barista-orange lg:text-lg whitespace-nowrap">
+                            LKR {itemTotal.toLocaleString()}
                           </p>
                         </div>
                         
                         {/* Quantity controls */}
-                        <div className="flex items-center gap-3 mt-2">
+                        <div className="flex items-center gap-2 mt-2">
                           <button
                             onClick={() => onUpdateQuantity(cartItem.item.id, cartItem.quantity - 1)}
-                            className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-barista-warmGray flex items-center justify-center hover:bg-gray-200 transition-colors"
+                            className="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
                           >
-                            <Minus className="w-3 h-3 lg:w-4 lg:h-4" />
+                            <Minus className="w-3 h-3 lg:w-4 lg:h-4 text-gray-600" />
                           </button>
                           <span className="font-semibold w-6 text-center lg:text-lg">{cartItem.quantity}</span>
                           <button
                             onClick={() => onUpdateQuantity(cartItem.item.id, cartItem.quantity + 1)}
-                            className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-barista-warmGray flex items-center justify-center hover:bg-gray-200 transition-colors"
+                            className="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
                           >
-                            <Plus className="w-3 h-3 lg:w-4 lg:h-4" />
+                            <Plus className="w-3 h-3 lg:w-4 lg:h-4 text-gray-600" />
                           </button>
                         </div>
                       </div>
                     </motion.div>
-                  ))}
+                  );
+                  })}
                 </div>
               )}
               
@@ -223,12 +244,17 @@ export default function CartSheet({
                     <span className="text-sm lg:text-base font-medium text-barista-orange">Pair with:</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 lg:w-14 lg:h-14 bg-white rounded-xl flex items-center justify-center text-xl lg:text-2xl">
-                      🍫
+                    <div className="relative w-12 h-12 lg:w-14 lg:h-14 rounded-xl overflow-hidden flex-shrink-0">
+                      <Image
+                        src={upsellItem.image}
+                        alt={upsellItem.name}
+                        fill
+                        className="object-cover"
+                      />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-semibold text-barista-dark lg:text-lg">Chocolate Brownie</h4>
-                      <p className="text-sm text-gray-500">+LKR 650</p>
+                      <h4 className="font-semibold text-barista-dark lg:text-lg">{upsellItem.name}</h4>
+                      <p className="text-sm text-gray-500">+LKR {upsellItem.price.toLocaleString()}</p>
                     </div>
                     <motion.button
                       onClick={() => onAddUpsell(upsellItem)}
