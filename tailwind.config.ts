@@ -20,6 +20,14 @@ const config: Config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       colors: {
+        // Barista brand colors
+        barista: {
+          orange: '#F26522',
+          red: '#E53935',
+          cream: '#FFF8F0',
+          dark: '#1A1A1A',
+          warmGray: '#F5F5F5',
+        },
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {
