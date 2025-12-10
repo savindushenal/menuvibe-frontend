@@ -20,6 +20,15 @@ const config: Config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       colors: {
+        // Franchise dynamic brand colors (CSS variables)
+        franchise: {
+          primary: 'var(--franchise-primary)',
+          secondary: 'var(--franchise-secondary)',
+          background: 'var(--franchise-background)',
+          dark: 'var(--franchise-dark)',
+          neutral: 'var(--franchise-neutral)',
+          accent: 'var(--franchise-accent)',
+        },
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {
