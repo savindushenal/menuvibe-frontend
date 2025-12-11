@@ -643,7 +643,7 @@ class ApiClient {
   // Subscription API methods
   async getSubscriptionPlans(): Promise<ApiResponse> {
     try {
-      return await this.request('/subscriptions/plans');
+      return await this.request('/subscription-plans');
     } catch (error: any) {
       console.error('Error fetching subscription plans:', error);
       throw error;
@@ -652,7 +652,7 @@ class ApiClient {
 
   async getCurrentSubscription(): Promise<ApiResponse> {
     try {
-      return await this.request('/subscriptions/current');
+      return await this.request('/subscription/current');
     } catch (error: any) {
       console.error('Error fetching current subscription:', error);
       throw error;
