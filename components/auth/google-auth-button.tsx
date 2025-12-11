@@ -2,10 +2,12 @@
 
 import { Button } from '@/components/ui/button';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 export function GoogleAuthButton() {
   const handleGoogleAuth = () => {
-    // Redirect to Next.js Google OAuth API route
-    window.location.href = `/api/auth/google`;
+    // Redirect to Laravel backend Google OAuth
+    window.location.href = `${API_URL}/auth/google`;
   };
 
   return (

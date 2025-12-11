@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
 import { queryOne } from '@/lib/db';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+import crypto from 'crypto';
 
 export interface AuthUser {
   id: number;
@@ -11,6 +9,11 @@ export interface AuthUser {
   phone?: string;
 }
 
+/**
+ * Validate Laravel Sanctum token and get the authenticated user
+ * Sanctum tokens are stored as SHA256 hashes in the database
+ * Token format: "id|plainTextToken"
+ */
 export async function getUserFromToken(request: NextRequest): Promise<AuthUser | null> {
   const authHeader = request.headers.get('authorization');
   
@@ -21,11 +24,52 @@ export async function getUserFromToken(request: NextRequest): Promise<AuthUser |
   const token = authHeader.substring(7);
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; email: string };
-    
+    // Sanctum tokens have format: "id|plainTextToken"
+    // We need to hash the plain text part and look it up in the database
+    const [tokenId, plainTextToken] = token.includes('|') 
+      ? token.split('|', 2) 
+      : [null, token];
+
+    if (!plainTextToken) {
+      console.error('Invalid token format - no plain text token found');
+      return null;
+    }
+
+    // Hash the token the same way Laravel Sanctum does
+    const hashedToken = crypto.createHash('sha256').update(plainTextToken).digest('hex');
+
+    // Look up the token in the personal_access_tokens table
+    // If token has ID prefix, use it for faster lookup
+    let tokenQuery: string;
+    let tokenParams: any[];
+
+    if (tokenId) {
+      tokenQuery = `
+        SELECT pat.tokenable_id, pat.abilities 
+        FROM personal_access_tokens pat 
+        WHERE pat.id = ? AND pat.token = ? AND pat.tokenable_type = 'App\\\\Models\\\\User'
+      `;
+      tokenParams = [tokenId, hashedToken];
+    } else {
+      tokenQuery = `
+        SELECT pat.tokenable_id, pat.abilities 
+        FROM personal_access_tokens pat 
+        WHERE pat.token = ? AND pat.tokenable_type = 'App\\\\Models\\\\User'
+      `;
+      tokenParams = [hashedToken];
+    }
+
+    const tokenRecord = await queryOne<{ tokenable_id: number; abilities: string }>(tokenQuery, tokenParams);
+
+    if (!tokenRecord) {
+      console.error('Token not found in database');
+      return null;
+    }
+
+    // Get the user associated with this token
     const user = await queryOne<AuthUser>(
       'SELECT id, name, email, phone FROM users WHERE id = ?',
-      [decoded.userId]
+      [tokenRecord.tokenable_id]
     );
 
     return user;

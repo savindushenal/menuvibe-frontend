@@ -8,14 +8,20 @@ import { ProtectedRoute } from '@/components/protected-route';
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, checkOnboardingStatus } = useAuth();
+  const { user, setNeedsOnboarding } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleOnboardingComplete = async () => {
     setIsSubmitting(true);
     try {
-      // Check onboarding status and redirect to dashboard
-      await checkOnboardingStatus();
+      // Directly set needsOnboarding to false since we just completed it
+      // This avoids the race condition with checkOnboardingStatus
+      setNeedsOnboarding(false);
+      
+      // Small delay to ensure state is updated before redirect
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Navigate to dashboard
       router.push('/dashboard');
     } catch (error) {
       console.error('Error completing onboarding:', error);

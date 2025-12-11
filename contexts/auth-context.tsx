@@ -9,6 +9,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   needsOnboarding: boolean;
+  setNeedsOnboarding: (value: boolean) => void;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, passwordConfirmation: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -69,15 +70,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await apiClient.getBusinessProfile();
       
-      // If no business profile exists or onboarding not completed
-      if (!response.success || !response.data || !response.data.onboarding_completed) {
+      // Handle the response structure from Laravel API
+      // Laravel returns: { data: { business_profile: {...}, needs_onboarding: bool } }
+      // or for Next.js API: { data: { onboarding_completed: bool } }
+      
+      if (!response.success || !response.data) {
         setNeedsOnboarding(true);
         return true;
       }
       
-      // Business profile exists and is complete
-      setNeedsOnboarding(false);
-      return false;
+      // Check for Laravel API response format
+      if (response.data.needs_onboarding !== undefined) {
+        const needsIt = response.data.needs_onboarding;
+        setNeedsOnboarding(needsIt);
+        return needsIt;
+      }
+      
+      // Check for business_profile object (Laravel nested format)
+      if (response.data.business_profile) {
+        const isComplete = response.data.business_profile.onboarding_completed;
+        setNeedsOnboarding(!isComplete);
+        return !isComplete;
+      }
+      
+      // Check for direct onboarding_completed field (Next.js API format)
+      if (response.data.onboarding_completed !== undefined) {
+        const isComplete = response.data.onboarding_completed;
+        setNeedsOnboarding(!isComplete);
+        return !isComplete;
+      }
+      
+      // Default: assume onboarding is needed
+      setNeedsOnboarding(true);
+      return true;
     } catch (error: any) {
       // Only log unexpected errors (not 404s which are expected for new users)
       if (!error.message?.includes('404') && !error.message?.includes('Business profile not found')) {
@@ -188,6 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated,
     isLoading,
     needsOnboarding,
+    setNeedsOnboarding,
     login,
     register,
     logout,

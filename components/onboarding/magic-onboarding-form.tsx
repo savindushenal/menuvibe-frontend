@@ -241,8 +241,13 @@ export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardin
         try {
           await apiClient.completeOnboarding();
           console.log('Onboarding marked as complete');
-        } catch (error) {
-          console.error('Error marking onboarding as complete:', error);
+        } catch (error: any) {
+          // 409 Conflict means onboarding was already completed - that's fine
+          if (error.message?.includes('already completed') || error.status === 409) {
+            console.log('Onboarding was already completed, continuing...');
+          } else {
+            console.error('Error marking onboarding as complete:', error);
+          }
         }
         onComplete();
       } else {
