@@ -950,6 +950,12 @@ class ApiClient {
     });
   }
 
+  async generateAndSendPassword(id: number): Promise<ApiResponse> {
+    return this.request(`/admin/users/${id}/send-password`, {
+      method: 'POST',
+    });
+  }
+
   async createAdmin(data: { name: string; email: string; password: string; role: string }): Promise<ApiResponse> {
     return this.request('/admin/admins', {
       method: 'POST',

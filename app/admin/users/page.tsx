@@ -46,6 +46,7 @@ import {
   UserCheck,
   Trash2,
   KeyRound,
+  Send,
   ChevronLeft,
   ChevronRight,
   UserPlus,
@@ -95,6 +96,8 @@ export default function AdminUsersPage() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [createAdminDialogOpen, setCreateAdminDialogOpen] = useState(false);
   const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
+  const [sendPasswordDialogOpen, setSendPasswordDialogOpen] = useState(false);
+  const [sendingPassword, setSendingPassword] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
   // Form states
@@ -197,6 +200,41 @@ export default function AdminUsersPage() {
         description: err.message || 'Failed to reset password',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleSendGeneratedPassword = async () => {
+    if (!selectedUser) return;
+    
+    setSendingPassword(true);
+    try {
+      const response = await apiClient.generateAndSendPassword(selectedUser.id);
+      if (response.success) {
+        toast({
+          title: 'Success',
+          description: response.message || 'New password generated and sent to user\'s email',
+        });
+        
+        // If email failed, show the password in a warning toast
+        if (response.data?.password && !response.data?.email_sent) {
+          toast({
+            title: 'Warning: Email Failed',
+            description: `Password: ${response.data.password}`,
+            variant: 'destructive',
+          });
+        }
+        
+        setSendPasswordDialogOpen(false);
+        setSelectedUser(null);
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to generate password',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingPassword(false);
     }
   };
 
@@ -369,6 +407,15 @@ export default function AdminUsersPage() {
                             >
                               <KeyRound className="h-4 w-4 mr-2" />
                               Reset Password
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setSendPasswordDialogOpen(true);
+                              }}
+                            >
+                              <Send className="h-4 w-4 mr-2" />
+                              Send Generated Password
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -575,6 +622,30 @@ export default function AdminUsersPage() {
               Cancel
             </Button>
             <Button onClick={handleResetPassword}>Reset Password</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Generated Password Dialog */}
+      <Dialog open={sendPasswordDialogOpen} onOpenChange={setSendPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5" />
+              Send Generated Password
+            </DialogTitle>
+            <DialogDescription>
+              This will generate a new random password for {selectedUser?.name} and send it to their email address ({selectedUser?.email}).
+              Their current password will be invalidated and all active sessions will be revoked.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSendPasswordDialogOpen(false)} disabled={sendingPassword}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendGeneratedPassword} disabled={sendingPassword}>
+              {sendingPassword ? 'Sending...' : 'Generate & Send Password'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
