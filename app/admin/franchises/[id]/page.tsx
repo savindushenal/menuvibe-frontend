@@ -185,7 +185,7 @@ export default function FranchiseDetailPage() {
     email: '',
     phone: '',
     role: 'staff',
-    branch_id: '',
+    branch_id: 'all',
     send_credentials: true,
   });
   
@@ -200,7 +200,7 @@ export default function FranchiseDetailPage() {
     email: '',
     name: '',
     role: 'staff',
-    branch_id: '',
+    branch_id: 'all',
     message: '',
     send_credentials: true,
   });
@@ -1036,7 +1036,7 @@ export default function FranchiseDetailPage() {
                       <SelectValue placeholder="All Branches" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Branches</SelectItem>
+                      <SelectItem value="all">All Branches</SelectItem>
                       {branches.map((b) => (
                         <SelectItem key={b.id} value={b.id.toString()}>
                           {b.branch_name}
