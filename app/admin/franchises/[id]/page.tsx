@@ -117,6 +117,18 @@ interface FranchiseDetails {
     role: string;
     status: string;
     expires_at: string;
+    accepted_at: string | null;
+    created_at: string;
+  }>;
+  all_invitations?: Array<{
+    id: number;
+    email: string;
+    name: string | null;
+    role: string;
+    status: string;
+    expires_at: string;
+    accepted_at: string | null;
+    created_at: string;
   }>;
   stats: {
     total_branches: number;
@@ -762,10 +774,10 @@ export default function FranchiseDetailPage() {
           <TabsContent value="invitations">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Pending Invitations</CardTitle>
+                <CardTitle>All Invitations</CardTitle>
                 <Button onClick={() => setShowInvite(true)}>
                   <Mail className="h-4 w-4 mr-2" />
-                  Send Invitation
+                  Send New Invitation
                 </Button>
               </CardHeader>
               <CardContent>
@@ -775,43 +787,60 @@ export default function FranchiseDetailPage() {
                       <TableHead>Email</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead>Expires</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Date</TableHead>
                       <TableHead className="w-[100px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pending_invitations.map((invite) => (
+                    {(data?.all_invitations || pending_invitations).map((invite) => (
                       <TableRow key={invite.id}>
                         <TableCell>{invite.email}</TableCell>
                         <TableCell>{invite.name || '-'}</TableCell>
                         <TableCell>{getRoleBadge(invite.role)}</TableCell>
-                        <TableCell>{new Date(invite.expires_at).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Badge variant={
+                            invite.status === 'accepted' ? 'default' :
+                            invite.status === 'pending' ? 'secondary' :
+                            invite.status === 'expired' ? 'outline' : 'destructive'
+                          }>
+                            {invite.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {invite.status === 'accepted' && invite.accepted_at
+                            ? new Date(invite.accepted_at).toLocaleDateString()
+                            : new Date(invite.expires_at).toLocaleDateString()
+                          }
+                        </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => handleResendInvite(invite.id)}
-                              title="Resend"
+                              title={invite.status === 'accepted' ? 'Resend Credentials' : 'Resend Invitation'}
                             >
                               <Send className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleCancelInvite(invite.id)}
-                              title="Cancel"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
+                            {invite.status === 'pending' && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleCancelInvite(invite.id)}
+                                title="Cancel"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
                     ))}
-                    {pending_invitations.length === 0 && (
+                    {(data?.all_invitations || pending_invitations).length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                          No pending invitations.
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                          No invitations yet. Send one to add team members.
                         </TableCell>
                       </TableRow>
                     )}
