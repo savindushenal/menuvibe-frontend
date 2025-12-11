@@ -155,6 +155,9 @@ export default function FranchiseDetailPage() {
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [showPartialPayment, setShowPartialPayment] = useState(false);
+  const [selectedPaymentForPartial, setSelectedPaymentForPartial] = useState<{id: number; amount: number; remaining: number} | null>(null);
+  const [partialAmount, setPartialAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   // Form states
@@ -266,6 +269,113 @@ export default function FranchiseDetailPage() {
       }
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to add branch', variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleMarkPaymentPaid = async (paymentId: number) => {
+    try {
+      const response = await apiClient.updateFranchisePayment(franchiseId, paymentId, {
+        status: 'paid',
+        paid_date: new Date().toISOString().split('T')[0],
+      });
+      if (response.success) {
+        toast({ title: 'Success', description: 'Payment marked as paid' });
+        fetchData();
+      } else {
+        toast({ title: 'Error', description: response.message, variant: 'destructive' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to update payment', variant: 'destructive' });
+    }
+  };
+
+  const handleMarkAllPaid = async () => {
+    const unpaidPayments = recent_payments.filter(p => p.status !== 'paid' && p.status !== 'cancelled');
+    if (unpaidPayments.length === 0) {
+      toast({ title: 'Info', description: 'No pending payments to mark as paid' });
+      return;
+    }
+    
+    if (!confirm(`Mark ${unpaidPayments.length} payment(s) as paid?`)) return;
+    
+    setSubmitting(true);
+    try {
+      let successCount = 0;
+      for (const payment of unpaidPayments) {
+        const response = await apiClient.updateFranchisePayment(franchiseId, payment.id, {
+          status: 'paid',
+          paid_date: new Date().toISOString().split('T')[0],
+        });
+        if (response.success) successCount++;
+      }
+      toast({ title: 'Success', description: `${successCount} payment(s) marked as paid` });
+      fetchData();
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to update some payments', variant: 'destructive' });
+      fetchData();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleOpenPartialPayment = (payment: { id: number; amount: number; status: string }) => {
+    setSelectedPaymentForPartial({ id: payment.id, amount: payment.amount, remaining: payment.amount });
+    setPartialAmount('');
+    setShowPartialPayment(true);
+  };
+
+  const handlePartialPayment = async () => {
+    if (!selectedPaymentForPartial || !partialAmount) return;
+    
+    const amount = parseFloat(partialAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({ title: 'Error', description: 'Please enter a valid amount', variant: 'destructive' });
+      return;
+    }
+    
+    if (amount > selectedPaymentForPartial.amount) {
+      toast({ title: 'Error', description: 'Partial amount cannot exceed total amount', variant: 'destructive' });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Record the partial payment as a new payment entry
+      const response = await apiClient.recordFranchisePayment(franchiseId, {
+        amount: amount,
+        payment_type: 'custom',
+        status: 'paid',
+        due_date: new Date().toISOString().split('T')[0],
+        paid_date: new Date().toISOString().split('T')[0],
+        notes: `Partial payment for payment #${selectedPaymentForPartial.id}`,
+      });
+      
+      // If full amount paid, mark original as paid
+      if (amount >= selectedPaymentForPartial.amount) {
+        await apiClient.updateFranchisePayment(franchiseId, selectedPaymentForPartial.id, {
+          status: 'paid',
+          paid_date: new Date().toISOString().split('T')[0],
+          notes: 'Paid in full',
+        });
+      } else {
+        // Update original payment with remaining amount note
+        const remaining = selectedPaymentForPartial.amount - amount;
+        await apiClient.updateFranchisePayment(franchiseId, selectedPaymentForPartial.id, {
+          notes: `Partial payment received: ${formatCurrency(amount)}. Remaining: ${formatCurrency(remaining)}`,
+        });
+      }
+
+      if (response.success) {
+        toast({ title: 'Success', description: `Partial payment of ${formatCurrency(amount)} recorded` });
+        setShowPartialPayment(false);
+        setSelectedPaymentForPartial(null);
+        setPartialAmount('');
+        fetchData();
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to record partial payment', variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
@@ -678,11 +788,29 @@ export default function FranchiseDetailPage() {
           <TabsContent value="payments">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Payment History</CardTitle>
-                <Button onClick={() => setShowAddPayment(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Record Payment
-                </Button>
+                <div>
+                  <CardTitle>Payment History</CardTitle>
+                  <CardDescription className="mt-1">
+                    {recent_payments.filter(p => p.status === 'pending' || p.status === 'overdue').length} pending payment(s)
+                  </CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  {recent_payments.filter(p => p.status !== 'paid' && p.status !== 'cancelled').length > 0 && (
+                    <Button 
+                      variant="outline" 
+                      onClick={handleMarkAllPaid}
+                      disabled={submitting}
+                      className="text-green-600 border-green-600 hover:bg-green-50"
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      Mark All Paid
+                    </Button>
+                  )}
+                  <Button onClick={() => setShowAddPayment(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Record Payment
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -694,6 +822,7 @@ export default function FranchiseDetailPage() {
                       <TableHead>Paid Date</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Notes</TableHead>
+                      <TableHead className="w-[150px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -705,11 +834,46 @@ export default function FranchiseDetailPage() {
                         <TableCell>{payment.paid_date || '-'}</TableCell>
                         <TableCell>{getStatusBadge(payment.status)}</TableCell>
                         <TableCell className="max-w-[200px] truncate">{payment.notes || '-'}</TableCell>
+                        <TableCell>
+                          {payment.status !== 'paid' && payment.status !== 'cancelled' && (
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleMarkPaymentPaid(payment.id)}
+                                className="text-green-600 hover:text-green-700 px-2"
+                                title="Mark as fully paid"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenPartialPayment(payment)}
+                                className="text-blue-600 hover:text-blue-700 px-2"
+                                title="Record partial payment"
+                              >
+                                <DollarSign className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                          {payment.status === 'paid' && (
+                            <Badge variant="outline" className="text-green-600">
+                              <Check className="h-3 w-3 mr-1" />
+                              Paid
+                            </Badge>
+                          )}
+                          {payment.status === 'cancelled' && (
+                            <Badge variant="outline" className="text-gray-500">
+                              Cancelled
+                            </Badge>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                     {recent_payments.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                           No payments recorded yet.
                         </TableCell>
                       </TableRow>
@@ -850,6 +1014,52 @@ export default function FranchiseDetailPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Partial Payment Dialog */}
+        <Dialog open={showPartialPayment} onOpenChange={setShowPartialPayment}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Record Partial Payment</DialogTitle>
+              <DialogDescription>
+                Enter the amount received for this payment.
+                {selectedPaymentForPartial && (
+                  <span className="block mt-2 font-medium">
+                    Total Amount: {formatCurrency(selectedPaymentForPartial.amount)}
+                  </span>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <Label>Amount Received (LKR) *</Label>
+                <Input
+                  type="number"
+                  value={partialAmount}
+                  onChange={(e) => setPartialAmount(e.target.value)}
+                  placeholder="Enter amount"
+                  max={selectedPaymentForPartial?.amount}
+                />
+                {selectedPaymentForPartial && partialAmount && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Remaining: {formatCurrency(Math.max(0, selectedPaymentForPartial.amount - parseFloat(partialAmount || '0')))}
+                  </p>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowPartialPayment(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handlePartialPayment} 
+                disabled={submitting || !partialAmount || parseFloat(partialAmount) <= 0}
+              >
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Record Payment
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Add Branch Dialog */}
         <Dialog open={showAddBranch} onOpenChange={setShowAddBranch}>

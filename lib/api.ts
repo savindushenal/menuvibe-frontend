@@ -1177,6 +1177,19 @@ class ApiClient {
     return this.request(`/admin/franchises/${franchiseId}/payments`);
   }
 
+  async updateFranchisePayment(franchiseId: number, paymentId: number, data: {
+    status?: 'pending' | 'paid' | 'overdue' | 'cancelled' | 'refunded';
+    paid_date?: string;
+    payment_method?: string;
+    transaction_reference?: string;
+    notes?: string;
+  }): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/payments/${paymentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Franchise Pricing
   async updateFranchisePricing(franchiseId: number, data: {
     pricing_type: 'fixed_yearly' | 'pay_as_you_go' | 'custom';
