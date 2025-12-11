@@ -322,10 +322,17 @@ export default function FranchiseDetailPage() {
         });
         fetchData();
       } else {
-        toast({ title: 'Error', description: response.message, variant: 'destructive' });
+        const errorMsg = response.errors 
+          ? Object.values(response.errors).flat().join(', ')
+          : response.message;
+        toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
       }
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to create account', variant: 'destructive' });
+    } catch (error: any) {
+      const responseErrors = error?.response?.errors;
+      const errorMsg = responseErrors 
+        ? Object.values(responseErrors).flat().join(', ')
+        : error?.message || 'Failed to create account';
+      toast({ title: 'Error', description: errorMsg, variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
