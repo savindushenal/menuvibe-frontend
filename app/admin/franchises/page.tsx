@@ -65,11 +65,16 @@ interface Franchise {
   custom_domain: string | null;
   settings: Record<string, any> | null;
   created_at: string;
-  owner: {
+  owner?: {
     id: number;
     name: string;
     email: string;
-  };
+  } | null;
+  owners?: Array<{
+    id: number;
+    name: string;
+    email: string;
+  }>;
   locations_count: number;
   users_count: number;
 }
@@ -117,6 +122,12 @@ export default function AdminFranchisesPage() {
     custom_domain: '',
   });
   const [newOwnerId, setNewOwnerId] = useState('');
+
+  // Helper function to get owner from either owner or owners array
+  const getOwner = (franchise: Franchise | null) => {
+    if (!franchise) return null;
+    return franchise.owner || franchise.owners?.[0] || null;
+  };
 
   const fetchFranchises = useCallback(async () => {
     try {
@@ -405,9 +416,9 @@ export default function AdminFranchisesPage() {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <p className="text-sm">{franchise.owner?.name || 'N/A'}</p>
+                          <p className="text-sm">{getOwner(franchise)?.name || 'N/A'}</p>
                           <p className="text-xs text-muted-foreground">
-                            {franchise.owner?.email || ''}
+                            {getOwner(franchise)?.email || ''}
                           </p>
                         </div>
                       </TableCell>
@@ -538,8 +549,8 @@ export default function AdminFranchisesPage() {
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Owner</Label>
-                  <p className="font-medium">{selectedFranchise.owner?.name}</p>
-                  <p className="text-sm text-muted-foreground">{selectedFranchise.owner?.email}</p>
+                  <p className="font-medium">{getOwner(selectedFranchise)?.name || 'N/A'}</p>
+                  <p className="text-sm text-muted-foreground">{getOwner(selectedFranchise)?.email || ''}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Status</Label>
