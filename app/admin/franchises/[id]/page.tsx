@@ -306,7 +306,7 @@ export default function FranchiseDetailPage() {
         email: accountForm.email,
         phone: accountForm.phone || undefined,
         role: accountForm.role,
-        branch_id: accountForm.branch_id ? parseInt(accountForm.branch_id) : undefined,
+        branch_id: accountForm.branch_id && accountForm.branch_id !== 'all' ? parseInt(accountForm.branch_id) : undefined,
         send_credentials: accountForm.send_credentials,
       });
       if (response.success) {
@@ -317,7 +317,7 @@ export default function FranchiseDetailPage() {
           email: '',
           phone: '',
           role: 'staff',
-          branch_id: '',
+          branch_id: 'all',
           send_credentials: true,
         });
         fetchData();
@@ -339,7 +339,7 @@ export default function FranchiseDetailPage() {
         email: inviteForm.email,
         name: inviteForm.name || undefined,
         role: inviteForm.role,
-        branch_id: inviteForm.branch_id ? parseInt(inviteForm.branch_id) : undefined,
+        branch_id: inviteForm.branch_id && inviteForm.branch_id !== 'all' ? parseInt(inviteForm.branch_id) : undefined,
         message: inviteForm.message || undefined,
         send_credentials: inviteForm.send_credentials,
       });
@@ -350,7 +350,7 @@ export default function FranchiseDetailPage() {
           email: '',
           name: '',
           role: 'staff',
-          branch_id: '',
+          branch_id: 'all',
           message: '',
           send_credentials: true,
         });
