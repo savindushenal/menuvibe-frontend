@@ -125,12 +125,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         apiClient.setToken(token);
         setUser(user);
         
-        // Check if user needs onboarding
-        const needsOnboarding = await checkOnboardingStatus();
-        if (needsOnboarding) {
-          router.push('/onboarding');
+        // Redirect based on user role
+        if (user.role === 'super_admin' || user.role === 'admin') {
+          router.push('/admin');
         } else {
-          router.push('/dashboard');
+          // Check if user needs onboarding
+          const needsOnboarding = await checkOnboardingStatus();
+          if (needsOnboarding) {
+            router.push('/onboarding');
+          } else {
+            router.push('/dashboard');
+          }
         }
       } else {
         throw new Error(response.message || 'Login failed');
