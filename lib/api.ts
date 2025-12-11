@@ -1274,6 +1274,306 @@ class ApiClient {
     });
   }
 
+  // ============================================
+  // TEMPLATE MENU SYSTEM APIs
+  // ============================================
+
+  // Menu Templates
+  async getMenuTemplates(locationId?: number): Promise<ApiResponse> {
+    const params = locationId ? `?location_id=${locationId}` : '';
+    return this.request(`/menu-templates${params}`);
+  }
+
+  async createMenuTemplate(data: {
+    name: string;
+    description?: string;
+    currency?: string;
+    location_id?: number;
+    settings?: any;
+  }): Promise<ApiResponse> {
+    return this.request('/menu-templates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getMenuTemplate(templateId: number): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}`);
+  }
+
+  async updateMenuTemplate(templateId: number, data: any): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteMenuTemplate(templateId: number): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async duplicateMenuTemplate(templateId: number, data: { name: string }): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/duplicate`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Template Categories
+  async createTemplateCategory(templateId: number, data: {
+    name: string;
+    description?: string;
+    icon?: string;
+  }): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/categories`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateTemplateCategory(templateId: number, categoryId: number, data: any): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/categories/${categoryId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTemplateCategory(templateId: number, categoryId: number): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/categories/${categoryId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async reorderTemplateCategories(templateId: number, data: { categories: { id: number; sort_order: number }[] }): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/categories/reorder`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Template Items
+  async createTemplateItem(templateId: number, categoryId: number, data: {
+    name: string;
+    description?: string;
+    price: number;
+    image_url?: string;
+  }): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/categories/${categoryId}/items`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateTemplateItem(templateId: number, itemId: number, data: any): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/items/${itemId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTemplateItem(templateId: number, itemId: number): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/items/${itemId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async bulkCreateTemplateItems(templateId: number, data: { items: any[] }): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/items/bulk`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Menu Endpoints (Tables, Rooms, Branches)
+  async getMenuEndpoints(params?: {
+    location_id?: number;
+    template_id?: number;
+    type?: string;
+  }): Promise<ApiResponse> {
+    const queryParams = new URLSearchParams();
+    if (params?.location_id) queryParams.append('location_id', params.location_id.toString());
+    if (params?.template_id) queryParams.append('template_id', params.template_id.toString());
+    if (params?.type) queryParams.append('type', params.type);
+    const query = queryParams.toString();
+    return this.request(`/menu-endpoints${query ? `?${query}` : ''}`);
+  }
+
+  async createMenuEndpoint(data: {
+    template_id: number;
+    type: 'table' | 'room' | 'area' | 'branch' | 'kiosk' | 'takeaway' | 'event' | 'delivery';
+    name: string;
+    identifier?: string;
+    description?: string;
+    location_id?: number;
+    settings?: any;
+  }): Promise<ApiResponse> {
+    return this.request('/menu-endpoints', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getMenuEndpoint(endpointId: number): Promise<ApiResponse> {
+    return this.request(`/menu-endpoints/${endpointId}`);
+  }
+
+  async updateMenuEndpoint(endpointId: number, data: any): Promise<ApiResponse> {
+    return this.request(`/menu-endpoints/${endpointId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteMenuEndpoint(endpointId: number): Promise<ApiResponse> {
+    return this.request(`/menu-endpoints/${endpointId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async bulkCreateMenuEndpoints(data: { endpoints: any[] }): Promise<ApiResponse> {
+    return this.request('/menu-endpoints/bulk', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getEndpointQRCode(endpointId: number, params?: {
+    size?: number;
+    format?: 'png' | 'svg';
+    color?: string;
+    background?: string;
+  }): Promise<ApiResponse> {
+    const queryParams = new URLSearchParams();
+    if (params?.size) queryParams.append('size', params.size.toString());
+    if (params?.format) queryParams.append('format', params.format);
+    if (params?.color) queryParams.append('color', params.color);
+    if (params?.background) queryParams.append('background', params.background);
+    const query = queryParams.toString();
+    return this.request(`/menu-endpoints/${endpointId}/qr${query ? `?${query}` : ''}`);
+  }
+
+  async regenerateEndpointQR(endpointId: number): Promise<ApiResponse> {
+    return this.request(`/menu-endpoints/${endpointId}/regenerate-qr`, {
+      method: 'POST',
+    });
+  }
+
+  // Endpoint Overrides
+  async getEndpointOverrides(endpointId: number): Promise<ApiResponse> {
+    return this.request(`/menu-endpoints/${endpointId}/overrides`);
+  }
+
+  async createEndpointOverride(endpointId: number, data: {
+    item_id: number;
+    price_override?: number;
+    is_available?: boolean;
+    is_hidden?: boolean;
+  }): Promise<ApiResponse> {
+    return this.request(`/menu-endpoints/${endpointId}/overrides`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteEndpointOverride(endpointId: number, itemId: number): Promise<ApiResponse> {
+    return this.request(`/menu-endpoints/${endpointId}/overrides/${itemId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async bulkUpdateEndpointOverrides(endpointId: number, data: { overrides: any[] }): Promise<ApiResponse> {
+    return this.request(`/menu-endpoints/${endpointId}/overrides/bulk`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getEndpointAnalytics(endpointId: number, params?: { days?: number }): Promise<ApiResponse> {
+    const query = params?.days ? `?days=${params.days}` : '';
+    return this.request(`/menu-endpoints/${endpointId}/analytics${query}`);
+  }
+
+  // Menu Offers
+  async getMenuOffers(params?: {
+    template_id?: number;
+    location_id?: number;
+    type?: string;
+    active_only?: boolean;
+  }): Promise<ApiResponse> {
+    const queryParams = new URLSearchParams();
+    if (params?.template_id) queryParams.append('template_id', params.template_id.toString());
+    if (params?.location_id) queryParams.append('location_id', params.location_id.toString());
+    if (params?.type) queryParams.append('type', params.type);
+    if (params?.active_only) queryParams.append('active_only', 'true');
+    const query = queryParams.toString();
+    return this.request(`/menu-offers${query ? `?${query}` : ''}`);
+  }
+
+  async createMenuOffer(data: {
+    template_id: number;
+    name: string;
+    type: 'special' | 'instant' | 'seasonal' | 'combo' | 'happy_hour';
+    discount_type?: 'percentage' | 'fixed' | 'bogo';
+    discount_value?: number;
+    description?: string;
+    starts_at?: string;
+    ends_at?: string;
+    item_ids?: number[];
+    category_ids?: number[];
+  }): Promise<ApiResponse> {
+    return this.request('/menu-offers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateMenuOffer(offerId: number, data: any): Promise<ApiResponse> {
+    return this.request(`/menu-offers/${offerId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteMenuOffer(offerId: number): Promise<ApiResponse> {
+    return this.request(`/menu-offers/${offerId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async toggleMenuOffer(offerId: number): Promise<ApiResponse> {
+    return this.request(`/menu-offers/${offerId}/toggle`, {
+      method: 'POST',
+    });
+  }
+
+  async duplicateMenuOffer(offerId: number, data: { name: string }): Promise<ApiResponse> {
+    return this.request(`/menu-offers/${offerId}/duplicate`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Public Menu APIs (for fetching menu by short code)
+  async getPublicMenu(shortCode: string): Promise<ApiResponse> {
+    return this.request(`/menu/${shortCode}`);
+  }
+
+  async getPublicMenuData(shortCode: string): Promise<ApiResponse> {
+    return this.request(`/menu/${shortCode}/data`);
+  }
+
+  async getPublicMenuOffers(shortCode: string): Promise<ApiResponse> {
+    return this.request(`/menu/${shortCode}/offers`);
+  }
+
+  async recordMenuScan(shortCode: string): Promise<ApiResponse> {
+    return this.request(`/menu/${shortCode}/scan`, {
+      method: 'POST',
+    });
+  }
+
   // Generic HTTP methods for direct API access
   async get<T = any>(endpoint: string): Promise<{ data: ApiResponse<T> }> {
     const response = await this.request<T>(endpoint, { method: 'GET' });
