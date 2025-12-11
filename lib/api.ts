@@ -26,10 +26,24 @@ interface User {
   updated_at: string;
 }
 
+interface UserContext {
+  type: 'personal' | 'franchise';
+  id: number | null;
+  slug: string | null;
+  name: string;
+  logo_url?: string | null;
+  role: string;
+  branch?: string | null;
+  locations_count?: number;
+  redirect: string;
+}
+
 interface AuthData {
   user: User;
   token: string;
-  token_type: string;
+  token_type?: string;
+  contexts?: UserContext[];
+  default_redirect?: string;
 }
 
 class ApiClient {
@@ -1259,7 +1273,36 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  // Generic HTTP methods for direct API access
+  async get<T = any>(endpoint: string): Promise<{ data: ApiResponse<T> }> {
+    const response = await this.request<T>(endpoint, { method: 'GET' });
+    return { data: response };
+  }
+
+  async post<T = any>(endpoint: string, data?: any): Promise<{ data: ApiResponse<T> }> {
+    const response = await this.request<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+    return { data: response };
+  }
+
+  async put<T = any>(endpoint: string, data?: any): Promise<{ data: ApiResponse<T> }> {
+    const response = await this.request<T>(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+    return { data: response };
+  }
+
+  async delete<T = any>(endpoint: string): Promise<{ data: ApiResponse<T> }> {
+    const response = await this.request<T>(endpoint, { method: 'DELETE' });
+    return { data: response };
+  }
 }
 
 export const apiClient = new ApiClient();
-export type { User, AuthData, ApiResponse };
+// Alias for simpler import: import { api } from '@/lib/api'
+export const api = apiClient;
+export type { User, AuthData, ApiResponse, UserContext };

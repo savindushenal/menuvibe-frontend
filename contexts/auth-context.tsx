@@ -119,17 +119,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await apiClient.login({ email, password });
       
       if (response.success && response.data) {
-        const { user, token } = response.data;
+        const { user, token, contexts, default_redirect } = response.data;
         
         // Set token first
         apiClient.setToken(token);
         setUser(user);
         
-        // Redirect based on user role
+        // Redirect based on user role and contexts
         if (user.role === 'super_admin' || user.role === 'admin') {
           router.push('/admin');
+        } else if (contexts && contexts.length > 0) {
+          // If contexts are returned, use the default redirect
+          // This handles single context (direct) or multiple contexts (selector)
+          if (default_redirect) {
+            router.push(default_redirect);
+          } else if (contexts.length === 1) {
+            router.push(contexts[0].redirect);
+          } else {
+            router.push('/auth/select-context');
+          }
         } else {
-          // Check if user needs onboarding
+          // Fallback: Check if user needs onboarding
           const needsOnboarding = await checkOnboardingStatus();
           if (needsOnboarding) {
             router.push('/onboarding');
