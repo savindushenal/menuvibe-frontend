@@ -153,10 +153,9 @@ export default function FranchiseHelpPage() {
 
     try {
       setSubmitting(true);
-      const response = await api.post('/help-tickets', {
-        ...formData,
-        franchise_slug: franchiseSlug
-      });
+      console.log('Creating ticket with data:', formData);
+      const response = await api.post('/help-tickets', formData);
+      console.log('Ticket response:', response);
       
       if (response.data.success) {
         toast.success('Ticket created successfully');
@@ -168,9 +167,12 @@ export default function FranchiseHelpPage() {
           priority: 'medium',
         });
         fetchTickets();
+      } else {
+        toast.error(response.data.message || 'Failed to create ticket');
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to create ticket');
+      console.error('Ticket creation error:', err);
+      toast.error(err.response?.data?.message || err.message || 'Failed to create ticket');
     } finally {
       setSubmitting(false);
     }
