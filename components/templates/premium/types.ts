@@ -19,6 +19,15 @@ export interface DesignTokens {
   borderRadius?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
 }
 
+export interface ItemVariation {
+  id?: string;
+  name: string;
+  price: number;
+  compare_at_price?: number;
+  is_default?: boolean;
+  is_available?: boolean;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -29,6 +38,7 @@ export interface MenuItem {
   reviews?: number;
   category: string;
   customizations?: MenuCustomization[];
+  variations?: ItemVariation[];
   isAvailable?: boolean;
   tags?: string[];
 }
@@ -48,6 +58,7 @@ export interface CartItem {
   item: MenuItem;
   quantity: number;
   customizations: string[];
+  selectedVariation?: ItemVariation;
 }
 
 export interface LocationInfo {

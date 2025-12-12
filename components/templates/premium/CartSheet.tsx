@@ -23,7 +23,8 @@ export default function CartSheet({
   onCheckout,
 }: CartSheetProps) {
   const calculateItemTotal = (cartItem: CartItem) => {
-    let total = cartItem.item.price;
+    // Use selected variation price if available, otherwise use item price
+    let total = cartItem.selectedVariation ? cartItem.selectedVariation.price : cartItem.item.price;
     cartItem.item.customizations?.forEach(c => {
       if (cartItem.customizations.includes(c.name)) {
         total += c.price;
@@ -123,9 +124,12 @@ export default function CartSheet({
                           </div>
 
                           {/* Customizations */}
-                          {cartItem.customizations.length > 0 && (
+                          {(cartItem.selectedVariation || cartItem.customizations.length > 0) && (
                             <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-                              {cartItem.customizations.join(', ')}
+                              {[
+                                cartItem.selectedVariation?.name,
+                                ...cartItem.customizations
+                              ].filter(Boolean).join(', ')}
                             </p>
                           )}
 

@@ -3,8 +3,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Minus, Plus, Star, Check } from 'lucide-react';
 import Image from 'next/image';
-import { useState } from 'react';
-import { MenuItem, CartItem } from './types';
+import { useState, useEffect } from 'react';
+import { MenuItem, CartItem, ItemVariation } from './types';
 
 interface ProductSheetProps {
   item: MenuItem | null;
@@ -16,11 +16,25 @@ interface ProductSheetProps {
 export default function ProductSheet({ item, isOpen, onClose, onAddToCart }: ProductSheetProps) {
   const [quantity, setQuantity] = useState(1);
   const [selectedCustomizations, setSelectedCustomizations] = useState<string[]>([]);
+  const [selectedVariation, setSelectedVariation] = useState<ItemVariation | null>(null);
 
   // Reset state when item changes
+  useEffect(() => {
+    if (item?.variations && item.variations.length > 0) {
+      // Select default variation or first available one
+      const defaultVariation = item.variations.find(v => v.is_default && v.is_available !== false) 
+        || item.variations.find(v => v.is_available !== false)
+        || item.variations[0];
+      setSelectedVariation(defaultVariation);
+    } else {
+      setSelectedVariation(null);
+    }
+  }, [item]);
+
   const handleClose = () => {
     setQuantity(1);
     setSelectedCustomizations([]);
+    setSelectedVariation(null);
     onClose();
   };
 
@@ -34,8 +48,12 @@ export default function ProductSheet({ item, isOpen, onClose, onAddToCart }: Pro
     );
   };
 
+  const getBasePrice = () => {
+    return selectedVariation ? selectedVariation.price : item.price;
+  };
+
   const calculateTotal = () => {
-    let total = item.price * quantity;
+    let total = getBasePrice() * quantity;
     item.customizations?.forEach(c => {
       if (selectedCustomizations.includes(c.name)) {
         total += c.price * quantity;
@@ -49,9 +67,12 @@ export default function ProductSheet({ item, isOpen, onClose, onAddToCart }: Pro
       item,
       quantity,
       customizations: selectedCustomizations,
+      selectedVariation: selectedVariation || undefined,
     });
     handleClose();
   };
+
+  const hasVariations = item.variations && item.variations.length > 0;
 
   return (
     <AnimatePresence>
@@ -119,13 +140,49 @@ export default function ProductSheet({ item, isOpen, onClose, onAddToCart }: Pro
                       </div>
                     )}
                   </div>
-                  <span className="text-xl md:text-2xl font-bold text-franchise-primary">
-                    Rs. {item.price.toLocaleString()}
-                  </span>
+                  <div className="text-right">
+                    {selectedVariation?.compare_at_price && selectedVariation.compare_at_price > selectedVariation.price && (
+                      <span className="text-sm text-gray-400 line-through block">
+                        Rs. {selectedVariation.compare_at_price.toLocaleString()}
+                      </span>
+                    )}
+                    <span className="text-xl md:text-2xl font-bold text-franchise-primary">
+                      Rs. {getBasePrice().toLocaleString()}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Description */}
                 <p className="text-gray-600 mt-3">{item.description}</p>
+
+                {/* Size Variations */}
+                {hasVariations && (
+                  <div className="mt-6">
+                    <h3 className="font-semibold text-franchise-dark mb-3">Size</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {item.variations!.map((variation) => (
+                        <motion.button
+                          key={variation.name}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => variation.is_available !== false && setSelectedVariation(variation)}
+                          disabled={variation.is_available === false}
+                          className={`px-4 py-2.5 rounded-xl border-2 transition-all ${
+                            selectedVariation?.name === variation.name
+                              ? 'border-franchise-primary bg-franchise-primary/10 text-franchise-primary'
+                              : variation.is_available === false
+                              ? 'border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed'
+                              : 'border-gray-200 hover:border-gray-300 text-franchise-dark'
+                          }`}
+                        >
+                          <span className="font-medium">{variation.name}</span>
+                          <span className="block text-sm mt-0.5">
+                            Rs. {variation.price.toLocaleString()}
+                          </span>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Customizations */}
                 {item.customizations && item.customizations.length > 0 && (

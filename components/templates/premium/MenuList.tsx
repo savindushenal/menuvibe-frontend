@@ -87,7 +87,14 @@ export default function MenuList({ items, category, onItemClick }: MenuListProps
               
               <div className="flex items-center justify-between mt-2">
                 <span className="text-franchise-primary font-bold text-sm md:text-base">
-                  Rs. {item.price.toLocaleString()}
+                  {item.variations && item.variations.length > 0 ? (
+                    <>
+                      {item.variations.length > 1 && <span className="text-gray-500 font-normal text-xs mr-1">from</span>}
+                      Rs. {Math.min(...item.variations.map(v => v.price)).toLocaleString()}
+                    </>
+                  ) : (
+                    <>Rs. {item.price.toLocaleString()}</>
+                  )}
                 </span>
                 {item.tags && item.tags.length > 0 && (
                   <div className="flex gap-1">
