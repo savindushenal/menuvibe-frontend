@@ -58,11 +58,13 @@ class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
     
-    // Always refresh token from localStorage before making requests, but prefer instance token
+    // Always refresh token from localStorage before making requests
     if (typeof window !== 'undefined') {
       const storageToken = localStorage.getItem('auth_token');
-      // Use instance token if available, otherwise use localStorage token
-      this.token = this.token || storageToken;
+      // Always prefer the latest token from localStorage
+      if (storageToken) {
+        this.token = storageToken;
+      }
     }
     
     const headers: Record<string, string> = {
