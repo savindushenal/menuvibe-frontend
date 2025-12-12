@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { UtensilsCrossed, Plus, Eye, Edit, ExternalLink } from 'lucide-react';
+import { UtensilsCrossed, Eye, Edit, ExternalLink } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -98,25 +98,33 @@ export default function FranchiseMenusPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Menus</h1>
-          <p className="text-neutral-600">Manage your franchise menus</p>
+          <h1 className="text-2xl font-bold text-neutral-900">Branch Menus</h1>
+          <p className="text-neutral-600">View and manage menus for each branch location</p>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          Create Menu
-        </Button>
       </div>
+
+      {/* Info Card */}
+      <Card className="bg-blue-50 border-blue-200">
+        <CardContent className="pt-4">
+          <p className="text-sm text-blue-700">
+            <strong>Tip:</strong> Branch menus are derived from your Master Menu. 
+            Use the <a href={`/${franchiseSlug}/dashboard/menus/master`} className="underline font-medium">Master Menu</a> to 
+            add items, then sync them to branches. Each branch can customize availability and prices.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Menus Grid */}
       {menus.length === 0 ? (
         <Card>
           <CardContent className="pt-6 text-center">
             <UtensilsCrossed className="w-12 h-12 mx-auto text-neutral-400 mb-4" />
-            <h3 className="text-lg font-medium text-neutral-900 mb-2">No menus yet</h3>
-            <p className="text-neutral-600 mb-4">Create your first menu to get started</p>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Menu
+            <h3 className="text-lg font-medium text-neutral-900 mb-2">No branch menus yet</h3>
+            <p className="text-neutral-600 mb-4">
+              Create your Master Menu first, then sync it to your branches.
+            </p>
+            <Button onClick={() => window.location.href = `/${franchiseSlug}/dashboard/menus/master`}>
+              Go to Master Menu
             </Button>
           </CardContent>
         </Card>
