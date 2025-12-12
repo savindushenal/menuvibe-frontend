@@ -139,7 +139,7 @@ export default function SelectContextPage() {
         <Card className="w-full max-w-lg border-red-200 bg-red-50">
           <CardContent className="pt-6 text-center">
             <p className="text-red-600 mb-4">{error}</p>
-            <Button onClick={fetchContexts} variant="outline">
+            <Button onClick={loadContexts} variant="outline">
               Try Again
             </Button>
           </CardContent>
