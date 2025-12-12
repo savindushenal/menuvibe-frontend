@@ -159,6 +159,11 @@ export default function FranchiseDetailPage() {
   const [selectedPaymentForPartial, setSelectedPaymentForPartial] = useState<{id: number; amount: number; remaining: number} | null>(null);
   const [partialAmount, setPartialAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  
+  // Send password states
+  const [showSendPassword, setShowSendPassword] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<{id: number; userId: number; name: string; email: string} | null>(null);
+  const [sendingPassword, setSendingPassword] = useState(false);
 
   // Form states
   const [branchForm, setBranchForm] = useState({
@@ -528,6 +533,41 @@ export default function FranchiseDetailPage() {
       }
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to cancel invitation', variant: 'destructive' });
+    }
+  };
+
+  const handleSendGeneratedPassword = async () => {
+    if (!selectedAccount) return;
+    
+    setSendingPassword(true);
+    try {
+      const response = await apiClient.generateAndSendPassword(selectedAccount.userId);
+      if (response.success) {
+        toast({
+          title: 'Success',
+          description: response.message || 'New password generated and sent to user\'s email',
+        });
+        
+        // If email failed, show the password in a warning toast
+        if (response.data?.password && !response.data?.email_sent) {
+          toast({
+            title: 'Warning: Email Failed',
+            description: `Password: ${response.data.password}`,
+            variant: 'destructive',
+          });
+        }
+        
+        setShowSendPassword(false);
+        setSelectedAccount(null);
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to generate password',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingPassword(false);
     }
   };
 
@@ -903,6 +943,7 @@ export default function FranchiseDetailPage() {
                       <TableHead>Role</TableHead>
                       <TableHead>Branch</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead className="w-[100px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -919,11 +960,36 @@ export default function FranchiseDetailPage() {
                             {account.is_active ? 'Active' : 'Inactive'}
                           </Badge>
                         </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedAccount({
+                                    id: account.id,
+                                    userId: account.user.id,
+                                    name: account.user.name,
+                                    email: account.user.email,
+                                  });
+                                  setShowSendPassword(true);
+                                }}
+                              >
+                                <Send className="h-4 w-4 mr-2" />
+                                Send Generated Password
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
                       </TableRow>
                     ))}
                     {accounts.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                           No accounts yet. Create or invite users.
                         </TableCell>
                       </TableRow>
@@ -1376,6 +1442,37 @@ export default function FranchiseDetailPage() {
               <Button onClick={handleSendInvite} disabled={submitting || !inviteForm.email}>
                 {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Send Invitation
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Send Generated Password Dialog */}
+        <Dialog open={showSendPassword} onOpenChange={setShowSendPassword}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Send className="h-5 w-5" />
+                Send Generated Password
+              </DialogTitle>
+              <DialogDescription>
+                This will generate a new random password for {selectedAccount?.name} and send it to their email address ({selectedAccount?.email}).
+                Their current password will be invalidated and all active sessions will be revoked.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowSendPassword(false)} disabled={sendingPassword}>
+                Cancel
+              </Button>
+              <Button onClick={handleSendGeneratedPassword} disabled={sendingPassword}>
+                {sendingPassword ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  'Generate & Send Password'
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
