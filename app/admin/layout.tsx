@@ -79,8 +79,8 @@ const adminNavItems = [
 
 const superAdminNavItems = [
   {
-    title: 'Super Admin',
-    href: '/super-admin',
+    title: 'Super Admin Dashboard',
+    href: '/admin',
     icon: Shield,
     roles: ['super_admin'],
   },
