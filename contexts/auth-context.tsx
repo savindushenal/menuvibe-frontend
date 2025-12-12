@@ -121,14 +121,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.success && response.data) {
         const { user, token, contexts, default_redirect } = response.data;
         
-        // Set token first
+        // Set token first and ensure it's saved to localStorage
         apiClient.setToken(token);
+        
+        // Double-check token is saved
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('auth_token', token);
+        }
+        
         setUser(user);
         
         // Redirect based on user role and contexts
         if (user.role === 'super_admin' || user.role === 'admin') {
           router.push('/admin');
         } else if (contexts && contexts.length > 0) {
+          // Store contexts in sessionStorage for the select-context page
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('user_contexts', JSON.stringify(contexts));
+          }
+          
           // If contexts are returned, use the default redirect
           // This handles single context (direct) or multiple contexts (selector)
           if (default_redirect) {

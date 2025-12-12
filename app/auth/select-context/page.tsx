@@ -36,13 +36,31 @@ export default function SelectContextPage() {
     }
 
     if (isAuthenticated) {
-      fetchContexts();
+      loadContexts();
     }
   }, [authLoading, isAuthenticated, router]);
 
-  const fetchContexts = async () => {
+  const loadContexts = async () => {
     try {
       setLoading(true);
+      
+      // First, try to get contexts from sessionStorage (set during login)
+      const cachedContexts = sessionStorage.getItem('user_contexts');
+      if (cachedContexts) {
+        const userContexts = JSON.parse(cachedContexts);
+        setContexts(userContexts);
+        // Clear the cache after reading
+        sessionStorage.removeItem('user_contexts');
+        
+        // If only one context, redirect directly
+        if (userContexts.length === 1) {
+          router.push(userContexts[0].redirect);
+        }
+        setLoading(false);
+        return;
+      }
+      
+      // Fallback: fetch from API if no cached contexts
       const response = await api.get('/auth/contexts');
       
       if (response.data.success) {
@@ -56,7 +74,7 @@ export default function SelectContextPage() {
       }
     } catch (err: any) {
       console.error('Failed to fetch contexts:', err);
-      setError(err.response?.data?.message || 'Failed to load your workspaces');
+      setError(err.message || 'Failed to load your workspaces');
     } finally {
       setLoading(false);
     }
