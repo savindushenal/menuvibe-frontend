@@ -121,12 +121,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.success && response.data) {
         const { user, token, contexts, default_redirect } = response.data;
         
+        console.log('[AUTH] Login successful, token received:', token?.substring(0, 20) + '...');
+        
         // Set token first and ensure it's saved to localStorage
         apiClient.setToken(token);
         
         // Double-check token is saved
         if (typeof window !== 'undefined') {
           localStorage.setItem('auth_token', token);
+          console.log('[AUTH] Token saved to localStorage, verified:', localStorage.getItem('auth_token')?.substring(0, 20) + '...');
         }
         
         setUser(user);
@@ -138,6 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Store contexts in sessionStorage for the select-context page
           if (typeof window !== 'undefined') {
             sessionStorage.setItem('user_contexts', JSON.stringify(contexts));
+            console.log('[AUTH] Contexts saved to sessionStorage:', contexts.length, 'contexts');
           }
           
           // If contexts are returned, use the default redirect

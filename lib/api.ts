@@ -65,6 +65,8 @@ class ApiClient {
       if (storageToken) {
         this.token = storageToken;
       }
+      // Debug logging
+      console.log('[API] Request to:', endpoint, '| Token exists:', !!this.token, '| Token preview:', this.token?.substring(0, 20) + '...');
     }
     
     const headers: Record<string, string> = {
