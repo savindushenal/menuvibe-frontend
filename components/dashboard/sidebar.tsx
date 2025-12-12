@@ -15,6 +15,7 @@ import {
   Menu,
   FileText,
   TableProperties,
+  HelpCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -28,6 +29,7 @@ const menuItems = [
   { icon: Building, label: 'Restaurant Profile', href: '/dashboard/profile' },
   { icon: QrCode, label: 'QR Codes', href: '/dashboard/qr-codes' },
   { icon: BarChart3, label: 'Analytics', href: '/dashboard/analytics' },
+  { icon: HelpCircle, label: 'Help & Support', href: '/dashboard/help' },
   { icon: Settings, label: 'Settings', href: '/dashboard/settings' },
 ];
 

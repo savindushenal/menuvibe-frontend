@@ -7,7 +7,6 @@ import {
   UtensilsCrossed,
   Building2,
   Users,
-  MapPin,
   Settings,
   ChevronLeft,
   Menu,
@@ -15,6 +14,7 @@ import {
   ArrowLeft,
   ChefHat,
   Tag,
+  HelpCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useParams, useRouter } from 'next/navigation';
@@ -39,9 +39,9 @@ export function FranchiseSidebar({ franchiseSlug }: FranchiseSidebarProps) {
     { icon: ChefHat, label: 'Master Menu', href: `/${franchiseSlug}/dashboard/menus/master` },
     { icon: Tag, label: 'Offers', href: `/${franchiseSlug}/dashboard/menus/offers` },
     { icon: UtensilsCrossed, label: 'Branch Menus', href: `/${franchiseSlug}/dashboard/menus` },
-    { icon: MapPin, label: 'Locations', href: `/${franchiseSlug}/dashboard/locations` },
     { icon: Building2, label: 'Branches', href: `/${franchiseSlug}/dashboard/branches` },
     { icon: Users, label: 'Team', href: `/${franchiseSlug}/dashboard/team` },
+    { icon: HelpCircle, label: 'Help & Support', href: `/${franchiseSlug}/dashboard/help` },
     { icon: Settings, label: 'Settings', href: `/${franchiseSlug}/dashboard/settings` },
   ];
 
