@@ -30,6 +30,14 @@ export interface Location {
   menus?: Menu[];
 }
 
+export interface ItemVariation {
+  id?: string;
+  name: string;
+  price: number;
+  compare_at_price?: number;
+  is_default?: boolean;
+}
+
 export interface MenuItem {
   id: number;
   menu_id: number;
@@ -50,7 +58,7 @@ export interface MenuItem {
   preparation_time?: number;
   is_spicy: boolean;
   spice_level?: number;
-  variations?: any;
+  variations?: ItemVariation[];
   created_at: string;
   updated_at: string;
   category?: MenuCategory;
