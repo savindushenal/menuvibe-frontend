@@ -86,6 +86,12 @@ interface MenuItem {
   is_spicy: boolean;
   spice_level: number | null;
   category_id: number;
+  variations?: Array<{
+    name: string;
+    price: number;
+    compare_at_price?: number;
+    is_default?: boolean;
+  }> | null;
 }
 
 interface Offer {
@@ -495,11 +501,25 @@ export default function MasterMenuEditorPage() {
                                 </div>
                                 <div className="flex items-center gap-4">
                                   <div className="text-right">
-                                    <p className="font-semibold">{formatPrice(item.price)}</p>
-                                    {item.compare_at_price && (
-                                      <p className="text-xs text-neutral-400 line-through">
-                                        {formatPrice(item.compare_at_price)}
-                                      </p>
+                                    {item.variations && item.variations.length > 0 ? (
+                                      <div className="flex items-center gap-1">
+                                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                          {item.variations.length} sizes
+                                        </Badge>
+                                        <span className="text-xs text-neutral-500">from</span>
+                                        <span className="font-semibold">
+                                          {formatPrice(Math.min(...item.variations.map(v => v.price)))}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <p className="font-semibold">{formatPrice(item.price)}</p>
+                                        {item.compare_at_price && (
+                                          <p className="text-xs text-neutral-400 line-through">
+                                            {formatPrice(item.compare_at_price)}
+                                          </p>
+                                        )}
+                                      </>
                                     )}
                                   </div>
                                   <Badge variant={item.is_available ? 'outline' : 'secondary'} className="text-xs">

@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, X, Plus } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { ItemVariantsForm, ItemVariant } from '@/components/menu/item-variants-form';
 
 interface MenuItem {
   id: number;
@@ -28,6 +29,7 @@ interface MenuItem {
   is_spicy: boolean;
   spice_level: number | null;
   category_id: number;
+  variations?: ItemVariant[] | null;
 }
 
 interface ItemDialogProps {
@@ -62,6 +64,7 @@ export function ItemDialog({
   onSuccess 
 }: ItemDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [variants, setVariants] = useState<ItemVariant[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -97,6 +100,8 @@ export function ItemDialog({
         calories: '',
         sku: '',
       });
+      // Load existing variants
+      setVariants(item.variations || []);
     } else {
       setFormData({
         name: '',
@@ -114,6 +119,7 @@ export function ItemDialog({
         calories: '',
         sku: '',
       });
+      setVariants([]);
     }
   }, [item, open]);
 
@@ -146,6 +152,12 @@ export function ItemDialog({
         spice_level: formData.spice_level ? parseInt(formData.spice_level) : null,
         calories: formData.calories ? parseInt(formData.calories) : null,
         category_id: categoryId,
+        variations: variants.length > 0 ? variants.map(v => ({
+          name: v.name,
+          price: v.price,
+          compare_at_price: v.compare_at_price || null,
+          is_default: v.is_default || false,
+        })) : null,
       };
       
       const endpoint = item 
@@ -278,6 +290,14 @@ export function ItemDialog({
                 )}
               </div>
             </div>
+
+            {/* Size Variants */}
+            <ItemVariantsForm
+              variants={variants}
+              onChange={setVariants}
+              currency={currency}
+              basePrice={formData.price ? parseFloat(formData.price) : 0}
+            />
 
             {/* Toggles */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
