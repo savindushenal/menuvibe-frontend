@@ -93,7 +93,8 @@ export default function FranchiseTeamPage() {
       if (staffRes.data.success) {
         setStaff(staffRes.data.data || staffRes.data.staff || []);
       }
-      setBranches(branchesRes.data.branches || []);
+      // Handle both response formats: { data: [...] } or { branches: [...] }
+      setBranches(branchesRes.data.data || branchesRes.data.branches || []);
     } catch (err: any) {
       console.error('Failed to fetch data:', err);
       setError(err.response?.data?.message || 'Failed to load team data');
