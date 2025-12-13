@@ -183,10 +183,16 @@ function EndpointsPageContent() {
 
   const handleCreate = async () => {
     try {
-      const response = await apiClient.createMenuEndpoint({
+      // Auto-generate identifier from name if not provided
+      const identifier = formData.identifier.trim() || formData.name.replace(/\s+/g, '-').toLowerCase();
+      const data = {
         ...formData,
+        identifier,
         location_id: currentLocation?.id ? parseInt(currentLocation.id) : undefined,
-      });
+      };
+      console.log('Creating endpoint with data:', data);
+      const response = await apiClient.createMenuEndpoint(data);
+      console.log('Create response:', response);
       if (response.success) {
         toast({ title: 'Success', description: 'Endpoint created successfully' });
         setIsCreateOpen(false);
@@ -194,9 +200,13 @@ function EndpointsPageContent() {
         loadData();
       }
     } catch (error: any) {
+      console.error('Create endpoint error:', error);
+      const errorMsg = error.errors 
+        ? Object.values(error.errors).flat().join(', ')
+        : error.message || 'Failed to create endpoint';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create endpoint',
+        description: errorMsg,
         variant: 'destructive',
       });
     }
@@ -648,7 +658,7 @@ function EndpointsPageContent() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Identifier</Label>
+                <Label>Identifier (auto-generated if empty)</Label>
                 <Input
                   placeholder="e.g., T1, VIP1"
                   value={formData.identifier}
