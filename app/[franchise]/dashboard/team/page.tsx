@@ -73,6 +73,7 @@ export default function FranchiseTeamPage() {
   const [deleting, setDeleting] = useState<number | null>(null);
   
   // Invite form
+  const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('staff');
   const [inviteBranchId, setInviteBranchId] = useState('');
@@ -108,10 +109,10 @@ export default function FranchiseTeamPage() {
   }, [franchiseSlug]);
 
   const handleInvite = async () => {
-    if (!inviteEmail) {
+    if (!inviteName || !inviteEmail) {
       toast({
         title: 'Error',
-        description: 'Please enter an email address',
+        description: 'Please enter name and email address',
         variant: 'destructive',
       });
       return;
@@ -120,6 +121,7 @@ export default function FranchiseTeamPage() {
     try {
       setInviting(true);
       await api.post(`/franchise/${franchiseSlug}/staff`, {
+        name: inviteName,
         email: inviteEmail,
         role: inviteRole,
         branch_id: inviteBranchId ? parseInt(inviteBranchId) : null,
@@ -131,6 +133,7 @@ export default function FranchiseTeamPage() {
       });
 
       setInviteDialogOpen(false);
+      setInviteName('');
       setInviteEmail('');
       setInviteRole('staff');
       setInviteBranchId('');
@@ -270,6 +273,16 @@ export default function FranchiseTeamPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="John Doe"
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <Input

@@ -174,24 +174,35 @@ export function FranchiseProvider({ children }: { children: React.ReactNode }) {
     
     const host = window.location.hostname;
     
-    // Skip main domains
-    const mainDomains = ['menuvibe.com', 'www.menuvibe.com', 'localhost', '127.0.0.1'];
+    // Skip main domains and staging/app subdomains
+    const mainDomains = ['menuvibe.com', 'www.menuvibe.com', 'localhost', '127.0.0.1', 'app.menuvibe.com', 'app.menuvire.com'];
     if (mainDomains.includes(host)) return null;
     
+    // Skip staging and preview domains
+    if (host.includes('staging.') || host.includes('preview.') || host.includes('vercel.app')) {
+      return null;
+    }
+    
     // Check for subdomain (e.g., subway.menuvibe.com)
-    const baseDomains = ['menuvibe.com', 'menuvibe.local', 'vercel.app'];
+    const baseDomains = ['menuvibe.com', 'menuvire.com', 'menuvibe.local'];
     for (const baseDomain of baseDomains) {
       if (host.endsWith(`.${baseDomain}`)) {
         const subdomain = host.replace(`.${baseDomain}`, '');
-        if (!['www', 'api', 'app', 'admin'].includes(subdomain)) {
-          return subdomain;
+        // Skip system subdomains
+        if (['www', 'api', 'app', 'admin', 'staging', 'preview', 'dev'].includes(subdomain)) {
+          return null;
         }
+        // Skip multi-level subdomains like staging.app
+        if (subdomain.includes('.')) {
+          return null;
+        }
+        return subdomain;
       }
     }
     
     // If not a subdomain, it might be a custom domain
-    // Return the full host as identifier
-    if (!host.includes('menuvibe') && !host.includes('localhost')) {
+    // Return the full host as identifier (only for actual custom domains)
+    if (!host.includes('menuvibe') && !host.includes('menuvire') && !host.includes('localhost') && !host.includes('vercel')) {
       return host;
     }
     
