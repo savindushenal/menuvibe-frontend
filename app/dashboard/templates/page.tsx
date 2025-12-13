@@ -450,7 +450,7 @@ export default function TemplatesPage() {
 
       {/* Create Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create Menu Template</DialogTitle>
             <DialogDescription>
@@ -580,7 +580,7 @@ export default function TemplatesPage() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Template Settings</DialogTitle>
             <DialogDescription>Update the template name, description, and currency</DialogDescription>
