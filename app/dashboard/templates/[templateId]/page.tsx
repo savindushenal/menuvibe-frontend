@@ -516,19 +516,27 @@ function TemplateEditorContent() {
         variations: variations.length > 0 ? variations : null,
       };
 
+      console.log('Saving item data:', data);
+
       if (editingItem) {
-        await apiClient.updateTemplateItem(templateId, editingItem.id, data);
+        const response = await apiClient.updateTemplateItem(templateId, editingItem.id, data);
+        console.log('Update response:', response);
         toast({ title: 'Success', description: 'Item updated' });
       } else {
-        await apiClient.createTemplateItem(templateId, selectedCategoryId, data);
+        const response = await apiClient.createTemplateItem(templateId, selectedCategoryId, data);
+        console.log('Create response:', response);
         toast({ title: 'Success', description: 'Item created' });
       }
       setIsItemDialogOpen(false);
       loadTemplate();
     } catch (error: any) {
+      console.error('Save item error:', error);
+      const errorMsg = error.errors 
+        ? Object.values(error.errors).flat().join(', ')
+        : error.message || 'Failed to save item';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to save item',
+        description: errorMsg,
         variant: 'destructive',
       });
     }
@@ -730,14 +738,14 @@ function TemplateEditorContent() {
 
       {/* Item Dialog */}
       <Dialog open={isItemDialogOpen} onOpenChange={setIsItemDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>{editingItem ? 'Edit Item' : 'Add Item'}</DialogTitle>
             <DialogDescription>
               {editingItem ? 'Update the item details' : 'Add a new item to this category'}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-4 py-4 max-h-[55vh] sm:max-h-[60vh] overflow-y-auto px-1">
             <div className="space-y-2">
               <Label>Name *</Label>
               <Input
@@ -754,7 +762,7 @@ function TemplateEditorContent() {
                 onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Price *</Label>
                 <div className="relative">
@@ -792,7 +800,7 @@ function TemplateEditorContent() {
                 onChange={(e) => setItemForm({ ...itemForm, image_url: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex items-center justify-between">
                 <Label>Available</Label>
                 <Switch
@@ -824,7 +832,7 @@ function TemplateEditorContent() {
 
             {/* Variations */}
             <div className="space-y-3 border-t pt-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <Label className="text-base font-medium">Variations (Size/Options)</Label>
                 <Button
                   type="button"
@@ -845,7 +853,7 @@ function TemplateEditorContent() {
                 <p className="text-sm text-neutral-500">No variations. Add sizes like Small, Medium, Large with different prices.</p>
               )}
               {itemForm.variations.map((variation, index) => (
-                <div key={index} className="flex gap-2 items-center">
+                <div key={index} className="flex flex-col sm:flex-row gap-2 sm:items-center">
                   <Input
                     placeholder="Name (e.g. Large)"
                     value={variation.name}
@@ -856,34 +864,37 @@ function TemplateEditorContent() {
                     }}
                     className="flex-1"
                   />
-                  <div className="relative w-28">
-                    <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="Price"
-                      className="pl-7"
-                      value={variation.price}
-                      onChange={(e) => {
-                        const newVariations = [...itemForm.variations];
-                        newVariations[index].price = e.target.value;
+                  <div className="flex gap-2 items-center">
+                    <div className="relative flex-1 sm:w-28 sm:flex-none">
+                      <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Price"
+                        className="pl-7"
+                        value={variation.price}
+                        onChange={(e) => {
+                          const newVariations = [...itemForm.variations];
+                          newVariations[index].price = e.target.value;
+                          setItemForm({ ...itemForm, variations: newVariations });
+                        }}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        const newVariations = itemForm.variations.filter((_, i) => i !== index);
                         setItemForm({ ...itemForm, variations: newVariations });
                       }}
-                    />
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      const newVariations = itemForm.variations.filter((_, i) => i !== index);
-                      setItemForm({ ...itemForm, variations: newVariations });
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
                 </div>
               ))}
+            </div>
             </div>
           </div>
           <DialogFooter>
