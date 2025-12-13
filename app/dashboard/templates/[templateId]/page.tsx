@@ -504,9 +504,15 @@ function TemplateEditorContent() {
         .map(v => ({ name: v.name.trim(), price: parseFloat(v.price) || 0 }));
       
       const data = {
-        ...itemForm,
+        name: itemForm.name,
+        description: itemForm.description || null,
         price: parseFloat(itemForm.price) || 0,
         compare_at_price: itemForm.compare_at_price ? parseFloat(itemForm.compare_at_price) : null,
+        image_url: itemForm.image_url || null,
+        is_available: itemForm.is_available,
+        is_featured: itemForm.is_featured,
+        is_spicy: itemForm.is_spicy,
+        spice_level: itemForm.spice_level > 0 ? itemForm.spice_level : null,
         variations: variations.length > 0 ? variations : null,
       };
 
