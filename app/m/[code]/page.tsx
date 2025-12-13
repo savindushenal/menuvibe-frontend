@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, use, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronRight,
@@ -16,6 +16,7 @@ import {
   Star,
   TableProperties,
   ChevronDown,
+  Loader2,
 } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 
@@ -85,7 +86,18 @@ const menuDesigns: Record<string, { bg: string; text: string; accent: string; ca
   bold: { bg: '#FEF9C3', text: '#7C2D12', accent: '#DC2626', card: '#FFFFFF' },
 };
 
-export default function PublicMenuPage({
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-500" />
+        <p className="mt-2 text-gray-600">Loading menu...</p>
+      </div>
+    </div>
+  );
+}
+
+function PublicMenuContent({
   params,
 }: {
   params: Promise<{ code: string }>;
@@ -622,5 +634,17 @@ export default function PublicMenuPage({
         }
       `}</style>
     </div>
+  );
+}
+
+export default function PublicMenuPage({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}) {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <PublicMenuContent params={params} />
+    </Suspense>
   );
 }
