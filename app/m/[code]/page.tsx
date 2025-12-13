@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, use, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
+import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronRight,
@@ -97,13 +98,9 @@ function LoadingFallback() {
   );
 }
 
-function PublicMenuContent({
-  params,
-}: {
-  params: Promise<{ code: string }>;
-}) {
-  const resolvedParams = use(params);
-  const shortCode = resolvedParams.code;
+function PublicMenuContent() {
+  const params = useParams();
+  const shortCode = params.code as string;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -637,14 +634,10 @@ function PublicMenuContent({
   );
 }
 
-export default function PublicMenuPage({
-  params,
-}: {
-  params: Promise<{ code: string }>;
-}) {
+export default function PublicMenuPage() {
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <PublicMenuContent params={params} />
+      <PublicMenuContent />
     </Suspense>
   );
 }

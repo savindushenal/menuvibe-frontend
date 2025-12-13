@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -18,6 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -264,13 +265,9 @@ function SortableCategory({
   );
 }
 
-function TemplateEditorContent({
-  params,
-}: {
-  params: Promise<{ templateId: string }>;
-}) {
-  const resolvedParams = use(params);
-  const templateId = parseInt(resolvedParams.templateId);
+function TemplateEditorContent() {
+  const params = useParams();
+  const templateId = parseInt(params.templateId as string);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -821,18 +818,14 @@ function TemplateEditorContent({
   );
 }
 
-export default function TemplateEditorPage({
-  params,
-}: {
-  params: Promise<{ templateId: string }>;
-}) {
+export default function TemplateEditorPage() {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center h-96">
         <LoadingSpinner size="lg" />
       </div>
     }>
-      <TemplateEditorContent params={params} />
+      <TemplateEditorContent />
     </Suspense>
   );
 }
