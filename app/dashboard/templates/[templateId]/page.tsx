@@ -505,15 +505,15 @@ function TemplateEditorContent() {
       
       const data = {
         name: itemForm.name,
-        description: itemForm.description || null,
+        description: itemForm.description || undefined,
         price: parseFloat(itemForm.price) || 0,
-        compare_at_price: itemForm.compare_at_price ? parseFloat(itemForm.compare_at_price) : null,
-        image_url: itemForm.image_url || null,
+        compare_at_price: itemForm.compare_at_price ? parseFloat(itemForm.compare_at_price) : undefined,
+        image_url: itemForm.image_url || undefined,
         is_available: itemForm.is_available,
         is_featured: itemForm.is_featured,
         is_spicy: itemForm.is_spicy,
-        spice_level: itemForm.spice_level > 0 ? itemForm.spice_level : null,
-        variations: variations.length > 0 ? variations : null,
+        spice_level: itemForm.spice_level > 0 ? itemForm.spice_level : undefined,
+        variations: variations.length > 0 ? variations : undefined,
       };
 
       console.log('Saving item data:', data);
