@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -86,7 +86,7 @@ const endpointTypes = [
   { value: 'event' as EndpointType, label: 'Event', icon: Calendar, description: 'Special events' },
 ];
 
-export default function EndpointsPage() {
+function EndpointsPageContent() {
   const searchParams = useSearchParams();
   const templateIdParam = searchParams.get('template_id');
 
@@ -842,5 +842,17 @@ export default function EndpointsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function EndpointsPage() {
+  return (
+    <Suspense fallback={
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <LoadingSpinner />
+      </div>
+    }>
+      <EndpointsPageContent />
+    </Suspense>
   );
 }
