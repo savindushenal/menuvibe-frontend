@@ -151,7 +151,9 @@ export function FranchiseProvider({ children }: { children: React.ReactNode }) {
       const identifier = detectFranchiseIdentifier();
       
       if (identifier) {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/branding/${identifier}`);
+        // Use base URL without /api suffix for this endpoint
+        const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/api$/, '');
+        const response = await fetch(`${baseUrl}/api/branding/${identifier}`);
         const data = await response.json();
         
         if (data.success && data.data?.branding) {
