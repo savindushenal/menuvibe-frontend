@@ -318,13 +318,25 @@ function TemplateEditorContent() {
   const loadTemplate = async () => {
     try {
       setLoading(true);
+      console.log('Loading template with ID:', templateId);
       const response = await apiClient.getMenuTemplate(templateId);
+      console.log('API Response:', response);
       if (response.success && response.data) {
         // API returns template directly in data, not data.template
         const templateData = response.data.template || response.data;
+        console.log('Template data:', templateData);
+        // Ensure categories is always an array
+        if (!templateData.categories) {
+          templateData.categories = [];
+        }
+        // Ensure each category has items array
+        templateData.categories = templateData.categories.map((cat: Category) => ({
+          ...cat,
+          items: cat.items || []
+        }));
         setTemplate(templateData);
         // Expand first category by default
-        if (templateData?.categories?.length > 0) {
+        if (templateData.categories.length > 0) {
           setExpandedCategories(new Set([templateData.categories[0].id]));
         }
       } else {
@@ -335,6 +347,7 @@ function TemplateEditorContent() {
         });
       }
     } catch (error: any) {
+      console.error('Load template error:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load template',
@@ -571,7 +584,7 @@ function TemplateEditorContent() {
       </div>
 
       {/* Categories List */}
-      {template.categories.length === 0 ? (
+      {!template.categories || template.categories.length === 0 ? (
         <Card className="p-12 text-center">
           <h3 className="text-lg font-medium text-neutral-900 mb-2">No Categories Yet</h3>
           <p className="text-neutral-500 mb-6">
