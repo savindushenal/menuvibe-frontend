@@ -75,7 +75,7 @@ export interface FranchiseInfo {
   slug: string;
   logoUrl?: string;
   designTokens: DesignTokens;
-  templateType: 'premium' | 'classic' | 'minimal';
+  templateType: 'premium' | 'classic' | 'minimal' | 'custom';
 }
 
 // Default design tokens for fallback

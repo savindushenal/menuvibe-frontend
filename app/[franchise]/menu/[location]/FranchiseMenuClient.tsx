@@ -2,6 +2,9 @@
 
 import { Suspense } from 'react';
 import { PremiumTemplate } from '@/components/templates/premium';
+import { ClassicTemplate } from '@/components/templates/classic';
+import { MinimalTemplate } from '@/components/templates/minimal';
+import { CustomTemplate } from '@/components/templates/custom';
 import type { FranchiseInfo, LocationInfo, MenuItem, DesignTokens } from '@/components/templates/premium/types';
 
 interface FranchiseMenuClientProps {
@@ -38,26 +41,54 @@ function MenuContent({ franchise, location, menuItems }: FranchiseMenuClientProp
   // Select template based on franchise settings
   const templateType = franchise.templateType || 'premium';
 
-  // For now, only premium template is available
-  // Future: switch between templates based on templateType
-  if (templateType === 'premium') {
-    return (
-      <PremiumTemplate
-        franchise={franchise}
-        location={location}
-        menuItems={menuItems}
-      />
-    );
+  // Switch between templates based on templateType
+  switch (templateType) {
+    case 'premium':
+      return (
+        <PremiumTemplate
+          franchise={franchise}
+          location={location}
+          menuItems={menuItems}
+        />
+      );
+    
+    case 'classic':
+      return (
+        <ClassicTemplate
+          franchise={franchise}
+          location={location}
+          menuItems={menuItems}
+        />
+      );
+    
+    case 'minimal':
+      return (
+        <MinimalTemplate
+          franchise={franchise}
+          location={location}
+          menuItems={menuItems}
+        />
+      );
+    
+    case 'custom':
+      return (
+        <CustomTemplate
+          franchise={franchise}
+          location={location}
+          menuItems={menuItems}
+        />
+      );
+    
+    default:
+      // Fallback to premium template
+      return (
+        <PremiumTemplate
+          franchise={franchise}
+          location={location}
+          menuItems={menuItems}
+        />
+      );
   }
-
-  // Fallback to premium template
-  return (
-    <PremiumTemplate
-      franchise={franchise}
-      location={location}
-      menuItems={menuItems}
-    />
-  );
 }
 
 export default function FranchiseMenuClient({ 

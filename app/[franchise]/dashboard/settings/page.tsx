@@ -93,9 +93,37 @@ const CURRENCIES = [
   { value: 'AED', label: 'AED (د.إ)' },
   { value: 'SAR', label: 'SAR (﷼)' },
   { value: 'INR', label: 'INR (₹)' },
+  { value: 'LKR', label: 'LKR (Rs)' },
   { value: 'AUD', label: 'AUD (A$)' },
   { value: 'CAD', label: 'CAD (C$)' },
   { value: 'JPY', label: 'JPY (¥)' },
+];
+
+const TEMPLATE_OPTIONS = [
+  { 
+    value: 'premium', 
+    label: 'Premium', 
+    description: 'Full-featured with animations and modern design',
+    icon: '✨'
+  },
+  { 
+    value: 'classic', 
+    label: 'Classic', 
+    description: 'Simple and clean list-based menu layout',
+    icon: '📋'
+  },
+  { 
+    value: 'minimal', 
+    label: 'Minimal', 
+    description: 'Modern card-based design with quick add',
+    icon: '🎯'
+  },
+  { 
+    value: 'custom', 
+    label: 'Custom', 
+    description: 'For special requirements (contact dev team)',
+    icon: '🛠️'
+  },
 ];
 
 const DEFAULT_BUSINESS_HOURS = {
@@ -131,6 +159,7 @@ export default function FranchiseSettingsPage() {
     currency: 'USD',
     primary_color: '#10b981',
     secondary_color: '#059669',
+    template_type: 'premium',
     allow_branch_customization: true,
     require_menu_approval: false,
     auto_sync_pricing: true,
@@ -164,6 +193,7 @@ export default function FranchiseSettingsPage() {
             currency: settings.currency || data.currency || 'USD',
             primary_color: data.primary_color || '#10b981',
             secondary_color: data.secondary_color || '#059669',
+            template_type: data.template_type || 'premium',
             allow_branch_customization: settings.allow_branch_customization ?? true,
             require_menu_approval: settings.require_menu_approval ?? false,
             auto_sync_pricing: settings.auto_sync_pricing ?? true,
@@ -203,6 +233,7 @@ export default function FranchiseSettingsPage() {
         currency: formData.currency,
         primary_color: formData.primary_color,
         secondary_color: formData.secondary_color,
+        template_type: formData.template_type,
         settings: {
           allow_branch_customization: formData.allow_branch_customization,
           require_menu_approval: formData.require_menu_approval,
@@ -547,6 +578,50 @@ export default function FranchiseSettingsPage() {
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Menu Template Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Menu Template</CardTitle>
+              <CardDescription>Choose how your menu looks to customers</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {TEMPLATE_OPTIONS.map((template) => (
+                  <div
+                    key={template.value}
+                    onClick={() => setFormData({ ...formData, template_type: template.value })}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                      formData.template_type === template.value
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">{template.icon}</span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold">{template.label}</h4>
+                          {formData.template_type === template.value && (
+                            <span className="text-xs bg-primary text-white px-2 py-0.5 rounded-full">
+                              Active
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-neutral-500 mt-1">
+                          {template.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-neutral-400 mt-4">
+                Templates define the look and feel of your customer-facing menu. 
+                Changes will apply to all branches.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
