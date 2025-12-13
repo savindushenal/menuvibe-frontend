@@ -1446,7 +1446,14 @@ class ApiClient {
     });
   }
 
-  async bulkCreateMenuEndpoints(data: { endpoints: any[] }): Promise<ApiResponse> {
+  async bulkCreateMenuEndpoints(data: {
+    template_id: number;
+    type: string;
+    prefix: string;
+    start_number: number;
+    count: number;
+    location_id?: number;
+  }): Promise<ApiResponse> {
     return this.request('/menu-endpoints/bulk', {
       method: 'POST',
       body: JSON.stringify(data),

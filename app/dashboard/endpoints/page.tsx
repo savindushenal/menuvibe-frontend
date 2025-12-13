@@ -203,19 +203,14 @@ export default function EndpointsPage() {
 
   const handleBulkCreate = async () => {
     try {
-      const endpoints = [];
-      for (let i = 0; i < bulkFormData.count; i++) {
-        const num = bulkFormData.start + i;
-        endpoints.push({
-          template_id: bulkFormData.template_id,
-          type: bulkFormData.type,
-          name: `${bulkFormData.prefix} ${num}`,
-          identifier: `${bulkFormData.prefix.charAt(0).toUpperCase()}${num}`,
-          location_id: currentLocation?.id,
-        });
-      }
-
-      const response = await apiClient.bulkCreateMenuEndpoints({ endpoints });
+      const response = await apiClient.bulkCreateMenuEndpoints({
+        template_id: bulkFormData.template_id,
+        type: bulkFormData.type,
+        prefix: bulkFormData.prefix,
+        start_number: bulkFormData.start,
+        count: bulkFormData.count,
+        location_id: currentLocation?.id ? parseInt(currentLocation.id) : undefined,
+      });
       if (response.success) {
         toast({
           title: 'Success',
