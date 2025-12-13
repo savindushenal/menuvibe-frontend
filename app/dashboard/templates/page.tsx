@@ -94,7 +94,9 @@ export default function TemplatesPage() {
       setLoading(true);
       const response = await apiClient.getMenuTemplates(currentLocation?.id ? parseInt(currentLocation.id) : undefined);
       if (response.success) {
-        setTemplates(response.data?.templates || []);
+        // Handle both response formats: { data: [...] } or { data: { templates: [...] } }
+        const templateData = Array.isArray(response.data) ? response.data : (response.data?.templates || []);
+        setTemplates(templateData);
       }
     } catch (error: any) {
       toast({
