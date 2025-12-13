@@ -895,7 +895,6 @@ function TemplateEditorContent() {
                 </div>
               ))}
             </div>
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsItemDialogOpen(false)}>
