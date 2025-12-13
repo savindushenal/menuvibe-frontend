@@ -319,12 +319,20 @@ function TemplateEditorContent() {
     try {
       setLoading(true);
       const response = await apiClient.getMenuTemplate(templateId);
-      if (response.success) {
-        setTemplate(response.data?.template);
+      if (response.success && response.data) {
+        // API returns template directly in data, not data.template
+        const templateData = response.data.template || response.data;
+        setTemplate(templateData);
         // Expand first category by default
-        if (response.data?.template?.categories?.length > 0) {
-          setExpandedCategories(new Set([response.data.template.categories[0].id]));
+        if (templateData?.categories?.length > 0) {
+          setExpandedCategories(new Set([templateData.categories[0].id]));
         }
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Template not found',
+          variant: 'destructive',
+        });
       }
     } catch (error: any) {
       toast({
