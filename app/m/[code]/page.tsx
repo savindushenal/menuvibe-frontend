@@ -121,11 +121,22 @@ function PublicMenuContent() {
       setError(null);
       const response = await apiClient.getPublicMenu(shortCode);
       if (response.success && response.data) {
-        setMenuData(response.data);
+        // Map API response to expected format
+        // API returns: { menu: { categories: [...] }, offers, endpoint, template }
+        // Frontend expects: { categories: [...], offers, endpoint, template, overrides }
+        const apiData = response.data;
+        const mappedData: MenuData = {
+          endpoint: apiData.endpoint,
+          template: apiData.template,
+          categories: apiData.menu?.categories || [],
+          offers: apiData.offers || [],
+          overrides: apiData.menu?.overrides || {},
+        };
+        setMenuData(mappedData);
         // Expand first category by default
-        if (response.data.categories?.length > 0) {
-          setActiveCategory(response.data.categories[0].id);
-          setExpandedCategories(new Set([response.data.categories[0].id]));
+        if (mappedData.categories?.length > 0) {
+          setActiveCategory(mappedData.categories[0].id);
+          setExpandedCategories(new Set([mappedData.categories[0].id]));
         }
       } else {
         setError('Menu not found');
