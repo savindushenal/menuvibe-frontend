@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -264,7 +264,7 @@ function SortableCategory({
   );
 }
 
-export default function TemplateEditorPage({
+function TemplateEditorContent({
   params,
 }: {
   params: Promise<{ templateId: string }>;
@@ -818,5 +818,21 @@ export default function TemplateEditorPage({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function TemplateEditorPage({
+  params,
+}: {
+  params: Promise<{ templateId: string }>;
+}) {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-96">
+        <LoadingSpinner size="lg" />
+      </div>
+    }>
+      <TemplateEditorContent params={params} />
+    </Suspense>
   );
 }

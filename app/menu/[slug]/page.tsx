@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { extractPublicIdFromSlug, isValidSlug } from '@/lib/slug-utils';
 import { ShoppingCart, Plus, Minus, X, User, Phone, Mail, Award } from 'lucide-react';
@@ -91,7 +91,7 @@ interface OrderForm {
   [key: string]: string; // Allow dynamic custom fields
 }
 
-export default function PublicMenuPage() {
+function PublicMenuContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const slug = params.slug as string;
@@ -952,5 +952,20 @@ export default function PublicMenuPage() {
       </div>
     </div>
     </>
+  );
+}
+
+export default function PublicMenuPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading menu...</p>
+        </div>
+      </div>
+    }>
+      <PublicMenuContent />
+    </Suspense>
   );
 }
