@@ -243,6 +243,10 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
                         alt={item.name}
                         className="w-full h-32 object-cover"
                       />
+                    ) : item.icon ? (
+                      <div className="w-full h-32 bg-neutral-200 flex items-center justify-center text-5xl">
+                        {item.icon}
+                      </div>
                     ) : (
                       <div className="w-full h-32 bg-neutral-200" />
                     )}
@@ -322,6 +326,10 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
                     alt={item.name}
                     className="w-28 h-28 rounded-xl object-cover flex-shrink-0"
                   />
+                ) : item.icon ? (
+                  <div className="w-28 h-28 rounded-xl bg-neutral-200 flex-shrink-0 flex items-center justify-center text-5xl">
+                    {item.icon}
+                  </div>
                 ) : (
                   <div className="w-28 h-28 rounded-xl bg-neutral-200 flex-shrink-0" />
                 )}
@@ -490,6 +498,10 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
                             alt={cartItem.item.name}
                             className="w-16 h-16 rounded-xl object-cover"
                           />
+                        ) : cartItem.item.icon ? (
+                          <div className="w-16 h-16 rounded-xl bg-neutral-200 flex items-center justify-center text-2xl">
+                            {cartItem.item.icon}
+                          </div>
                         ) : (
                           <div className="w-16 h-16 rounded-xl bg-neutral-200" />
                         )}

@@ -60,6 +60,7 @@ interface MenuTemplate {
 }
 
 const currencies = [
+  { code: 'LKR', symbol: 'Rs', name: 'Sri Lankan Rupee' },
   { code: 'USD', symbol: '$', name: 'US Dollar' },
   { code: 'EUR', symbol: '€', name: 'Euro' },
   { code: 'GBP', symbol: '£', name: 'British Pound' },

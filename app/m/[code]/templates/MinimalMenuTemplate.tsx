@@ -164,6 +164,10 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
                       alt={item.name}
                       className="w-full h-full object-cover"
                     />
+                  ) : item.icon ? (
+                    <div className="w-full h-full bg-neutral-200 flex items-center justify-center text-6xl">
+                      {item.icon}
+                    </div>
                   ) : (
                     <div className="w-full h-full bg-neutral-200" />
                   )}
@@ -320,6 +324,10 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
                             alt={cartItem.item.name}
                             className="w-14 h-14 rounded-lg object-cover"
                           />
+                        ) : cartItem.item.icon ? (
+                          <div className="w-14 h-14 rounded-lg bg-neutral-200 flex items-center justify-center text-2xl">
+                            {cartItem.item.icon}
+                          </div>
                         ) : (
                           <div className="w-14 h-14 rounded-lg bg-neutral-200" />
                         )}

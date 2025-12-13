@@ -7,6 +7,7 @@ export interface PublicMenuItem {
   price: number;
   compare_at_price: number | null;
   image_url: string | null;
+  icon: string | null;
   is_available: boolean;
   is_featured: boolean;
   is_spicy: boolean;

@@ -243,6 +243,10 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
                               alt={item.name}
                               className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
                             />
+                          ) : item.icon ? (
+                            <div className="w-24 h-24 rounded-lg bg-neutral-100 flex-shrink-0 flex items-center justify-center text-4xl">
+                              {item.icon}
+                            </div>
                           ) : (
                             <div className="w-24 h-24 rounded-lg bg-neutral-100 flex-shrink-0" />
                           )}
@@ -416,6 +420,10 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
                             alt={cartItem.item.name}
                             className="w-16 h-16 rounded-lg object-cover"
                           />
+                        ) : cartItem.item.icon ? (
+                          <div className="w-16 h-16 rounded-lg bg-neutral-100 flex items-center justify-center text-2xl">
+                            {cartItem.item.icon}
+                          </div>
                         ) : (
                           <div className="w-16 h-16 rounded-lg bg-neutral-100" />
                         )}

@@ -267,7 +267,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                   </div>
 
                   {/* Image */}
-                  {item.image_url && (
+                  {item.image_url ? (
                     <div className="flex-shrink-0">
                       <img
                         src={item.image_url}
@@ -275,7 +275,11 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                         className="w-32 h-32 rounded-lg object-cover"
                       />
                     </div>
-                  )}
+                  ) : item.icon ? (
+                    <div className="flex-shrink-0 w-32 h-32 rounded-lg bg-neutral-100 flex items-center justify-center text-5xl">
+                      {item.icon}
+                    </div>
+                  ) : null}
                 </motion.div>
               );
             })}
@@ -344,6 +348,10 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                             alt={cartItem.item.name}
                             className="w-16 h-16 rounded-lg object-cover"
                           />
+                        ) : cartItem.item.icon ? (
+                          <div className="w-16 h-16 rounded-lg bg-neutral-200 flex items-center justify-center text-2xl">
+                            {cartItem.item.icon}
+                          </div>
                         ) : (
                           <div className="w-16 h-16 rounded-lg bg-neutral-200" />
                         )}

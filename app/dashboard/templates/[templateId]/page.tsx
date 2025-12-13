@@ -74,6 +74,7 @@ interface Item {
   price: number;
   compare_at_price: number | null;
   image_url: string | null;
+  icon: string | null;
   is_available: boolean;
   is_featured: boolean;
   sort_order: number;
@@ -134,6 +135,7 @@ function SortableCategory({
 
   const getCurrencySymbol = (code: string) => {
     const symbols: Record<string, string> = {
+      LKR: 'Rs',
       USD: '$',
       EUR: '€',
       GBP: '£',
@@ -211,6 +213,10 @@ function SortableCategory({
                           alt={item.name}
                           className="w-12 h-12 rounded-lg object-cover"
                         />
+                      ) : item.icon ? (
+                        <div className="w-12 h-12 rounded-lg bg-neutral-100 flex items-center justify-center text-2xl">
+                          {item.icon}
+                        </div>
                       ) : (
                         <div className="w-12 h-12 rounded-lg bg-neutral-100 flex items-center justify-center">
                           <ImageIcon className="w-5 h-5 text-neutral-400" />
@@ -304,6 +310,7 @@ function TemplateEditorContent() {
     price: '',
     compare_at_price: '',
     image_url: '',
+    icon: '',
     is_available: true,
     is_featured: false,
     is_spicy: false,
@@ -472,6 +479,7 @@ function TemplateEditorContent() {
         price: String(item.price || ''),
         compare_at_price: item.compare_at_price ? String(item.compare_at_price) : '',
         image_url: item.image_url || '',
+        icon: item.icon || '',
         is_available: item.is_available,
         is_featured: item.is_featured,
         is_spicy: item.is_spicy,
@@ -486,6 +494,7 @@ function TemplateEditorContent() {
         price: '',
         compare_at_price: '',
         image_url: '',
+        icon: '',
         is_available: true,
         is_featured: false,
         is_spicy: false,
@@ -509,6 +518,7 @@ function TemplateEditorContent() {
         price: parseFloat(itemForm.price) || 0,
         compare_at_price: itemForm.compare_at_price ? parseFloat(itemForm.compare_at_price) : undefined,
         image_url: itemForm.image_url || undefined,
+        icon: itemForm.icon || undefined,
         is_available: itemForm.is_available,
         is_featured: itemForm.is_featured,
         is_spicy: itemForm.is_spicy,
@@ -654,7 +664,7 @@ function TemplateEditorContent() {
 
       {/* Category Dialog */}
       <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingCategory ? 'Edit Category' : 'Add Category'}
@@ -685,10 +695,28 @@ function TemplateEditorContent() {
             <div className="space-y-2">
               <Label>Icon (optional)</Label>
               <Input
-                placeholder="e.g., 🍕 or icon class name"
+                placeholder="Click an emoji below or type your own"
                 value={categoryForm.icon}
                 onChange={(e) => setCategoryForm({ ...categoryForm, icon: e.target.value })}
               />
+              <div className="flex flex-wrap gap-2 pt-2">
+                {['🍕', '🍔', '🍟', '🌮', '🌯', '🥗', '🍜', '🍝', '🍣', '🍱', '🥘', '🍛', 
+                  '☕', '🧃', '🥤', '🍺', '🍷', '🧁', '🍰', '🍨', '🥐', '🥪', '🍗', '🥩',
+                  '🐟', '🦐', '🥬', '🍳', '🥞', '🧇'].map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => setCategoryForm({ ...categoryForm, icon: emoji })}
+                    className={`w-9 h-9 text-xl rounded-lg border-2 transition-all hover:scale-110 ${
+                      categoryForm.icon === emoji 
+                        ? 'border-emerald-500 bg-emerald-50' 
+                        : 'border-neutral-200 hover:border-neutral-300'
+                    }`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="flex items-center justify-between">
               <Label>Active</Label>
@@ -793,12 +821,38 @@ function TemplateEditorContent() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Image URL</Label>
+              <Label>Image URL (optional)</Label>
               <Input
                 placeholder="https://..."
                 value={itemForm.image_url}
                 onChange={(e) => setItemForm({ ...itemForm, image_url: e.target.value })}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Icon (optional - use if no image)</Label>
+              <Input
+                placeholder="Click an emoji below or type your own"
+                value={itemForm.icon}
+                onChange={(e) => setItemForm({ ...itemForm, icon: e.target.value })}
+              />
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {['🍕', '🍔', '🍟', '🌮', '🌯', '🥗', '🍜', '🍝', '🍣', '🍱', '🥘', '🍛', 
+                  '☕', '🧃', '🥤', '🍺', '🍷', '🧁', '🍰', '🍨', '🥐', '🥪', '🍗', '🥩',
+                  '🐟', '🦐', '🥬', '🍳', '🥞', '🧇', '🥧', '🍩', '🍪', '🥜', '🍿', '🧀'].map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => setItemForm({ ...itemForm, icon: emoji })}
+                    className={`w-8 h-8 text-lg rounded border-2 transition-all hover:scale-110 ${
+                      itemForm.icon === emoji 
+                        ? 'border-emerald-500 bg-emerald-50' 
+                        : 'border-neutral-200 hover:border-neutral-300'
+                    }`}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex items-center justify-between">
