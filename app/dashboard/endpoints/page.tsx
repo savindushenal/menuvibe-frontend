@@ -64,6 +64,7 @@ interface MenuEndpoint {
   identifier: string;
   description: string | null;
   short_code: string;
+  short_url: string | null;
   qr_code_url: string | null;
   is_active: boolean;
   scan_count: number;
@@ -270,7 +271,11 @@ export default function EndpointsPage() {
     try {
       const response = await apiClient.getEndpointQRCode(endpoint.id);
       if (response.success) {
-        setQrCodeData(response.data);
+        // Map backend response to expected format
+        setQrCodeData({
+          url: response.data.qr_code_url,
+          short_url: response.data.short_url || response.data.menu_url,
+        });
         setSelectedEndpoint(endpoint);
         setIsQROpen(true);
       }
@@ -289,7 +294,15 @@ export default function EndpointsPage() {
       const response = await apiClient.regenerateEndpointQR(selectedEndpoint.id);
       if (response.success) {
         toast({ title: 'Success', description: 'QR code regenerated' });
-        handleViewQR(selectedEndpoint);
+        // Reload the QR data
+        const qrResponse = await apiClient.getEndpointQRCode(selectedEndpoint.id);
+        if (qrResponse.success) {
+          setQrCodeData({
+            url: qrResponse.data.qr_code_url,
+            short_url: qrResponse.data.short_url || qrResponse.data.menu_url,
+          });
+        }
+        loadData();
       }
     } catch (error: any) {
       toast({
@@ -373,15 +386,15 @@ export default function EndpointsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Tables & Endpoints</h1>
+          <h1 className="text-2xl font-bold text-neutral-900">Tables & QR Codes</h1>
           <p className="text-neutral-500 mt-1">
-            Manage tables, rooms, and branches with their QR codes
+            Create tables, generate QR codes, and manage where customers can scan to view your menu
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setIsBulkCreateOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            Bulk Create
+            Bulk Create Tables
           </Button>
           <Button
             onClick={() => {
@@ -391,7 +404,7 @@ export default function EndpointsPage() {
             className="bg-emerald-600 hover:bg-emerald-700"
           >
             <Plus className="w-4 h-4 mr-2" />
-            New Endpoint
+            Add Table
           </Button>
         </div>
       </div>
