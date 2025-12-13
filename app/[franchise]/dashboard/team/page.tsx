@@ -298,12 +298,12 @@ export default function FranchiseTeamPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="branch">Branch (Optional)</Label>
-                <Select value={inviteBranchId} onValueChange={setInviteBranchId}>
+                <Select value={inviteBranchId || "all"} onValueChange={(val) => setInviteBranchId(val === "all" ? "" : val)}>
                   <SelectTrigger>
                     <SelectValue placeholder="All branches" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All branches</SelectItem>
+                    <SelectItem value="all">All branches</SelectItem>
                     {branches.map((branch) => (
                       <SelectItem key={branch.id} value={branch.id.toString()}>
                         {branch.name}
@@ -453,12 +453,12 @@ export default function FranchiseTeamPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-branch">Branch</Label>
-              <Select value={editBranchId} onValueChange={setEditBranchId}>
+              <Select value={editBranchId || "all"} onValueChange={(val) => setEditBranchId(val === "all" ? "" : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="All branches" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All branches</SelectItem>
+                  <SelectItem value="all">All branches</SelectItem>
                   {branches.map((branch) => (
                     <SelectItem key={branch.id} value={branch.id.toString()}>
                       {branch.name}
