@@ -28,8 +28,11 @@ interface StaffMember {
 
 interface Branch {
   id: number;
-  name: string;
-  address: string;
+  branch_name: string;
+  branch_code?: string;
+  address: string | null;
+  city?: string | null;
+  is_active?: boolean;
 }
 
 const roleColors: Record<string, string> = {
@@ -320,7 +323,7 @@ export default function FranchiseTeamPage() {
                     <SelectItem value="all">All branches</SelectItem>
                     {branches.map((branch) => (
                       <SelectItem key={branch.id} value={branch.id.toString()}>
-                        {branch.name}
+                        {branch.branch_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
