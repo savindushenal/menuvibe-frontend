@@ -13,6 +13,8 @@ import {
   TableProperties,
   Eye,
   Settings2,
+  Palette,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,6 +51,7 @@ interface MenuTemplate {
   is_active: boolean;
   is_default: boolean;
   image_url: string | null;
+  settings?: { layout?: string; colorTheme?: string; design?: string } | null;
   categories_count?: number;
   items_count?: number;
   endpoints_count?: number;
@@ -67,6 +70,52 @@ const currencies = [
   { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham' },
 ];
 
+// Menu design templates - Layout Types
+const layoutTemplates = [
+  { 
+    id: 'standard', 
+    name: 'Standard', 
+    description: 'Simple collapsible categories with item cards',
+    preview: '📋',
+    features: ['Collapsible categories', 'Item cards', 'Quick add to cart']
+  },
+  { 
+    id: 'premium', 
+    name: 'Premium', 
+    description: 'Full-featured with hero, top picks & animations',
+    preview: '✨',
+    features: ['Hero banner', 'Top picks carousel', 'Animated transitions', 'Rating display']
+  },
+  { 
+    id: 'minimal', 
+    name: 'Minimal', 
+    description: 'Clean grid-based card layout',
+    preview: '🎯',
+    features: ['Grid layout', 'Large images', 'Quick view', 'Bottom sheet cart']
+  },
+  { 
+    id: 'classic', 
+    name: 'Classic', 
+    description: 'Traditional list-based menu style',
+    preview: '📜',
+    features: ['List layout', 'Category sidebar', 'Detailed descriptions']
+  },
+];
+
+// Color themes that can be applied to any layout
+const colorThemes = [
+  { id: 'modern', name: 'Modern Blue', bg: '#F8FAFC', text: '#1E293B', accent: '#3B82F6', card: '#FFFFFF' },
+  { id: 'classic', name: 'Warm Amber', bg: '#FEF3C7', text: '#78350F', accent: '#D97706', card: '#FFFBEB' },
+  { id: 'minimal', name: 'Grayscale', bg: '#FFFFFF', text: '#18181B', accent: '#71717A', card: '#F9FAFB' },
+  { id: 'elegant', name: 'Royal Purple', bg: '#FAF5FF', text: '#581C87', accent: '#9333EA', card: '#FFFFFF' },
+  { id: 'rustic', name: 'Rustic Red', bg: '#FEF2F2', text: '#7F1D1D', accent: '#B91C1C', card: '#FFFBEB' },
+  { id: 'coffee', name: 'Coffee Brown', bg: '#FFF8F0', text: '#4A2C2A', accent: '#C87941', card: '#FFFFFF' },
+  { id: 'ocean', name: 'Ocean Blue', bg: '#F0F9FF', text: '#0C4A6E', accent: '#0EA5E9', card: '#FFFFFF' },
+  { id: 'forest', name: 'Forest Green', bg: '#F0FDF4', text: '#14532D', accent: '#22C55E', card: '#FFFFFF' },
+  { id: 'midnight', name: 'Dark Mode', bg: '#1E1E2E', text: '#E2E8F0', accent: '#F59E0B', card: '#2D2D3F' },
+  { id: 'rose', name: 'Rose Pink', bg: '#FFF1F2', text: '#881337', accent: '#E11D48', card: '#FFFFFF' },
+];
+
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<MenuTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +129,8 @@ export default function TemplatesPage() {
     name: '',
     description: '',
     currency: 'USD',
+    layout: 'standard',
+    colorTheme: 'modern',
   });
   const [duplicateName, setDuplicateName] = useState('');
   const { toast } = useToast();
@@ -114,6 +165,7 @@ export default function TemplatesPage() {
       const response = await apiClient.createMenuTemplate({
         ...formData,
         location_id: currentLocation?.id ? parseInt(currentLocation.id) : undefined,
+        settings: { layout: formData.layout, colorTheme: formData.colorTheme },
       });
       if (response.success) {
         toast({
@@ -121,7 +173,7 @@ export default function TemplatesPage() {
           description: 'Template created successfully',
         });
         setIsCreateOpen(false);
-        setFormData({ name: '', description: '', currency: 'USD' });
+        setFormData({ name: '', description: '', currency: 'USD', layout: 'standard', colorTheme: 'modern' });
         loadTemplates();
       }
     } catch (error: any) {
@@ -136,7 +188,12 @@ export default function TemplatesPage() {
   const handleEdit = async () => {
     if (!selectedTemplate) return;
     try {
-      const response = await apiClient.updateMenuTemplate(selectedTemplate.id, formData);
+      const response = await apiClient.updateMenuTemplate(selectedTemplate.id, {
+        name: formData.name,
+        description: formData.description,
+        currency: formData.currency,
+        settings: { layout: formData.layout, colorTheme: formData.colorTheme },
+      });
       if (response.success) {
         toast({
           title: 'Success',
@@ -208,6 +265,8 @@ export default function TemplatesPage() {
       name: template.name,
       description: template.description || '',
       currency: template.currency,
+      layout: template.settings?.layout || 'standard',
+      colorTheme: template.settings?.colorTheme || 'modern',
     });
     setIsEditOpen(true);
   };
@@ -247,7 +306,7 @@ export default function TemplatesPage() {
         </div>
         <Button
           onClick={() => {
-            setFormData({ name: '', description: '', currency: 'USD' });
+            setFormData({ name: '', description: '', currency: 'USD', layout: 'standard', colorTheme: 'modern' });
             setIsCreateOpen(true);
           }}
           className="bg-emerald-600 hover:bg-emerald-700"
@@ -432,6 +491,77 @@ export default function TemplatesPage() {
                 ))}
               </select>
             </div>
+            
+            {/* Layout Template Selection */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <TableProperties className="w-4 h-4" />
+                Layout Template
+              </Label>
+              <div className="grid grid-cols-2 gap-2">
+                {layoutTemplates.map((layout) => (
+                  <button
+                    key={layout.id}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, layout: layout.id })}
+                    className={`relative p-3 rounded-lg border-2 transition-all text-left ${
+                      formData.layout === layout.id
+                        ? 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50'
+                        : 'border-neutral-200 hover:border-neutral-300 bg-white'
+                    }`}
+                  >
+                    {formData.layout === layout.id && (
+                      <div className="absolute top-1 right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                        <Check className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xl">{layout.preview}</span>
+                      <span className="font-medium text-sm">{layout.name}</span>
+                    </div>
+                    <p className="text-xs text-neutral-500">{layout.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Color Theme Selection */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Palette className="w-4 h-4" />
+                Color Theme
+              </Label>
+              <div className="grid grid-cols-2 gap-2 max-h-[180px] overflow-y-auto p-1">
+                {colorThemes.map((theme) => (
+                  <button
+                    key={theme.id}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, colorTheme: theme.id })}
+                    className={`relative p-2 rounded-lg border-2 transition-all text-left ${
+                      formData.colorTheme === theme.id
+                        ? 'border-emerald-500 ring-2 ring-emerald-200'
+                        : 'border-neutral-200 hover:border-neutral-300'
+                    }`}
+                    style={{ backgroundColor: theme.bg }}
+                  >
+                    {formData.colorTheme === theme.id && (
+                      <div className="absolute top-1 right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
+                        <Check className="w-2.5 h-2.5 text-white" />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-4 h-4 rounded-full border"
+                        style={{ backgroundColor: theme.accent }}
+                      />
+                      <span className="font-medium text-xs" style={{ color: theme.text }}>
+                        {theme.name}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
@@ -486,6 +616,77 @@ export default function TemplatesPage() {
                   </option>
                 ))}
               </select>
+            </div>
+            
+            {/* Layout Template Selection */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <TableProperties className="w-4 h-4" />
+                Layout Template
+              </Label>
+              <div className="grid grid-cols-2 gap-2">
+                {layoutTemplates.map((layout) => (
+                  <button
+                    key={layout.id}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, layout: layout.id })}
+                    className={`relative p-3 rounded-lg border-2 transition-all text-left ${
+                      formData.layout === layout.id
+                        ? 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50'
+                        : 'border-neutral-200 hover:border-neutral-300 bg-white'
+                    }`}
+                  >
+                    {formData.layout === layout.id && (
+                      <div className="absolute top-1 right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                        <Check className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xl">{layout.preview}</span>
+                      <span className="font-medium text-sm">{layout.name}</span>
+                    </div>
+                    <p className="text-xs text-neutral-500">{layout.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Color Theme Selection */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Palette className="w-4 h-4" />
+                Color Theme
+              </Label>
+              <div className="grid grid-cols-2 gap-2 max-h-[180px] overflow-y-auto p-1">
+                {colorThemes.map((theme) => (
+                  <button
+                    key={theme.id}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, colorTheme: theme.id })}
+                    className={`relative p-2 rounded-lg border-2 transition-all text-left ${
+                      formData.colorTheme === theme.id
+                        ? 'border-emerald-500 ring-2 ring-emerald-200'
+                        : 'border-neutral-200 hover:border-neutral-300'
+                    }`}
+                    style={{ backgroundColor: theme.bg }}
+                  >
+                    {formData.colorTheme === theme.id && (
+                      <div className="absolute top-1 right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
+                        <Check className="w-2.5 h-2.5 text-white" />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-4 h-4 rounded-full border"
+                        style={{ backgroundColor: theme.accent }}
+                      />
+                      <span className="font-medium text-xs" style={{ color: theme.text }}>
+                        {theme.name}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           <DialogFooter>
