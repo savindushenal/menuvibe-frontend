@@ -308,6 +308,7 @@ function TemplateEditorContent() {
     is_featured: false,
     is_spicy: false,
     spice_level: 0,
+    variations: [] as { name: string; price: string }[],
   });
 
   // Drag and drop sensors
@@ -468,13 +469,14 @@ function TemplateEditorContent() {
       setItemForm({
         name: item.name,
         description: item.description || '',
-        price: item.price.toString(),
-        compare_at_price: item.compare_at_price?.toString() || '',
+        price: String(item.price || ''),
+        compare_at_price: item.compare_at_price ? String(item.compare_at_price) : '',
         image_url: item.image_url || '',
         is_available: item.is_available,
         is_featured: item.is_featured,
         is_spicy: item.is_spicy,
         spice_level: item.spice_level || 0,
+        variations: (item.variations || []).map(v => ({ name: v.name, price: String(v.price || '') })),
       });
     } else {
       setEditingItem(null);
@@ -488,6 +490,7 @@ function TemplateEditorContent() {
         is_featured: false,
         is_spicy: false,
         spice_level: 0,
+        variations: [],
       });
     }
     setIsItemDialogOpen(true);
@@ -496,10 +499,15 @@ function TemplateEditorContent() {
   const handleSaveItem = async () => {
     if (!selectedCategoryId) return;
     try {
+      const variations = itemForm.variations
+        .filter(v => v.name.trim() && v.price)
+        .map(v => ({ name: v.name.trim(), price: parseFloat(v.price) || 0 }));
+      
       const data = {
         ...itemForm,
         price: parseFloat(itemForm.price) || 0,
         compare_at_price: itemForm.compare_at_price ? parseFloat(itemForm.compare_at_price) : null,
+        variations: variations.length > 0 ? variations : null,
       };
 
       if (editingItem) {
@@ -806,6 +814,70 @@ function TemplateEditorContent() {
                   setItemForm({ ...itemForm, is_spicy: checked })
                 }
               />
+            </div>
+
+            {/* Variations */}
+            <div className="space-y-3 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-medium">Variations (Size/Options)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setItemForm({
+                      ...itemForm,
+                      variations: [...itemForm.variations, { name: '', price: '' }],
+                    })
+                  }
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add
+                </Button>
+              </div>
+              {itemForm.variations.length === 0 && (
+                <p className="text-sm text-neutral-500">No variations. Add sizes like Small, Medium, Large with different prices.</p>
+              )}
+              {itemForm.variations.map((variation, index) => (
+                <div key={index} className="flex gap-2 items-center">
+                  <Input
+                    placeholder="Name (e.g. Large)"
+                    value={variation.name}
+                    onChange={(e) => {
+                      const newVariations = [...itemForm.variations];
+                      newVariations[index].name = e.target.value;
+                      setItemForm({ ...itemForm, variations: newVariations });
+                    }}
+                    className="flex-1"
+                  />
+                  <div className="relative w-28">
+                    <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="Price"
+                      className="pl-7"
+                      value={variation.price}
+                      onChange={(e) => {
+                        const newVariations = [...itemForm.variations];
+                        newVariations[index].price = e.target.value;
+                        setItemForm({ ...itemForm, variations: newVariations });
+                      }}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      const newVariations = itemForm.variations.filter((_, i) => i !== index);
+                      setItemForm({ ...itemForm, variations: newVariations });
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </Button>
+                </div>
+              ))}
             </div>
           </div>
           <DialogFooter>
