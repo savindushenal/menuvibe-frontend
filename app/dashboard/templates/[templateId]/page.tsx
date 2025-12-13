@@ -81,6 +81,13 @@ interface Item {
   dietary_info: string[] | null;
   is_spicy: boolean;
   spice_level: number | null;
+  variations: ItemVariation[] | null;
+}
+
+interface ItemVariation {
+  name: string;
+  price: number;
+  is_available?: boolean;
 }
 
 interface Template {
@@ -228,12 +235,12 @@ function SortableCategory({
                       <div className="text-right">
                         <div className="font-medium text-emerald-600">
                           {getCurrencySymbol(currency)}
-                          {item.price.toFixed(2)}
+                          {Number(item.price || 0).toFixed(2)}
                         </div>
-                        {item.compare_at_price && item.compare_at_price > item.price && (
+                        {item.compare_at_price && Number(item.compare_at_price) > Number(item.price) && (
                           <div className="text-sm text-neutral-400 line-through">
                             {getCurrencySymbol(currency)}
-                            {item.compare_at_price.toFixed(2)}
+                            {Number(item.compare_at_price).toFixed(2)}
                           </div>
                         )}
                       </div>
