@@ -888,6 +888,17 @@ class ApiClient {
       throw error;
     }
   }
+
+  // Public Menu (for QR code scans)
+  async getPublicMenu(shortCode: string): Promise<ApiResponse> {
+    return this.request(`/menu/${shortCode}`);
+  }
+
+  async recordMenuScan(shortCode: string): Promise<ApiResponse> {
+    return this.request(`/menu/${shortCode}/scan`, {
+      method: 'POST',
+    });
+  }
 }
 
 export const apiClient = new ApiClient();
