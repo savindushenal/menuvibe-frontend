@@ -155,14 +155,18 @@ export default function EndpointsPage() {
       ]);
 
       if (endpointsRes.success) {
-        setEndpoints(endpointsRes.data?.endpoints || []);
+        // Handle both formats: { data: [...] } or { data: { endpoints: [...] } }
+        const endpointData = Array.isArray(endpointsRes.data) ? endpointsRes.data : (endpointsRes.data?.endpoints || []);
+        setEndpoints(endpointData);
       }
       if (templatesRes.success) {
-        setTemplates(templatesRes.data?.templates || []);
+        // Handle both formats: { data: [...] } or { data: { templates: [...] } }
+        const templateData = Array.isArray(templatesRes.data) ? templatesRes.data : (templatesRes.data?.templates || []);
+        setTemplates(templateData);
         // Auto-select first template if none selected
-        if (!selectedTemplateId && templatesRes.data?.templates?.length > 0) {
-          setFormData((prev) => ({ ...prev, template_id: templatesRes.data.templates[0].id }));
-          setBulkFormData((prev) => ({ ...prev, template_id: templatesRes.data.templates[0].id }));
+        if (!selectedTemplateId && templateData.length > 0) {
+          setFormData((prev) => ({ ...prev, template_id: templateData[0].id }));
+          setBulkFormData((prev) => ({ ...prev, template_id: templateData[0].id }));
         }
       }
     } catch (error: any) {
