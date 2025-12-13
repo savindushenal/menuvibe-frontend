@@ -150,6 +150,10 @@ class ApiClient {
     return this.request('/user');
   }
 
+  async getContexts(): Promise<ApiResponse<{ contexts: any[], default_redirect: string }>> {
+    return this.request('/auth/contexts');
+  }
+
   async googleAuth(accessToken: string): Promise<ApiResponse<AuthData>> {
     return this.request<AuthData>('/auth/google', {
       method: 'POST',

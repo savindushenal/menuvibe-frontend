@@ -13,7 +13,6 @@ import {
   ChevronRight,
   LogOut,
   Menu,
-  FileText,
   TableProperties,
   HelpCircle,
 } from 'lucide-react';
@@ -23,8 +22,7 @@ import { cn } from '@/lib/utils';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
-  { icon: UtensilsCrossed, label: 'Menu Management', href: '/dashboard/menu' },
-  { icon: FileText, label: 'Menu Templates', href: '/dashboard/templates' },
+  { icon: UtensilsCrossed, label: 'Menus', href: '/dashboard/templates' },
   { icon: TableProperties, label: 'Tables & Endpoints', href: '/dashboard/endpoints' },
   { icon: Building, label: 'Restaurant Profile', href: '/dashboard/profile' },
   { icon: QrCode, label: 'QR Codes', href: '/dashboard/qr-codes' },

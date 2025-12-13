@@ -53,10 +53,54 @@ export default function AuthCallbackPage() {
             throw new Error('Failed to fetch user profile');
           }
           
-          console.log('User profile loaded:', profileResponse.data.user.email);
+          const user = profileResponse.data.user;
+          console.log('User profile loaded:', user.email);
           
-          // Check business profile to determine onboarding status
-          // Do this BEFORE refreshAuth to avoid race conditions
+          // Check if user has contexts (franchise membership or personal business)
+          let contexts: any[] = [];
+          try {
+            const contextsResponse = await apiClient.getContexts();
+            if (contextsResponse.success && contextsResponse.data?.contexts) {
+              contexts = contextsResponse.data.contexts;
+              console.log('User contexts:', contexts.length);
+              
+              // If user has contexts, redirect based on them
+              if (contexts.length > 0) {
+                // Store contexts for the select-context page
+                sessionStorage.setItem('user_contexts', JSON.stringify(contexts));
+                
+                if (contextsResponse.data.default_redirect) {
+                  await refreshAuth();
+                  toast({
+                    title: 'Login Successful',
+                    description: 'Welcome to MenuVibe!',
+                  });
+                  router.replace(contextsResponse.data.default_redirect);
+                  return;
+                } else if (contexts.length === 1) {
+                  await refreshAuth();
+                  toast({
+                    title: 'Login Successful',
+                    description: 'Welcome to MenuVibe!',
+                  });
+                  router.replace(contexts[0].redirect);
+                  return;
+                } else {
+                  await refreshAuth();
+                  toast({
+                    title: 'Login Successful',
+                    description: 'Welcome to MenuVibe!',
+                  });
+                  router.replace('/auth/select-context');
+                  return;
+                }
+              }
+            }
+          } catch (err) {
+            console.log('Error fetching contexts, continuing with onboarding check');
+          }
+          
+          // No contexts - check business profile to determine onboarding status
           let needsOnboarding = true;
           try {
             const businessProfile = await apiClient.getBusinessProfile();
