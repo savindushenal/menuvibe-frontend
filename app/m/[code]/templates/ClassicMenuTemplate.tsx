@@ -21,6 +21,7 @@ import {
   getCurrencySymbol,
   getItemPrice,
   isItemAvailable,
+  formatPrice,
 } from './types';
 
 interface ClassicMenuTemplateProps {
@@ -201,11 +202,11 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                       </div>
                       <div className="text-right">
                         <span className="text-lg font-bold" style={{ color: design.accent }}>
-                          {symbol}{price.toFixed(2)}
+                          {symbol}{formatPrice(price)}
                         </span>
-                        {item.compare_at_price && item.compare_at_price > price && (
+                        {item.compare_at_price && Number(item.compare_at_price) > price && (
                           <span className="block text-sm line-through opacity-40" style={{ color: design.text }}>
-                            {symbol}{item.compare_at_price.toFixed(2)}
+                            {symbol}{formatPrice(item.compare_at_price)}
                           </span>
                         )}
                       </div>
@@ -292,7 +293,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
           >
             <ShoppingCart className="w-5 h-5" />
             <span className="font-medium">{getCartCount()} items</span>
-            <span className="font-bold">{symbol}{getCartTotal().toFixed(2)}</span>
+            <span className="font-bold">{symbol}{formatPrice(getCartTotal())}</span>
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
@@ -351,7 +352,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                             {cartItem.item.name}
                           </h3>
                           <p className="text-sm font-bold" style={{ color: design.accent }}>
-                            {symbol}{getItemPrice(cartItem.item, menuData.overrides).toFixed(2)}
+                            {symbol}{formatPrice(getItemPrice(cartItem.item, menuData.overrides))}
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
@@ -381,7 +382,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-lg" style={{ color: design.text }}>Subtotal</span>
                     <span className="text-2xl font-bold" style={{ color: design.accent }}>
-                      {symbol}{getCartTotal().toFixed(2)}
+                      {symbol}{formatPrice(getCartTotal())}
                     </span>
                   </div>
                   <button

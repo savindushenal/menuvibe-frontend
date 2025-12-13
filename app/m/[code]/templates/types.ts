@@ -106,9 +106,9 @@ export function getLayout(settings: PublicMenuData['template']['settings']): str
 export function getItemPrice(item: PublicMenuItem, overrides?: Record<number, { price_override?: number }>): number {
   const override = overrides?.[item.id];
   if (override?.price_override !== undefined) {
-    return override.price_override;
+    return Number(override.price_override) || 0;
   }
-  return item.price;
+  return Number(item.price) || 0;
 }
 
 export function isItemAvailable(item: PublicMenuItem, overrides?: Record<number, { is_available?: boolean }>): boolean {
@@ -117,4 +117,10 @@ export function isItemAvailable(item: PublicMenuItem, overrides?: Record<number,
     return override.is_available;
   }
   return item.is_available;
+}
+
+// Safe toFixed helper
+export function formatPrice(price: number | string | null | undefined): string {
+  const num = Number(price);
+  return isNaN(num) ? '0.00' : num.toFixed(2);
 }

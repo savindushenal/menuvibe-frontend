@@ -19,6 +19,7 @@ import {
   getCurrencySymbol,
   getItemPrice,
   isItemAvailable,
+  formatPrice,
 } from './types';
 
 interface MinimalMenuTemplateProps {
@@ -235,11 +236,11 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
                   )}
                   <div className="flex items-center justify-between mt-2">
                     <span className="font-bold" style={{ color: design.accent }}>
-                      {symbol}{price.toFixed(0)}
+                      {symbol}{formatPrice(price)}
                     </span>
-                    {item.compare_at_price && item.compare_at_price > price && (
+                    {item.compare_at_price && Number(item.compare_at_price) > price && (
                       <span className="text-xs line-through opacity-40" style={{ color: design.text }}>
-                        {symbol}{item.compare_at_price.toFixed(0)}
+                        {symbol}{formatPrice(item.compare_at_price)}
                       </span>
                     )}
                   </div>
@@ -263,7 +264,7 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
                 <ShoppingCart className="w-5 h-5" />
                 <span className="font-medium">{getCartCount()} items</span>
               </div>
-              <span className="font-bold">{symbol}{getCartTotal().toFixed(0)}</span>
+              <span className="font-bold">{symbol}{formatPrice(getCartTotal())}</span>
             </button>
           </div>
         </div>
@@ -327,7 +328,7 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
                             {cartItem.item.name}
                           </h3>
                           <p className="text-sm font-bold" style={{ color: design.accent }}>
-                            {symbol}{getItemPrice(cartItem.item, menuData.overrides).toFixed(0)}
+                            {symbol}{formatPrice(getItemPrice(cartItem.item, menuData.overrides))}
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
@@ -357,7 +358,7 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
                   <div className="flex items-center justify-between mb-4">
                     <span style={{ color: design.text }}>Total</span>
                     <span className="text-xl font-bold" style={{ color: design.accent }}>
-                      {symbol}{getCartTotal().toFixed(0)}
+                      {symbol}{formatPrice(getCartTotal())}
                     </span>
                   </div>
                   <button

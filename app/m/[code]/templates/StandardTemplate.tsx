@@ -24,6 +24,7 @@ import {
   getCurrencySymbol,
   getItemPrice,
   isItemAvailable,
+  formatPrice,
 } from './types';
 
 interface StandardTemplateProps {
@@ -290,11 +291,11 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
                                   className="font-bold text-lg"
                                   style={{ color: design.accent }}
                                 >
-                                  {symbol}{price.toFixed(2)}
+                                  {symbol}{formatPrice(price)}
                                 </span>
-                                {item.compare_at_price && item.compare_at_price > price && (
+                                {item.compare_at_price && Number(item.compare_at_price) > price && (
                                   <span className="ml-2 text-sm text-neutral-400 line-through">
-                                    {symbol}{item.compare_at_price.toFixed(2)}
+                                    {symbol}{formatPrice(item.compare_at_price)}
                                   </span>
                                 )}
                               </div>
@@ -361,7 +362,7 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
                 <span className="font-medium">{getCartCount()} items</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-bold">{symbol}{getCartTotal().toFixed(2)}</span>
+                <span className="font-bold">{symbol}{formatPrice(getCartTotal())}</span>
                 <ChevronRight className="w-5 h-5" />
               </div>
             </button>
@@ -421,7 +422,7 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
                         <div className="flex-1">
                           <h3 className="font-medium">{cartItem.item.name}</h3>
                           <p className="text-sm" style={{ color: design.accent }}>
-                            {symbol}{getItemPrice(cartItem.item, menuData.overrides).toFixed(2)}
+                            {symbol}{formatPrice(getItemPrice(cartItem.item, menuData.overrides))}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -451,7 +452,7 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-lg font-medium">Total</span>
                     <span className="text-xl font-bold" style={{ color: design.accent }}>
-                      {symbol}{getCartTotal().toFixed(2)}
+                      {symbol}{formatPrice(getCartTotal())}
                     </span>
                   </div>
                   <button
