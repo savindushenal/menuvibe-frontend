@@ -38,6 +38,7 @@ export interface PublicOffer {
 
 export interface BusinessInfo {
   name: string;
+  branch_name: string | null;
   description: string | null;
   logo_url: string | null;
   phone: string | null;

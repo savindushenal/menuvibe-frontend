@@ -131,19 +131,27 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
               )}
               <div>
                 <h1 className="text-lg font-bold">{menuData.business?.name || menuData.template.name}</h1>
-                <div className="flex items-center gap-2 text-sm text-neutral-500">
-                  {menuData.business?.cuisine_type ? (
-                    <>
-                      <UtensilsCrossed className="w-3 h-3" />
-                      <span>{menuData.business.cuisine_type}</span>
-                    </>
-                  ) : (
-                    <>
-                      <TableProperties className="w-4 h-4" />
-                      <span>{menuData.endpoint.name}</span>
-                    </>
-                  )}
-                </div>
+                {/* Show branch name if different from business name */}
+                {menuData.business?.branch_name && menuData.business.branch_name !== menuData.business.name && (
+                  <div className="text-sm font-medium text-neutral-600">
+                    {menuData.business.branch_name}
+                  </div>
+                )}
+                {!menuData.business?.branch_name && (
+                  <div className="flex items-center gap-2 text-sm text-neutral-500">
+                    {menuData.business?.cuisine_type ? (
+                      <>
+                        <UtensilsCrossed className="w-3 h-3" />
+                        <span>{menuData.business.cuisine_type}</span>
+                      </>
+                    ) : (
+                      <>
+                        <TableProperties className="w-4 h-4" />
+                        <span>{menuData.endpoint.name}</span>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <button

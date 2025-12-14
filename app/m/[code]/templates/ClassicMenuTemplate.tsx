@@ -119,14 +119,22 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                   {menuData.business?.name || menuData.template.name}
                 </h1>
                 <div className="flex items-center gap-3 mt-1">
+                  {/* Show branch name if different from business name */}
+                  {menuData.business?.branch_name && menuData.business.branch_name !== menuData.business.name && (
+                    <span className="text-sm font-medium opacity-80" style={{ color: design.text }}>
+                      {menuData.business.branch_name}
+                    </span>
+                  )}
                   {menuData.business?.cuisine_type && (
                     <span className="text-sm opacity-60 flex items-center gap-1" style={{ color: design.text }}>
                       <UtensilsCrossed className="w-3 h-3" /> {menuData.business.cuisine_type}
                     </span>
                   )}
-                  <span className="text-sm opacity-60" style={{ color: design.text }}>
-                    {menuData.endpoint.name}
-                  </span>
+                  {!menuData.business?.branch_name && (
+                    <span className="text-sm opacity-60" style={{ color: design.text }}>
+                      {menuData.endpoint.name}
+                    </span>
+                  )}
                 </div>
                 {/* Contact info */}
                 {menuData.business && (menuData.business.phone || menuData.business.website) && (

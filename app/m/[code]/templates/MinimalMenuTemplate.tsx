@@ -117,13 +117,20 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
                 <h1 className="text-xl font-bold" style={{ color: design.text }}>
                   {menuData.business?.name || menuData.template.name}
                 </h1>
-                <p className="text-sm opacity-60 flex items-center gap-1" style={{ color: design.text }}>
-                  {menuData.business?.cuisine_type ? (
-                    <><UtensilsCrossed className="w-3 h-3" /> {menuData.business.cuisine_type}</>
-                  ) : (
-                    menuData.endpoint.name
-                  )}
-                </p>
+                {/* Show branch name if different from business name */}
+                {menuData.business?.branch_name && menuData.business.branch_name !== menuData.business.name ? (
+                  <p className="text-sm font-medium opacity-80" style={{ color: design.text }}>
+                    {menuData.business.branch_name}
+                  </p>
+                ) : (
+                  <p className="text-sm opacity-60 flex items-center gap-1" style={{ color: design.text }}>
+                    {menuData.business?.cuisine_type ? (
+                      <><UtensilsCrossed className="w-3 h-3" /> {menuData.business.cuisine_type}</>
+                    ) : (
+                      menuData.endpoint.name
+                    )}
+                  </p>
+                )}
               </div>
             </div>
             <button

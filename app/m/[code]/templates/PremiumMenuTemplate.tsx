@@ -149,13 +149,19 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
                 <h2 className="font-bold text-lg" style={{ color: design.text }}>
                   {menuData.business?.name || menuData.template.name}
                 </h2>
+                {/* Show branch name if different from business name */}
+                {menuData.business?.branch_name && menuData.business.branch_name !== menuData.business.name && (
+                  <div className="text-sm font-medium opacity-80" style={{ color: design.text }}>
+                    {menuData.business.branch_name}
+                  </div>
+                )}
                 {menuData.business?.cuisine_type && (
                   <div className="flex items-center gap-1 text-sm opacity-70" style={{ color: design.text }}>
                     <UtensilsCrossed className="w-3 h-3" />
                     <span>{menuData.business.cuisine_type}</span>
                   </div>
                 )}
-                {!menuData.business?.cuisine_type && (
+                {!menuData.business?.cuisine_type && !menuData.business?.branch_name && (
                   <div className="flex items-center gap-1 text-sm opacity-70" style={{ color: design.text }}>
                     <MapPin className="w-3 h-3" />
                     <span>{menuData.endpoint.name}</span>
