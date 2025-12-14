@@ -36,6 +36,22 @@ export interface PublicOffer {
   image_url: string | null;
 }
 
+export interface BusinessInfo {
+  name: string;
+  description: string | null;
+  logo_url: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  address: string[];
+  cuisine_type: string | null;
+  operating_hours: Record<string, { open: string; close: string }> | null;
+  services: string[] | null;
+  social_media: Record<string, string> | null;
+  primary_color: string | null;
+  secondary_color: string | null;
+}
+
 export interface PublicMenuData {
   endpoint: {
     id: number;
@@ -47,12 +63,14 @@ export interface PublicMenuData {
     id: number;
     name: string;
     currency: string;
+    image_url?: string | null;
     settings: {
       layout?: string;
       colorTheme?: string;
       design?: string;
     } | null;
   };
+  business?: BusinessInfo | null;
   categories: PublicCategory[];
   offers: PublicOffer[];
   overrides: Record<number, { price_override?: number; is_available?: boolean }>;

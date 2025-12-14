@@ -14,6 +14,9 @@ import {
   ChevronRight,
   MapPin,
   Tag,
+  Phone,
+  Globe,
+  UtensilsCrossed,
 } from 'lucide-react';
 import {
   PublicMenuData,
@@ -25,6 +28,10 @@ import {
   isItemAvailable,
   formatPrice,
 } from './types';
+
+// Default food icon for items without image or icon
+const DEFAULT_ITEM_ICON = '🍽️';
+const DEFAULT_CATEGORY_ICON = '📋';
 
 interface PremiumMenuTemplateProps {
   menuData: PublicMenuData;
@@ -112,7 +119,7 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: design.bg }}>
-      {/* Hero Header */}
+      {/* Hero Header with Business Info */}
       <header className="relative overflow-hidden">
         <div 
           className="absolute inset-0 opacity-10"
@@ -124,20 +131,36 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
           {/* Logo & Cart */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div 
-                className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg"
-                style={{ backgroundColor: design.accent }}
-              >
-                {menuData.template.name.charAt(0)}
-              </div>
-              <div>
-                <h2 className="font-bold" style={{ color: design.text }}>
-                  {menuData.template.name}
-                </h2>
-                <div className="flex items-center gap-1 text-sm opacity-70" style={{ color: design.text }}>
-                  <MapPin className="w-3 h-3" />
-                  <span>{menuData.endpoint.name}</span>
+              {menuData.business?.logo_url || menuData.template.image_url ? (
+                <img 
+                  src={menuData.business?.logo_url || menuData.template.image_url || ''} 
+                  alt={menuData.business?.name || menuData.template.name}
+                  className="w-14 h-14 rounded-xl object-cover"
+                />
+              ) : (
+                <div 
+                  className="w-14 h-14 rounded-xl flex items-center justify-center text-white font-bold text-xl"
+                  style={{ backgroundColor: menuData.business?.primary_color || design.accent }}
+                >
+                  {(menuData.business?.name || menuData.template.name).charAt(0)}
                 </div>
+              )}
+              <div>
+                <h2 className="font-bold text-lg" style={{ color: design.text }}>
+                  {menuData.business?.name || menuData.template.name}
+                </h2>
+                {menuData.business?.cuisine_type && (
+                  <div className="flex items-center gap-1 text-sm opacity-70" style={{ color: design.text }}>
+                    <UtensilsCrossed className="w-3 h-3" />
+                    <span>{menuData.business.cuisine_type}</span>
+                  </div>
+                )}
+                {!menuData.business?.cuisine_type && (
+                  <div className="flex items-center gap-1 text-sm opacity-70" style={{ color: design.text }}>
+                    <MapPin className="w-3 h-3" />
+                    <span>{menuData.endpoint.name}</span>
+                  </div>
+                )}
               </div>
             </div>
             <button
@@ -153,6 +176,49 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
               )}
             </button>
           </div>
+
+          {/* Business Description */}
+          {menuData.business?.description && (
+            <p className="text-sm opacity-70 mb-4" style={{ color: design.text }}>
+              {menuData.business.description}
+            </p>
+          )}
+
+          {/* Business Contact Info */}
+          {menuData.business && (menuData.business.phone || menuData.business.website) && (
+            <div className="flex flex-wrap gap-3 mb-4">
+              {menuData.business.phone && (
+                <a 
+                  href={`tel:${menuData.business.phone}`}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm"
+                  style={{ backgroundColor: design.card, color: design.text }}
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  {menuData.business.phone}
+                </a>
+              )}
+              {menuData.business.website && (
+                <a 
+                  href={menuData.business.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm"
+                  style={{ backgroundColor: design.card, color: design.text }}
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  Website
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Address */}
+          {menuData.business?.address && menuData.business.address.length > 0 && (
+            <div className="flex items-start gap-1.5 text-sm opacity-60 mb-4" style={{ color: design.text }}>
+              <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>{menuData.business.address.join(', ')}</span>
+            </div>
+          )}
 
           {/* Greeting */}
           <h1 className="text-3xl font-bold mb-4" style={{ color: design.text }}>
@@ -243,12 +309,13 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
                         alt={item.name}
                         className="w-full h-32 object-cover"
                       />
-                    ) : item.icon ? (
-                      <div className="w-full h-32 bg-neutral-200 flex items-center justify-center text-5xl">
-                        {item.icon}
-                      </div>
                     ) : (
-                      <div className="w-full h-32 bg-neutral-200" />
+                      <div 
+                        className="w-full h-32 flex items-center justify-center text-5xl"
+                        style={{ backgroundColor: design.card, opacity: 0.8 }}
+                      >
+                        {item.icon || DEFAULT_ITEM_ICON}
+                      </div>
                     )}
                     <div className="p-3">
                       <h3 className="font-semibold text-sm line-clamp-1" style={{ color: design.text }}>
@@ -319,19 +386,20 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
                 className={`flex gap-4 p-4 rounded-2xl shadow-sm ${!available ? 'opacity-50' : ''}`}
                 style={{ backgroundColor: design.card }}
               >
-                {/* Image */}
+                {/* Image/Icon */}
                 {item.image_url ? (
                   <img
                     src={item.image_url}
                     alt={item.name}
                     className="w-28 h-28 rounded-xl object-cover flex-shrink-0"
                   />
-                ) : item.icon ? (
-                  <div className="w-28 h-28 rounded-xl bg-neutral-200 flex-shrink-0 flex items-center justify-center text-5xl">
-                    {item.icon}
-                  </div>
                 ) : (
-                  <div className="w-28 h-28 rounded-xl bg-neutral-200 flex-shrink-0" />
+                  <div 
+                    className="w-28 h-28 rounded-xl flex-shrink-0 flex items-center justify-center text-5xl"
+                    style={{ backgroundColor: design.bg }}
+                  >
+                    {item.icon || DEFAULT_ITEM_ICON}
+                  </div>
                 )}
 
                 {/* Details */}

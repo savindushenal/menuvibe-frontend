@@ -10,6 +10,9 @@ import {
   Star,
   Flame,
   Leaf,
+  Phone,
+  Globe,
+  UtensilsCrossed,
 } from 'lucide-react';
 import {
   PublicMenuData,
@@ -21,6 +24,9 @@ import {
   isItemAvailable,
   formatPrice,
 } from './types';
+
+// Default icon
+const DEFAULT_ITEM_ICON = '🍽️';
 
 interface MinimalMenuTemplateProps {
   menuData: PublicMenuData;
@@ -88,17 +94,37 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: design.bg }}>
-      {/* Minimal Header */}
+      {/* Minimal Header with Business Info */}
       <header className="sticky top-0 z-40 backdrop-blur-md border-b" style={{ backgroundColor: design.bg + 'ee' }}>
         <div className="max-w-3xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold" style={{ color: design.text }}>
-                {menuData.template.name}
-              </h1>
-              <p className="text-sm opacity-60" style={{ color: design.text }}>
-                {menuData.endpoint.name}
-              </p>
+            <div className="flex items-center gap-3">
+              {menuData.business?.logo_url || menuData.template.image_url ? (
+                <img 
+                  src={menuData.business?.logo_url || menuData.template.image_url || ''} 
+                  alt={menuData.business?.name || menuData.template.name}
+                  className="w-10 h-10 rounded-lg object-cover"
+                />
+              ) : (
+                <div 
+                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
+                  style={{ backgroundColor: menuData.business?.primary_color || design.accent }}
+                >
+                  {(menuData.business?.name || menuData.template.name).charAt(0)}
+                </div>
+              )}
+              <div>
+                <h1 className="text-xl font-bold" style={{ color: design.text }}>
+                  {menuData.business?.name || menuData.template.name}
+                </h1>
+                <p className="text-sm opacity-60 flex items-center gap-1" style={{ color: design.text }}>
+                  {menuData.business?.cuisine_type ? (
+                    <><UtensilsCrossed className="w-3 h-3" /> {menuData.business.cuisine_type}</>
+                  ) : (
+                    menuData.endpoint.name
+                  )}
+                </p>
+              </div>
             </div>
             <button
               onClick={() => setIsCartOpen(true)}
@@ -116,6 +142,16 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
               )}
             </button>
           </div>
+          {/* Quick contact links */}
+          {menuData.business && (menuData.business.phone || menuData.business.website) && (
+            <div className="flex gap-2 mt-2">
+              {menuData.business.phone && (
+                <a href={`tel:${menuData.business.phone}`} className="flex items-center gap-1 text-xs opacity-60" style={{ color: design.text }}>
+                  <Phone className="w-3 h-3" /> {menuData.business.phone}
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
@@ -156,7 +192,7 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
                 className={`rounded-2xl overflow-hidden shadow-sm ${!available ? 'opacity-50' : ''}`}
                 style={{ backgroundColor: design.card }}
               >
-                {/* Image */}
+                {/* Image/Icon */}
                 <div className="relative aspect-square">
                   {item.image_url ? (
                     <img
@@ -164,12 +200,13 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
                       alt={item.name}
                       className="w-full h-full object-cover"
                     />
-                  ) : item.icon ? (
-                    <div className="w-full h-full bg-neutral-200 flex items-center justify-center text-6xl">
-                      {item.icon}
-                    </div>
                   ) : (
-                    <div className="w-full h-full bg-neutral-200" />
+                    <div 
+                      className="w-full h-full flex items-center justify-center text-6xl"
+                      style={{ backgroundColor: design.bg }}
+                    >
+                      {item.icon || DEFAULT_ITEM_ICON}
+                    </div>
                   )}
                   
                   {/* Badges */}

@@ -12,6 +12,10 @@ import {
   Flame,
   Leaf,
   ChevronRight,
+  Phone,
+  Globe,
+  MapPin,
+  UtensilsCrossed,
 } from 'lucide-react';
 import {
   PublicMenuData,
@@ -23,6 +27,9 @@ import {
   isItemAvailable,
   formatPrice,
 } from './types';
+
+// Default icon
+const DEFAULT_ITEM_ICON = '🍽️';
 
 interface ClassicMenuTemplateProps {
   menuData: PublicMenuData;
@@ -88,17 +95,55 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: design.bg }}>
-      {/* Classic Header */}
+      {/* Classic Header with Business Info */}
       <header className="border-b" style={{ backgroundColor: design.card }}>
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
-            <div className="text-center flex-1">
-              <h1 className="text-2xl font-serif font-bold" style={{ color: design.text }}>
-                {menuData.template.name}
-              </h1>
-              <p className="text-sm opacity-60 mt-1" style={{ color: design.text }}>
-                {menuData.endpoint.name}
-              </p>
+            <div className="flex items-center gap-4 flex-1">
+              {menuData.business?.logo_url || menuData.template.image_url ? (
+                <img 
+                  src={menuData.business?.logo_url || menuData.template.image_url || ''} 
+                  alt={menuData.business?.name || menuData.template.name}
+                  className="w-14 h-14 rounded-lg object-cover"
+                />
+              ) : (
+                <div 
+                  className="w-14 h-14 rounded-lg flex items-center justify-center text-white font-bold text-xl"
+                  style={{ backgroundColor: menuData.business?.primary_color || design.accent }}
+                >
+                  {(menuData.business?.name || menuData.template.name).charAt(0)}
+                </div>
+              )}
+              <div>
+                <h1 className="text-2xl font-serif font-bold" style={{ color: design.text }}>
+                  {menuData.business?.name || menuData.template.name}
+                </h1>
+                <div className="flex items-center gap-3 mt-1">
+                  {menuData.business?.cuisine_type && (
+                    <span className="text-sm opacity-60 flex items-center gap-1" style={{ color: design.text }}>
+                      <UtensilsCrossed className="w-3 h-3" /> {menuData.business.cuisine_type}
+                    </span>
+                  )}
+                  <span className="text-sm opacity-60" style={{ color: design.text }}>
+                    {menuData.endpoint.name}
+                  </span>
+                </div>
+                {/* Contact info */}
+                {menuData.business && (menuData.business.phone || menuData.business.website) && (
+                  <div className="flex gap-4 mt-2">
+                    {menuData.business.phone && (
+                      <a href={`tel:${menuData.business.phone}`} className="flex items-center gap-1 text-xs" style={{ color: design.accent }}>
+                        <Phone className="w-3 h-3" /> {menuData.business.phone}
+                      </a>
+                    )}
+                    {menuData.business.website && (
+                      <a href={menuData.business.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs" style={{ color: design.accent }}>
+                        <Globe className="w-3 h-3" /> Website
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             <button
               onClick={() => setIsCartOpen(true)}
@@ -266,7 +311,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                     </div>
                   </div>
 
-                  {/* Image */}
+                  {/* Image/Icon */}
                   {item.image_url ? (
                     <div className="flex-shrink-0">
                       <img
@@ -275,11 +320,14 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                         className="w-32 h-32 rounded-lg object-cover"
                       />
                     </div>
-                  ) : item.icon ? (
-                    <div className="flex-shrink-0 w-32 h-32 rounded-lg bg-neutral-100 flex items-center justify-center text-5xl">
-                      {item.icon}
+                  ) : (
+                    <div 
+                      className="flex-shrink-0 w-32 h-32 rounded-lg flex items-center justify-center text-5xl"
+                      style={{ backgroundColor: design.bg }}
+                    >
+                      {item.icon || DEFAULT_ITEM_ICON}
                     </div>
-                  ) : null}
+                  )}
                 </motion.div>
               );
             })}

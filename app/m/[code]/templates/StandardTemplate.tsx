@@ -15,6 +15,10 @@ import {
   Star,
   TableProperties,
   ChevronDown,
+  Phone,
+  Globe,
+  MapPin,
+  UtensilsCrossed,
 } from 'lucide-react';
 import {
   PublicMenuData,
@@ -26,6 +30,10 @@ import {
   isItemAvailable,
   formatPrice,
 } from './types';
+
+// Default icons
+const DEFAULT_ITEM_ICON = '🍽️';
+const DEFAULT_CATEGORY_ICON = '📋';
 
 interface StandardTemplateProps {
   menuData: PublicMenuData;
@@ -102,15 +110,40 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
       className="min-h-screen pb-24"
       style={{ backgroundColor: design.bg, color: design.text }}
     >
-      {/* Header */}
+      {/* Header with Business Info */}
       <header className="sticky top-0 z-40 backdrop-blur-md bg-white/80 border-b">
         <div className="max-w-lg mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-lg font-bold">{menuData.template.name}</h1>
-              <div className="flex items-center gap-2 text-sm text-neutral-500">
-                <TableProperties className="w-4 h-4" />
-                <span>{menuData.endpoint.name}</span>
+            <div className="flex items-center gap-3">
+              {menuData.business?.logo_url || menuData.template.image_url ? (
+                <img 
+                  src={menuData.business?.logo_url || menuData.template.image_url || ''} 
+                  alt={menuData.business?.name || menuData.template.name}
+                  className="w-10 h-10 rounded-lg object-cover"
+                />
+              ) : (
+                <div 
+                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
+                  style={{ backgroundColor: menuData.business?.primary_color || design.accent }}
+                >
+                  {(menuData.business?.name || menuData.template.name).charAt(0)}
+                </div>
+              )}
+              <div>
+                <h1 className="text-lg font-bold">{menuData.business?.name || menuData.template.name}</h1>
+                <div className="flex items-center gap-2 text-sm text-neutral-500">
+                  {menuData.business?.cuisine_type ? (
+                    <>
+                      <UtensilsCrossed className="w-3 h-3" />
+                      <span>{menuData.business.cuisine_type}</span>
+                    </>
+                  ) : (
+                    <>
+                      <TableProperties className="w-4 h-4" />
+                      <span>{menuData.endpoint.name}</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
             <button
@@ -129,6 +162,34 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
               )}
             </button>
           </div>
+          
+          {/* Business Contact Quick Links */}
+          {menuData.business && (menuData.business.phone || menuData.business.website) && (
+            <div className="flex gap-2 mt-2">
+              {menuData.business.phone && (
+                <a 
+                  href={`tel:${menuData.business.phone}`}
+                  className="flex items-center gap-1 px-2 py-1 rounded-full text-xs"
+                  style={{ backgroundColor: design.accent + '15', color: design.accent }}
+                >
+                  <Phone className="w-3 h-3" />
+                  Call
+                </a>
+              )}
+              {menuData.business.website && (
+                <a 
+                  href={menuData.business.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-1 rounded-full text-xs"
+                  style={{ backgroundColor: design.accent + '15', color: design.accent }}
+                >
+                  <Globe className="w-3 h-3" />
+                  Website
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
@@ -236,19 +297,20 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
                           }`}
                           style={{ backgroundColor: design.card }}
                         >
-                          {/* Image */}
+                          {/* Image/Icon */}
                           {item.image_url ? (
                             <img
                               src={item.image_url}
                               alt={item.name}
                               className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
                             />
-                          ) : item.icon ? (
-                            <div className="w-24 h-24 rounded-lg bg-neutral-100 flex-shrink-0 flex items-center justify-center text-4xl">
-                              {item.icon}
-                            </div>
                           ) : (
-                            <div className="w-24 h-24 rounded-lg bg-neutral-100 flex-shrink-0" />
+                            <div 
+                              className="w-24 h-24 rounded-lg flex-shrink-0 flex items-center justify-center text-4xl"
+                              style={{ backgroundColor: design.bg }}
+                            >
+                              {item.icon || DEFAULT_ITEM_ICON}
+                            </div>
                           )}
 
                           {/* Details */}

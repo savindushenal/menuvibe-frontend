@@ -41,6 +41,7 @@ function PublicMenuContent() {
         const mappedData: PublicMenuData = {
           endpoint: apiData.endpoint,
           template: apiData.template,
+          business: apiData.business || null,
           categories: apiData.menu?.categories || [],
           offers: apiData.offers || [],
           overrides: apiData.menu?.overrides || {},
