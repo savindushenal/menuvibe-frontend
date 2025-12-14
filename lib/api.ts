@@ -1373,6 +1373,7 @@ class ApiClient {
     description?: string;
     price: number;
     image_url?: string;
+    icon?: string;
   }): Promise<ApiResponse> {
     return this.request(`/menu-templates/${templateId}/categories/${categoryId}/items`, {
       method: 'POST',
