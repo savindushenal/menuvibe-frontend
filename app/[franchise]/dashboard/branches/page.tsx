@@ -93,8 +93,6 @@ export default function FranchiseBranchesPage() {
     is_active: true,
   });
 
-  const franchiseId = currentFranchise?.id;
-
   const fetchBranches = useCallback(async () => {
     if (!franchiseSlug) return;
     
@@ -146,7 +144,10 @@ export default function FranchiseBranchesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!franchiseId) return;
+    if (!franchiseSlug) {
+      toast.error('Franchise not found');
+      return;
+    }
     
     if (!formData.branch_name.trim()) {
       toast.error('Please enter a branch name');
