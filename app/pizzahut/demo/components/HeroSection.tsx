@@ -75,7 +75,7 @@ export default function HeroSection({ tableInfo, onExploreClick }: HeroSectionPr
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                No One OutPizzas The Hut™
+                What would you like today?
               </motion.p>
             </div>
 

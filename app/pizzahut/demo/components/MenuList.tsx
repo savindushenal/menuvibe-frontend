@@ -80,7 +80,7 @@ export default function MenuList({ items, onItemClick }: MenuListProps) {
                 
                 <p className="text-pizzahut-red font-bold mt-2 text-base md:text-lg">
                   {item.sizes 
-                    ? `From LKR ${item.sizes[0].price.toLocaleString()}`
+                    ? `From LKR ${(item.price + item.sizes[0].price).toLocaleString()}`
                     : `LKR ${item.price.toLocaleString()}`
                   }
                 </p>

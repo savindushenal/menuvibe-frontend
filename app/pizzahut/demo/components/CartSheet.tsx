@@ -18,13 +18,13 @@ interface CartSheetProps {
 
 const upsellItems: MenuItem[] = [
   {
-    id: 'pepsi-1.5',
-    name: 'Pepsi 1.5L',
+    id: 'coca-cola-upsell',
+    name: 'Coca-Cola 1.5L',
     price: 450,
-    description: 'Chilled Pepsi to complement your meal',
-    image: '/pizzahut/pepsi.jpg',
-    rating: 4.5,
-    reviews: 89,
+    description: 'Chilled Coca-Cola to complement your meal',
+    image: '/pizzahut/coke.webp',
+    rating: 4.8,
+    reviews: 234,
     category: 'Drinks',
   },
   {
@@ -32,7 +32,7 @@ const upsellItems: MenuItem[] = [
     name: 'Chocolate Lava Cake',
     price: 690,
     description: 'Warm chocolate cake with molten center',
-    image: '/pizzahut/lava-cake.jpg',
+    image: '/pizzahut/lava-cake.webp',
     rating: 4.9,
     reviews: 234,
     category: 'Desserts',

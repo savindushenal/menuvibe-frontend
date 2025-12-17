@@ -56,7 +56,7 @@ export const topPicksData: MenuItem[] = [
     name: 'Chocolate Lava Cake',
     price: 690,
     description: 'Warm chocolate cake with a molten center, served with vanilla ice cream.',
-    image: '/pizzahut/lava-cake.jpg',
+    image: '/pizzahut/lava-cake.webp',
     rating: 4.9,
     reviews: 445,
     category: 'Desserts',
