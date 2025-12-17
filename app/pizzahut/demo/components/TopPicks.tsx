@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Sparkles, Star } from 'lucide-react';
+import { Flame, Star } from 'lucide-react';
 import Image from 'next/image';
 import { MenuItem } from '../types';
 
@@ -12,11 +12,11 @@ interface TopPicksProps {
 // Top picks - bestsellers
 export const topPicksData: MenuItem[] = [
   {
-    id: 'pepperoni-lovers',
-    name: 'Pepperoni Lovers',
+    id: 'beef-pepperoni',
+    name: 'Beef Pepperoni',
     price: 2490,
-    description: 'Loaded with double pepperoni, extra mozzarella, and our signature tomato sauce.',
-    image: '/pizzahut/pepperoni.jpg',
+    description: 'Loaded with double beef pepperoni, extra mozzarella, and our signature tomato sauce.',
+    image: '/pizzahut/beef-pepperoni.jpg',
     rating: 4.9,
     reviews: 312,
     category: 'Pizza',
@@ -32,11 +32,11 @@ export const topPicksData: MenuItem[] = [
     ],
   },
   {
-    id: 'chicken-supreme',
-    name: 'Chicken Supreme',
+    id: 'super-supreme',
+    name: 'Super Supreme',
     price: 2690,
-    description: 'Grilled chicken, mushrooms, capsicum, onions on our signature pan crust.',
-    image: '/pizzahut/chicken-supreme.jpg',
+    description: 'The ultimate loaded pizza with pepperoni, sausage, beef, mushrooms, capsicum & onions.',
+    image: '/pizzahut/super-supreme.jpg',
     rating: 4.8,
     reviews: 256,
     category: 'Pizza',
@@ -72,7 +72,7 @@ export default function TopPicks({ onItemClick }: TopPicksProps) {
       transition={{ delay: 0.5 }}
     >
       <div className="px-4 sm:px-6 lg:px-12 mb-4 md:mb-6 flex items-center gap-2">
-        <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-pizzahut-red" />
+        <Flame className="w-5 h-5 md:w-6 md:h-6 text-pizzahut-red" />
         <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-pizzahut-dark">Top Picks for You</h2>
       </div>
       

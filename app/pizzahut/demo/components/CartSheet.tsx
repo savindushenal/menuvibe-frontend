@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
-import { X, MapPin, CreditCard, Lock, Plus, Minus, ChevronRight, Sparkles, FileText } from 'lucide-react';
+import { X, MapPin, CreditCard, Lock, Plus, Minus, ChevronRight, UtensilsCrossed, FileText } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { MenuItem, CartItem } from '../types';
@@ -242,7 +242,7 @@ export default function CartSheet({
                   className="mt-6 lg:mt-8 p-4 lg:p-5 bg-gradient-to-r from-red-50 to-orange-50 rounded-2xl border border-pizzahut-red/20"
                 >
                   <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="w-4 h-4 lg:w-5 lg:h-5 text-pizzahut-red" />
+                    <UtensilsCrossed className="w-4 h-4 lg:w-5 lg:h-5 text-pizzahut-red" />
                     <span className="text-sm lg:text-base font-medium text-pizzahut-red">Complete Your Meal</span>
                   </div>
                   <div className="space-y-3">

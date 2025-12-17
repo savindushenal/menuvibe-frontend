@@ -41,7 +41,7 @@ export const dealsData: MenuItem[] = [
     price: 4499,
     originalPrice: 5650,
     description: '1 Medium Pizza + Breadsticks + Cinnamon Sticks. The ultimate combo!',
-    image: '/pizzahut/triple-treat.jpg',
+    image: '/pizzahut/chicken-triple-treat-pizza.jpg',
     rating: 4.7,
     reviews: 156,
     category: 'Deals',

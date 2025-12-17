@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, ShoppingCart } from 'lucide-react';
 
 // Components
 import Header from './components/Header';
@@ -70,6 +70,44 @@ const menuItemsByCategory: Record<string, MenuItem[]> = {
       crusts: defaultCrusts,
     },
     {
+      id: 'super-supreme',
+      name: 'Super Supreme',
+      price: 2590,
+      description: 'The ultimate loaded pizza with pepperoni, sausage, beef, mushrooms, capsicum & onions.',
+      image: '/pizzahut/super-supreme.jpg',
+      rating: 4.9,
+      reviews: 289,
+      category: 'Pizza',
+      sizes: defaultPizzaSizes,
+      crusts: defaultCrusts,
+      badge: 'Best Seller',
+    },
+    {
+      id: 'crispy-korean-chicken',
+      name: 'Crispy Korean Chicken',
+      price: 2390,
+      description: 'Crispy fried chicken, spicy gochujang sauce, spring onions & sesame seeds.',
+      image: '/pizzahut/crispy-korean-chicken.jpg',
+      rating: 4.8,
+      reviews: 198,
+      category: 'Pizza',
+      sizes: defaultPizzaSizes,
+      crusts: defaultCrusts,
+      badge: 'New',
+    },
+    {
+      id: '4-cheese',
+      name: '4 Cheese Pizza',
+      price: 2190,
+      description: 'A cheesy delight with mozzarella, cheddar, parmesan & feta cheese.',
+      image: '/pizzahut/4-cheese-pizza.jpg',
+      rating: 4.7,
+      reviews: 234,
+      category: 'Pizza',
+      sizes: defaultPizzaSizes,
+      crusts: defaultCrusts,
+    },
+    {
       id: 'bbq-chicken',
       name: 'BBQ Chicken',
       price: 2090,
@@ -106,17 +144,79 @@ const menuItemsByCategory: Record<string, MenuItem[]> = {
       crusts: defaultCrusts,
     },
     {
-      id: 'devilled-chicken',
-      name: 'Devilled Chicken',
+      id: 'middle-eastern-chicken',
+      name: 'Middle Eastern Chicken',
       price: 2290,
-      description: 'Sri Lankan style devilled chicken with fiery spices and capsicum.',
-      image: '/pizzahut/devilled-chicken.jpg',
+      description: 'Tender chicken with Middle Eastern spices, capsicum & onions.',
+      image: '/pizzahut/middle-eastern-chicken-pizza.jpg',
       rating: 4.8,
       reviews: 312,
       category: 'Pizza',
       sizes: defaultPizzaSizes,
       crusts: defaultCrusts,
       badge: 'Local Favorite',
+    },
+    {
+      id: 'hot-garlic-prawns',
+      name: 'Hot Garlic Prawns',
+      price: 2790,
+      description: 'Succulent prawns with garlic butter sauce, chili flakes & fresh herbs.',
+      image: '/pizzahut/hot-garlic-prawns.jpg',
+      rating: 4.7,
+      reviews: 156,
+      category: 'Pizza',
+      sizes: defaultPizzaSizes,
+      crusts: defaultCrusts,
+      badge: 'Seafood',
+    },
+    {
+      id: 'seafood-treat',
+      name: 'Seafood Treat',
+      price: 2690,
+      description: 'A delicious mix of prawns, squid & crab sticks with creamy sauce.',
+      image: '/pizzahut/seafood-treat.jpg',
+      rating: 4.6,
+      reviews: 143,
+      category: 'Pizza',
+      sizes: defaultPizzaSizes,
+      crusts: defaultCrusts,
+    },
+    {
+      id: 'minced-mutton-treat',
+      name: 'Minced Mutton Treat',
+      price: 2490,
+      description: 'Spiced minced mutton with onions, capsicum & our special sauce.',
+      image: '/pizzahut/minced-mutton-treat.jpg',
+      rating: 4.8,
+      reviews: 187,
+      category: 'Pizza',
+      sizes: defaultPizzaSizes,
+      crusts: defaultCrusts,
+    },
+    {
+      id: 'double-chicken-surprise',
+      name: 'Double Chicken Surprise',
+      price: 2390,
+      description: 'Double portion of seasoned chicken, cheese & special herbs.',
+      image: '/pizzahut/double-chicken-surprise.jpg',
+      rating: 4.7,
+      reviews: 201,
+      category: 'Pizza',
+      sizes: defaultPizzaSizes,
+      crusts: defaultCrusts,
+    },
+    {
+      id: 'beef-pepperoni',
+      name: 'Beef Pepperoni',
+      price: 2290,
+      description: 'Loaded with double beef pepperoni, extra mozzarella & tomato sauce.',
+      image: '/pizzahut/beef-pepperoni.jpg',
+      rating: 4.9,
+      reviews: 345,
+      category: 'Pizza',
+      sizes: defaultPizzaSizes,
+      crusts: defaultCrusts,
+      badge: 'Popular',
     },
   ],
   sides: [
@@ -573,11 +673,7 @@ export default function PizzaHutDemoPage() {
         isOpen={isSuccessOpen}
         onClose={handleSuccessClose}
         orderNumber={orderNumber}
-        onCancel={handleCancelOrder}
-        orderItems={cartItems.map(ci => ({
-          name: ci.item.name,
-          quantity: ci.quantity,
-        }))}
+        tableInfo={tableInfo}
       />
 
       {/* Floating Cart Button (Mobile) */}
@@ -591,7 +687,7 @@ export default function PizzaHutDemoPage() {
             className="fixed bottom-6 left-4 right-4 bg-pizzahut-red text-white py-4 rounded-2xl shadow-lg flex items-center justify-between px-6 z-40 lg:hidden"
           >
             <div className="flex items-center gap-3">
-              <span className="text-2xl">🛒</span>
+              <ShoppingCart className="w-6 h-6" />
               <div>
                 <p className="font-semibold">{cartItemCount} item{cartItemCount > 1 ? 's' : ''}</p>
                 <p className="text-xs text-white/80">Tap to view cart</p>

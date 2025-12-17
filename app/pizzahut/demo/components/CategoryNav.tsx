@@ -37,13 +37,11 @@ export default function CategoryNav({ activeCategory, onCategoryChange }: Catego
                 onClick={() => onCategoryChange(category.id)}
                 className={`flex items-center gap-2 px-4 md:px-6 py-2 md:py-3 rounded-full font-medium text-sm md:text-base transition-all whitespace-nowrap ${
                   isActive
-                    ? 'bg-pizzahut-red text-white shadow-lg shadow-red-500/30'
+                    ? 'bg-pizzahut-red text-white'
                     : 'bg-pizzahut-warmGray text-pizzahut-dark hover:bg-gray-200'
                 }`}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                animate={isActive ? { y: [0, -3, 0] } : {}}
-                transition={{ duration: 0.3 }}
               >
                 <Icon className="w-4 h-4 md:w-5 md:h-5" />
                 {category.name}
