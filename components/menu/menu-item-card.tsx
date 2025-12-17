@@ -69,7 +69,7 @@ export function MenuItemCard({
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xl font-bold text-emerald-600">
-                ${typeof item.price === 'number' ? item.price.toFixed(2) : parseFloat(item.price).toFixed(2)}
+                ${item.price.toFixed(2)}
               </span>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-neutral-600">Available</span>
