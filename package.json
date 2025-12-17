@@ -52,6 +52,7 @@
     "@vercel/blob": "^2.0.0",
     "autoprefixer": "10.4.15",
     "bcryptjs": "^3.0.3",
+    "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
@@ -83,5 +84,8 @@
     "typescript": "5.2.2",
     "vaul": "^0.9.9",
     "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/canvas-confetti": "^1.9.0"
   }
 }
