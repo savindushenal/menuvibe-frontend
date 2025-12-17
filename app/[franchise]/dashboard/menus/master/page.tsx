@@ -19,7 +19,9 @@ import {
   X,
   Clock,
   Building2,
-  UtensilsCrossed
+  UtensilsCrossed,
+  Eye,
+  ExternalLink
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -117,21 +119,36 @@ export default function MasterMenusPage() {
   };
 
   const handleSyncAll = async (menuId: number) => {
-    if (!franchiseId) return;
+    if (!franchiseId) {
+      toast.error('Franchise ID not found');
+      return;
+    }
     
     try {
       setSyncing(menuId);
+      console.log('[Sync] Starting sync for menu:', menuId, 'franchise:', franchiseId);
       const response = await api.post(`/franchises/${franchiseId}/master-menus/${menuId}/sync`);
+      console.log('[Sync] Response:', response);
       
       if (response.data.success) {
-        toast.success('Menu synced to all branches successfully');
+        toast.success(response.data.message || 'Menu synced to all branches successfully');
         fetchMenus();
+      } else {
+        toast.error(response.data.message || 'Sync failed');
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to sync menu');
+      console.error('[Sync] Error:', err);
+      const errorMsg = err.message || err.response?.data?.message || 'Failed to sync menu';
+      toast.error(errorMsg);
     } finally {
       setSyncing(null);
     }
+  };
+
+  const handlePreviewMenu = (menu: MasterMenu) => {
+    // Open menu preview in a new window
+    const previewUrl = `/${franchiseSlug}/menu/${menu.slug}/preview`;
+    window.open(previewUrl, '_blank', 'width=450,height=800');
   };
 
   const handleDelete = async () => {
@@ -306,6 +323,10 @@ export default function MasterMenusPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handlePreviewMenu(menu)}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        Preview Menu
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => router.push(`/${franchiseSlug}/dashboard/menus/master/${menu.id}`)}>
                         <Edit className="h-4 w-4 mr-2" />
                         Edit Menu
@@ -390,15 +411,25 @@ export default function MasterMenusPage() {
                   </div>
                 )}
 
-                {/* Action Button */}
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => router.push(`/${franchiseSlug}/dashboard/menus/master/${menu.id}`)}
-                >
-                  <Settings2 className="h-4 w-4 mr-2" />
-                  Manage Menu
-                </Button>
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => handlePreviewMenu(menu)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Preview
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => router.push(`/${franchiseSlug}/dashboard/menus/master/${menu.id}`)}
+                  >
+                    <Settings2 className="h-4 w-4 mr-2" />
+                    Manage
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
