@@ -542,6 +542,13 @@ function EndpointsPageContent() {
                               <QrCode className="w-4 h-4 mr-2" />
                               View QR Code
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              const menuUrl = endpoint.short_url || `/menu/${endpoint.short_code}`;
+                              window.open(menuUrl, '_blank');
+                            }}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Preview Menu
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => openEditDialog(endpoint)}>
                               <Edit2 className="w-4 h-4 mr-2" />
                               Edit
@@ -583,10 +590,13 @@ function EndpointsPageContent() {
                             variant="outline"
                             size="sm"
                             className="flex-1"
-                            onClick={() => openEditDialog(endpoint)}
+                            onClick={() => {
+                              const menuUrl = endpoint.short_url || `/menu/${endpoint.short_code}`;
+                              window.open(menuUrl, '_blank');
+                            }}
                           >
-                            <Edit2 className="w-3 h-3 mr-1" />
-                            Edit
+                            <Eye className="w-3 h-3 mr-1" />
+                            Preview
                           </Button>
                         </div>
                       </div>
@@ -828,6 +838,16 @@ function EndpointsPageContent() {
               <Download className="w-4 h-4 mr-2" />
               Download QR
             </Button>
+            {qrCodeData?.short_url && (
+              <Button 
+                variant="outline" 
+                className="w-full sm:w-auto border-blue-500 text-blue-600 hover:bg-blue-50"
+                onClick={() => window.open(qrCodeData.short_url, '_blank')}
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                Preview Menu
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
