@@ -28,6 +28,17 @@ const config: Config = {
           dark: '#1A1A1A',
           warmGray: '#F5F5F5',
         },
+        // Pizza Hut brand colors
+        pizzahut: {
+          red: '#EE3124',
+          redDark: '#C41E1E',
+          redLight: '#FF4538',
+          black: '#000000',
+          warmYellow: '#FFD700',
+          cream: '#FFF8F0',
+          dark: '#2D2D2D',
+          warmGray: '#F5F5F5',
+        },
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {
