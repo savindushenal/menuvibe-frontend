@@ -44,7 +44,7 @@ interface CartItem extends MenuItem {
 export default function MasterMenuPreviewPage() {
   const params = useParams();
   const franchiseSlug = params?.franchise as string;
-  const menuSlug = params?.slug as string;
+  const menuId = params?.menuId as string;
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export default function MasterMenuPreviewPage() {
 
   useEffect(() => {
     fetchMenuData();
-  }, [franchiseSlug, menuSlug]);
+  }, [franchiseSlug, menuId]);
 
   const fetchMenuData = async () => {
     try {
@@ -69,24 +69,15 @@ export default function MasterMenuPreviewPage() {
       
       const franchiseId = franchiseRes.data.data.franchise.id;
       
-      // Get all master menus and find by slug
-      const menusRes = await api.get(`/franchises/${franchiseId}/master-menus`);
-      if (!menusRes.data.success) {
-        throw new Error('Failed to load menus');
-      }
-      
-      const foundMenu = menusRes.data.data.find((m: any) => m.slug === menuSlug);
-      if (!foundMenu) {
-        throw new Error('Menu not found');
-      }
-      
       // Get full menu with categories and items
-      const menuRes = await api.get(`/franchises/${franchiseId}/master-menus/${foundMenu.id}`);
+      const menuRes = await api.get(`/franchises/${franchiseId}/master-menus/${menuId}`);
       if (menuRes.data.success) {
         setMenu(menuRes.data.data);
         if (menuRes.data.data.categories?.length > 0) {
           setActiveCategory(menuRes.data.data.categories[0].id);
         }
+      } else {
+        throw new Error('Menu not found');
       }
     } catch (err: any) {
       console.error('Failed to load menu:', err);
@@ -234,6 +225,7 @@ export default function MasterMenuPreviewPage() {
                       item={item}
                       formatPrice={formatPrice}
                       onAdd={() => addToCart(item)}
+                      onRemove={() => removeFromCart(item.id)}
                       cartQuantity={cart.find(i => i.id === item.id)?.quantity || 0}
                     />
                   ))}
@@ -258,6 +250,7 @@ export default function MasterMenuPreviewPage() {
                   item={item}
                   formatPrice={formatPrice}
                   onAdd={() => addToCart(item)}
+                  onRemove={() => removeFromCart(item.id)}
                   cartQuantity={cart.find(i => i.id === item.id)?.quantity || 0}
                 />
               ))}
@@ -383,11 +376,13 @@ function MenuItemCard({
   item, 
   formatPrice, 
   onAdd, 
+  onRemove,
   cartQuantity 
 }: { 
   item: MenuItem; 
   formatPrice: (price: number) => string; 
   onAdd: () => void; 
+  onRemove: () => void;
   cartQuantity: number;
 }) {
   return (
@@ -434,7 +429,7 @@ function MenuItemCard({
           cartQuantity > 0 ? (
             <div className="flex items-center justify-center gap-4 bg-amber-50 rounded-lg py-2">
               <button
-                onClick={() => {/* handled in parent */}}
+                onClick={onRemove}
                 className="w-8 h-8 rounded-full bg-amber-600 text-white flex items-center justify-center hover:bg-amber-700"
               >
                 <Minus className="w-4 h-4" />

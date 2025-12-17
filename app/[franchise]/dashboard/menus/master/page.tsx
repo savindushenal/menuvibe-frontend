@@ -146,8 +146,8 @@ export default function MasterMenusPage() {
   };
 
   const handlePreviewMenu = (menu: MasterMenu) => {
-    // Open menu preview in a new window
-    const previewUrl = `/${franchiseSlug}/menu/${menu.slug}/preview`;
+    // Open menu preview in a new window - use the menuId route under dashboard
+    const previewUrl = `/${franchiseSlug}/dashboard/menus/master/${menu.id}/preview`;
     window.open(previewUrl, '_blank', 'width=450,height=800');
   };
 
