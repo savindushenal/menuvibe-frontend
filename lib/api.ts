@@ -1041,6 +1041,75 @@ class ApiClient {
     });
   }
 
+  async assignTicket(id: number, data: { admin_id: number; notes?: string }): Promise<ApiResponse> {
+    return this.request(`/admin/tickets/${id}/assign`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async autoAssignTicket(id: number): Promise<ApiResponse> {
+    return this.request(`/admin/tickets/${id}/auto-assign`, {
+      method: 'POST',
+    });
+  }
+
+  async selfAssignTicket(id: number): Promise<ApiResponse> {
+    return this.request(`/admin/tickets/${id}/self-assign`, {
+      method: 'POST',
+    });
+  }
+
+  async getAvailableStaff(): Promise<ApiResponse> {
+    return this.request('/admin/tickets/available-staff');
+  }
+
+  // Notifications
+  async getNotifications(params?: URLSearchParams): Promise<ApiResponse> {
+    const queryString = params ? `?${params.toString()}` : '';
+    return this.request(`/admin/notifications${queryString}`);
+  }
+
+  async getUnreadNotificationCount(): Promise<ApiResponse> {
+    return this.request('/admin/notifications/unread-count');
+  }
+
+  async markNotificationAsRead(id: number): Promise<ApiResponse> {
+    return this.request(`/admin/notifications/${id}/read`, {
+      method: 'POST',
+    });
+  }
+
+  async markAllNotificationsAsRead(): Promise<ApiResponse> {
+    return this.request('/admin/notifications/mark-all-read', {
+      method: 'POST',
+    });
+  }
+
+  async deleteNotification(id: number): Promise<ApiResponse> {
+    return this.request(`/admin/notifications/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async clearAllNotifications(): Promise<ApiResponse> {
+    return this.request('/admin/notifications', {
+      method: 'DELETE',
+    });
+  }
+
+  async sendHeartbeat(): Promise<ApiResponse> {
+    return this.request('/admin/status/heartbeat', {
+      method: 'POST',
+    });
+  }
+
+  async goOffline(): Promise<ApiResponse> {
+    return this.request('/admin/status/offline', {
+      method: 'POST',
+    });
+  }
+
   // Admin Activity Logs
   async getAdminActivityLogs(params?: URLSearchParams): Promise<ApiResponse> {
     const queryString = params ? `?${params.toString()}` : '';

@@ -267,6 +267,8 @@ export default function AdminUsersPage() {
         return 'destructive';
       case 'admin':
         return 'default';
+      case 'support_officer':
+        return 'outline';
       default:
         return 'secondary';
     }
@@ -583,8 +585,12 @@ export default function AdminUsersPage() {
                 <SelectContent>
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="super_admin">Super Admin</SelectItem>
+                  <SelectItem value="support_officer">Support Officer</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                Support Officers can only manage support tickets.
+              </p>
             </div>
           </div>
           <DialogFooter>

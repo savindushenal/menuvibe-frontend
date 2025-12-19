@@ -27,6 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { NotificationsDropdown } from '@/components/admin/notifications-dropdown';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -37,7 +38,7 @@ const adminNavItems = [
     title: 'Dashboard',
     href: '/admin',
     icon: LayoutDashboard,
-    roles: ['admin', 'super_admin'],
+    roles: ['admin', 'super_admin', 'support_officer'],
   },
   {
     title: 'Users',
@@ -55,7 +56,7 @@ const adminNavItems = [
     title: 'Support Tickets',
     href: '/admin/tickets',
     icon: Ticket,
-    roles: ['admin', 'super_admin'],
+    roles: ['admin', 'super_admin', 'support_officer'],
   },
   {
     title: 'Activity Logs',
@@ -94,7 +95,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && (!user || (user.role !== 'admin' && user.role !== 'super_admin'))) {
+    if (!isLoading && (!user || !['admin', 'super_admin', 'support_officer'].includes(user.role))) {
       router.push('/dashboard');
     }
   }, [user, isLoading, router]);
@@ -110,7 +111,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
-  if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+  if (!user || !['admin', 'super_admin', 'support_officer'].includes(user.role)) {
     return null;
   }
 
@@ -168,13 +169,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <Shield className="h-6 w-6 text-emerald-600" />
             <span className="font-bold text-lg">Admin Panel</span>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
+          <div className="flex items-center gap-2">
+            <NotificationsDropdown />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
         </div>
 
         {/* Mobile Menu Overlay */}
@@ -317,6 +321,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             collapsed ? 'lg:ml-16' : 'lg:ml-64'
           )}
         >
+          {/* Desktop Top Bar */}
+          <div className="hidden lg:flex h-16 items-center justify-end px-6 border-b bg-white">
+            <div className="flex items-center gap-4">
+              <NotificationsDropdown />
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <span className="text-sm font-medium text-emerald-700">
+                    {user.name?.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="text-sm">
+                  <p className="font-medium">{user.name}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{user.role?.replace('_', ' ')}</p>
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="p-6">{children}</div>
         </main>
       </div>

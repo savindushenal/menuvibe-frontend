@@ -41,6 +41,10 @@ import {
   CheckCircle,
   MessageSquare,
   User,
+  UserPlus,
+  Eye,
+  Zap,
+  Hand,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
@@ -63,6 +67,7 @@ interface SupportTicket {
     id: number;
     name: string;
     email: string;
+    role?: string;
   } | null;
   messages?: {
     id: number;
@@ -75,6 +80,42 @@ interface SupportTicket {
       role: string;
     };
   }[];
+  views?: {
+    id: number;
+    viewed_at: string;
+    user: {
+      id: number;
+      name: string;
+      email: string;
+      role: string;
+    };
+  }[];
+  assignments?: {
+    id: number;
+    assignment_type: string;
+    assigned_at: string;
+    notes: string | null;
+    assignee: {
+      id: number;
+      name: string;
+      email: string;
+    };
+    assigner: {
+      id: number;
+      name: string;
+      email: string;
+    } | null;
+  }[];
+}
+
+interface SupportStaff {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  is_online: boolean;
+  last_seen_at: string | null;
+  active_tickets_count: number;
 }
 
 interface TicketStats {
@@ -112,6 +153,12 @@ export default function AdminTicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [isInternalNote, setIsInternalNote] = useState(false);
+  
+  // Assignment states
+  const [availableStaff, setAvailableStaff] = useState<SupportStaff[]>([]);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedStaffId, setSelectedStaffId] = useState<string>('');
+  const [assignmentNotes, setAssignmentNotes] = useState('');
 
   const fetchTickets = useCallback(async () => {
     try {
@@ -201,6 +248,91 @@ export default function AdminTicketsPage() {
       toast({
         title: 'Error',
         description: err.message || 'Failed to update priority',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const fetchAvailableStaff = async () => {
+    try {
+      const response = await apiClient.getAvailableStaff();
+      if (response.success) {
+        setAvailableStaff(response.data as SupportStaff[]);
+      }
+    } catch (err) {
+      console.error('Failed to load staff:', err);
+    }
+  };
+
+  const handleOpenAssignDialog = async (ticket: SupportTicket) => {
+    setSelectedTicket(ticket);
+    setSelectedStaffId(ticket.assigned_to?.id?.toString() || '');
+    setAssignmentNotes('');
+    await fetchAvailableStaff();
+    setAssignDialogOpen(true);
+  };
+
+  const handleAssignTicket = async () => {
+    if (!selectedTicket || !selectedStaffId) return;
+
+    try {
+      const response = await apiClient.assignTicket(selectedTicket.id, {
+        admin_id: parseInt(selectedStaffId),
+        notes: assignmentNotes || undefined,
+      });
+      if (response.success) {
+        toast({ title: 'Success', description: 'Ticket assigned successfully' });
+        setAssignDialogOpen(false);
+        fetchTickets();
+        fetchStats();
+        if (viewDialogOpen) {
+          fetchTicketDetails(selectedTicket.id);
+        }
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to assign ticket',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleSelfAssign = async (ticketId: number) => {
+    try {
+      const response = await apiClient.selfAssignTicket(ticketId);
+      if (response.success) {
+        toast({ title: 'Success', description: 'Ticket assigned to you' });
+        fetchTickets();
+        fetchStats();
+        if (selectedTicket?.id === ticketId) {
+          fetchTicketDetails(ticketId);
+        }
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to self-assign ticket',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleAutoAssign = async (ticketId: number) => {
+    try {
+      const response = await apiClient.autoAssignTicket(ticketId);
+      if (response.success) {
+        toast({ title: 'Success', description: 'Ticket auto-assigned successfully' });
+        fetchTickets();
+        fetchStats();
+        if (selectedTicket?.id === ticketId) {
+          fetchTicketDetails(ticketId);
+        }
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to auto-assign ticket',
         variant: 'destructive',
       });
     }
@@ -402,24 +534,60 @@ export default function AdminTicketsPage() {
                       <TableCell>{getPriorityBadge(ticket.priority)}</TableCell>
                       <TableCell>{getStatusBadge(ticket.status)}</TableCell>
                       <TableCell>
-                        {ticket.assigned_to?.name || (
-                          <span className="text-muted-foreground">Unassigned</span>
+                        {ticket.assigned_to ? (
+                          <div className="flex items-center gap-2">
+                            <span>{ticket.assigned_to.name}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => handleOpenAssignDialog(ticket)}
+                              title="Reassign"
+                            >
+                              <UserPlus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <span className="text-muted-foreground text-sm">Unassigned</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => handleSelfAssign(ticket.id)}
+                              title="Take this ticket"
+                            >
+                              <Hand className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => handleOpenAssignDialog(ticket)}
+                              title="Assign to someone"
+                            >
+                              <UserPlus className="h-3 w-3" />
+                            </Button>
+                          </div>
                         )}
                       </TableCell>
                       <TableCell>
                         {new Date(ticket.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            fetchTicketDetails(ticket.id);
-                            setViewDialogOpen(true);
-                          }}
-                        >
-                          View
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              fetchTicketDetails(ticket.id);
+                              setViewDialogOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -596,8 +764,130 @@ export default function AdminTicketsPage() {
                   Send Reply
                 </Button>
               </div>
+
+              {/* Views/Assignment History */}
+              {(selectedTicket.views?.length || selectedTicket.assignments?.length) && (
+                <div className="border-t pt-4 space-y-4">
+                  {selectedTicket.views && selectedTicket.views.length > 0 && (
+                    <div>
+                      <Label className="text-muted-foreground mb-2 block">
+                        <Eye className="h-4 w-4 inline mr-1" />
+                        Viewed By
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedTicket.views.map((view) => (
+                          <Badge key={view.id} variant="outline" className="text-xs">
+                            {view.user.name} ({new Date(view.viewed_at).toLocaleString()})
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {selectedTicket.assignments && selectedTicket.assignments.length > 0 && (
+                    <div>
+                      <Label className="text-muted-foreground mb-2 block">
+                        <UserPlus className="h-4 w-4 inline mr-1" />
+                        Assignment History
+                      </Label>
+                      <div className="space-y-2">
+                        {selectedTicket.assignments.slice(0, 5).map((assignment) => (
+                          <div key={assignment.id} className="text-xs p-2 bg-neutral-50 rounded">
+                            <span className="font-medium">{assignment.assignee.name}</span>
+                            {' - '}
+                            <span className="text-muted-foreground capitalize">
+                              {assignment.assignment_type}
+                            </span>
+                            {assignment.assigner && (
+                              <span className="text-muted-foreground">
+                                {' by '}{assignment.assigner.name}
+                              </span>
+                            )}
+                            <span className="text-muted-foreground">
+                              {' • '}{new Date(assignment.assigned_at).toLocaleString()}
+                            </span>
+                            {assignment.notes && (
+                              <p className="text-muted-foreground mt-1 italic">{assignment.notes}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Ticket Dialog */}
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Ticket</DialogTitle>
+            <DialogDescription>
+              Assign ticket {selectedTicket?.ticket_number} to a support staff member.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Select Staff Member</Label>
+              <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select staff member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableStaff.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.id.toString()}>
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${staff.is_online ? 'bg-green-500' : 'bg-gray-300'}`} />
+                        <span>{staff.name}</span>
+                        <span className="text-muted-foreground text-xs">
+                          ({staff.active_tickets_count} active)
+                        </span>
+                        <Badge variant="outline" className="text-xs capitalize">
+                          {staff.role.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Notes (optional)</Label>
+              <Textarea
+                value={assignmentNotes}
+                onChange={(e) => setAssignmentNotes(e.target.value)}
+                placeholder="Add a note about this assignment..."
+                rows={2}
+              />
+            </div>
+            <div className="flex items-center justify-between pt-2">
+              <Button
+                variant="outline"
+                onClick={() => selectedTicket && handleAutoAssign(selectedTicket.id)}
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                Auto-Assign
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => selectedTicket && handleSelfAssign(selectedTicket.id)}
+              >
+                <Hand className="h-4 w-4 mr-2" />
+                Take It
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAssignTicket} disabled={!selectedStaffId}>
+              Assign Ticket
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
