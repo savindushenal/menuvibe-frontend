@@ -101,7 +101,7 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
         cluster: process.env.NEXT_PUBLIC_PUSHER_APP_CLUSTER || 'mt1',
         forceTLS: true,
         encrypted: true,
-        authEndpoint: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/broadcasting/auth`,
+        authEndpoint: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/broadcasting/auth`,
         auth: {
           headers: {
             Authorization: `Bearer ${token}`,
