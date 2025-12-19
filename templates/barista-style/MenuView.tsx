@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShoppingBag, Search, Star, ChevronRight, Clock, 
-  MapPin, Coffee, X, Plus, Minus, Menu as MenuIcon
+  MapPin, Coffee, X, Plus, Minus, Menu as MenuIcon,
+  Percent, Tag, Sparkles, Timer, Gift
 } from 'lucide-react';
 
 /**
@@ -13,6 +14,7 @@ import {
  * Premium cafe/coffee shop template with:
  * - Animated header with location bar
  * - Hero section with greeting & stats
+ * - Special Offers carousel
  * - Category navigation tabs
  * - Grid menu layout with images
  * - Product sheet for customization
@@ -37,6 +39,23 @@ interface Category {
   name: string;
   icon?: string;
   items: MenuItem[];
+}
+
+interface Offer {
+  id: number;
+  type: string;
+  title: string;
+  description?: string;
+  image_url?: string;
+  badge_text?: string;
+  badge_color?: string;
+  discount_type?: string;
+  discount_value?: number;
+  bundle_price?: number;
+  minimum_order?: number;
+  remaining_time?: string;
+  terms_conditions?: string;
+  is_featured?: boolean;
 }
 
 interface CartItem {
@@ -308,6 +327,122 @@ export default function BaristaStyleTemplate({ code }: { code: string }) {
           </div>
         </div>
       </motion.section>
+
+      {/* Special Offers Section */}
+      {data.offers && data.offers.length > 0 && (
+        <motion.section 
+          className="px-4 py-6 bg-gradient-to-b from-gray-50 to-white"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <div 
+              className="p-2 rounded-xl"
+              style={{ backgroundColor: `${colors.accent || '#ef4444'}15` }}
+            >
+              <Sparkles className="w-5 h-5" style={{ color: colors.accent || '#ef4444' }} />
+            </div>
+            <h2 className="text-lg md:text-xl font-bold text-gray-800">Special Offers</h2>
+          </div>
+          
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x">
+            {data.offers.map((offer: Offer) => (
+              <motion.div
+                key={offer.id}
+                className="flex-shrink-0 w-72 md:w-80 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden snap-start relative"
+                whileHover={{ scale: 1.02, y: -4 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {/* Offer Badge */}
+                {offer.badge_text && (
+                  <div 
+                    className="absolute top-3 left-3 z-10 px-3 py-1 rounded-full text-xs font-bold text-white shadow-lg"
+                    style={{ backgroundColor: offer.badge_color || colors.accent || '#ef4444' }}
+                  >
+                    {offer.badge_text}
+                  </div>
+                )}
+                
+                {/* Offer Image or Gradient */}
+                <div 
+                  className="h-32 md:h-36 relative overflow-hidden"
+                  style={{
+                    background: offer.image_url 
+                      ? undefined 
+                      : `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary || colors.primary} 100%)`
+                  }}
+                >
+                  {offer.image_url ? (
+                    <img src={offer.image_url} alt={offer.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="text-white/20 text-6xl">
+                        {offer.type === 'discount' && <Percent className="w-16 h-16" />}
+                        {offer.type === 'bundle' && <Gift className="w-16 h-16" />}
+                        {offer.type === 'bogo' && <Tag className="w-16 h-16" />}
+                        {offer.type === 'happy_hour' && <Timer className="w-16 h-16" />}
+                        {!['discount', 'bundle', 'bogo', 'happy_hour'].includes(offer.type) && <Sparkles className="w-16 h-16" />}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Discount Badge Overlay */}
+                  {offer.discount_value && (
+                    <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl shadow-lg">
+                      <span className="font-bold text-lg" style={{ color: colors.accent || '#ef4444' }}>
+                        {offer.discount_type === 'percentage' 
+                          ? `${offer.discount_value}% OFF`
+                          : `${currency} ${offer.discount_value} OFF`
+                        }
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Offer Content */}
+                <div className="p-4">
+                  <h3 className="font-bold text-gray-800 text-base line-clamp-1">{offer.title}</h3>
+                  {offer.description && (
+                    <p className="text-gray-500 text-sm mt-1 line-clamp-2">{offer.description}</p>
+                  )}
+                  
+                  {/* Offer Details */}
+                  <div className="flex items-center gap-3 mt-3 flex-wrap">
+                    {offer.bundle_price && (
+                      <div className="flex items-center gap-1 text-sm">
+                        <Tag className="w-4 h-4 text-gray-400" />
+                        <span className="font-semibold" style={{ color: colors.primary }}>
+                          {currency} {offer.bundle_price.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {offer.minimum_order && (
+                      <div className="flex items-center gap-1 text-sm text-gray-500">
+                        <ShoppingBag className="w-4 h-4" />
+                        <span>Min. {currency} {offer.minimum_order.toLocaleString()}</span>
+                      </div>
+                    )}
+                    
+                    {offer.remaining_time && (
+                      <div className="flex items-center gap-1 text-sm" style={{ color: colors.accent || '#ef4444' }}>
+                        <Timer className="w-4 h-4" />
+                        <span className="font-medium">{offer.remaining_time}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Terms */}
+                  {offer.terms_conditions && (
+                    <p className="text-gray-400 text-xs mt-3 line-clamp-1">*{offer.terms_conditions}</p>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.section>
+      )}
 
       {/* Featured Items / Top Picks */}
       {featuredItems && featuredItems.length > 0 && (

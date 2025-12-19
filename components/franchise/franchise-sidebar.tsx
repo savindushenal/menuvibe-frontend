@@ -44,7 +44,7 @@ export function FranchiseSidebar({ franchiseSlug }: FranchiseSidebarProps) {
     { icon: LayoutDashboard, label: 'Dashboard', href: `/${franchiseSlug}/dashboard`, roles: ['all'] },
     { icon: ChefHat, label: 'Master Menu', href: `/${franchiseSlug}/dashboard/menus/master`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin'] },
     { icon: Tag, label: 'Offers', href: `/${franchiseSlug}/dashboard/menus/offers`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin'] },
-    { icon: UtensilsCrossed, label: 'Branch Menus', href: `/${franchiseSlug}/dashboard/menus`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin', 'branch_manager', 'manager'] },
+    { icon: UtensilsCrossed, label: 'Branch Menus', href: `/${franchiseSlug}/dashboard/menus`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin', 'branch_manager', 'manager', 'staff'] },
     { icon: Building2, label: 'Branches', href: `/${franchiseSlug}/dashboard/branches`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin'] },
     { icon: Users, label: 'Team', href: `/${franchiseSlug}/dashboard/team`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin', 'branch_manager', 'manager'] },
     { icon: HelpCircle, label: 'Help & Support', href: `/${franchiseSlug}/dashboard/help`, roles: ['all'] },
