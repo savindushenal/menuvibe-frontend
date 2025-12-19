@@ -32,18 +32,31 @@ export function FranchiseSidebar({ franchiseSlug }: FranchiseSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuth();
-  const { currentFranchise, branding } = useFranchise();
+  const { currentFranchise, branding, myRole } = useFranchise();
 
-  const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', href: `/${franchiseSlug}/dashboard` },
-    { icon: ChefHat, label: 'Master Menu', href: `/${franchiseSlug}/dashboard/menus/master` },
-    { icon: Tag, label: 'Offers', href: `/${franchiseSlug}/dashboard/menus/offers` },
-    { icon: UtensilsCrossed, label: 'Branch Menus', href: `/${franchiseSlug}/dashboard/menus` },
-    { icon: Building2, label: 'Branches', href: `/${franchiseSlug}/dashboard/branches` },
-    { icon: Users, label: 'Team', href: `/${franchiseSlug}/dashboard/team` },
-    { icon: HelpCircle, label: 'Help & Support', href: `/${franchiseSlug}/dashboard/help` },
-    { icon: Settings, label: 'Settings', href: `/${franchiseSlug}/dashboard/settings` },
+  // Define which roles can access which menu items
+  const isOwnerOrAdmin = ['owner', 'franchise_owner', 'franchise_admin', 'admin'].includes(myRole || '');
+  const isBranchManager = ['branch_manager', 'manager'].includes(myRole || '');
+  const isStaff = myRole === 'staff';
+
+  // All menu items with role restrictions
+  const allMenuItems = [
+    { icon: LayoutDashboard, label: 'Dashboard', href: `/${franchiseSlug}/dashboard`, roles: ['all'] },
+    { icon: ChefHat, label: 'Master Menu', href: `/${franchiseSlug}/dashboard/menus/master`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin'] },
+    { icon: Tag, label: 'Offers', href: `/${franchiseSlug}/dashboard/menus/offers`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin'] },
+    { icon: UtensilsCrossed, label: 'Branch Menus', href: `/${franchiseSlug}/dashboard/menus`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin', 'branch_manager', 'manager'] },
+    { icon: Building2, label: 'Branches', href: `/${franchiseSlug}/dashboard/branches`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin'] },
+    { icon: Users, label: 'Team', href: `/${franchiseSlug}/dashboard/team`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin', 'branch_manager', 'manager'] },
+    { icon: HelpCircle, label: 'Help & Support', href: `/${franchiseSlug}/dashboard/help`, roles: ['all'] },
+    { icon: Settings, label: 'Settings', href: `/${franchiseSlug}/dashboard/settings`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin'] },
   ];
+
+  // Filter menu items based on user role
+  const menuItems = allMenuItems.filter(item => {
+    if (item.roles.includes('all')) return true;
+    if (!myRole) return false;
+    return item.roles.includes(myRole);
+  });
 
   // Auto-collapse on mobile on initial load
   useEffect(() => {
