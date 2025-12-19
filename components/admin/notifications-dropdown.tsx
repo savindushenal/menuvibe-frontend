@@ -21,9 +21,13 @@ import {
   CheckCircle,
   X,
   Loader2,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
+import { useRealTimeNotifications } from '@/hooks/use-realtime-notifications';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Notification {
   id: number;
@@ -43,6 +47,16 @@ export function NotificationsDropdown() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+
+  // Real-time notifications hook
+  const { isConnected, connectionError } = useRealTimeNotifications({
+    onNotification: (notification) => {
+      // Add new notification to the list
+      setNotifications(prev => [notification, ...prev].slice(0, 10));
+      setUnreadCount(prev => prev + 1);
+    },
+    showToasts: true, // Show toast notifications
+  });
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -76,10 +90,10 @@ export function NotificationsDropdown() {
     }
   }, [isOpen, fetchNotifications]);
 
-  // Poll for unread count every 30 seconds
+  // Fetch unread count on mount and as fallback (every 2 minutes instead of 30s since we have real-time)
   useEffect(() => {
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
+    const interval = setInterval(fetchUnreadCount, 120000); // 2 minutes fallback
     return () => clearInterval(interval);
   }, [fetchUnreadCount]);
 
@@ -177,6 +191,23 @@ export function NotificationsDropdown() {
               {unreadCount > 99 ? '99+' : unreadCount}
             </Badge>
           )}
+          {/* Connection status indicator */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background ${
+                    isConnected ? 'bg-green-500' : 'bg-gray-400'
+                  }`}
+                />
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p className="text-xs">
+                  {isConnected ? 'Real-time connected' : connectionError || 'Connecting...'}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">

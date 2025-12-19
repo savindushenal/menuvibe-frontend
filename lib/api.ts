@@ -19,11 +19,16 @@ interface User {
   email: string;
   email_verified_at?: string;
   google_id?: string;
-  role: 'user' | 'admin' | 'super_admin';
+  role: 'user' | 'admin' | 'super_admin' | 'support_officer';
   is_active: boolean;
+  is_online?: boolean;
+  last_seen_at?: string;
+  active_tickets_count?: number;
   last_login_at?: string;
   created_at: string;
   updated_at: string;
+  // Computed property for support ticket access
+  canHandleSupportTickets?: boolean;
 }
 
 interface UserContext {

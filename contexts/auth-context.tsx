@@ -6,6 +6,7 @@ import { apiClient, User } from '@/lib/api';
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   needsOnboarding: boolean;
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const router = useRouter();
@@ -33,17 +35,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const checkAuthStatus = async () => {
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
+    const storedToken = localStorage.getItem('auth_token');
+    if (!storedToken) {
       setIsLoading(false);
       return;
     }
 
     try {
-      apiClient.setToken(token);
+      apiClient.setToken(storedToken);
+      setToken(storedToken);
       const response = await apiClient.getProfile();
       if (response.success && response.data?.user) {
-        setUser(response.data.user);
+        // Add computed property for support ticket access
+        const userData = {
+          ...response.data.user,
+          canHandleSupportTickets: ['admin', 'super_admin', 'support_officer'].includes(response.data.user.role),
+        };
+        setUser(userData);
         
         // Check onboarding status - will be handled separately
         await checkOnboardingStatus();
@@ -51,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Invalid response, clear auth
         localStorage.removeItem('auth_token');
         apiClient.setToken(null);
+        setToken(null);
       }
     } catch (error: any) {
       // Only log non-401 errors (401 is expected for expired/invalid tokens)
@@ -60,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear invalid token
       localStorage.removeItem('auth_token');
       apiClient.setToken(null);
+      setToken(null);
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -119,23 +129,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await apiClient.login({ email, password });
       
       if (response.success && response.data) {
-        const { user, token, contexts, default_redirect } = response.data;
+        const { user, token: authToken, contexts, default_redirect } = response.data;
         
-        console.log('[AUTH] Login successful, token received:', token?.substring(0, 20) + '...');
+        console.log('[AUTH] Login successful, token received:', authToken?.substring(0, 20) + '...');
         
         // Set token first and ensure it's saved to localStorage
-        apiClient.setToken(token);
+        apiClient.setToken(authToken);
+        setToken(authToken);
         
         // Double-check token is saved
         if (typeof window !== 'undefined') {
-          localStorage.setItem('auth_token', token);
+          localStorage.setItem('auth_token', authToken);
           console.log('[AUTH] Token saved to localStorage, verified:', localStorage.getItem('auth_token')?.substring(0, 20) + '...');
         }
         
-        setUser(user);
+        // Add computed property for support ticket access
+        const userData = {
+          ...user,
+          canHandleSupportTickets: ['admin', 'super_admin', 'support_officer'].includes(user.role),
+        };
+        setUser(userData);
         
         // Redirect based on user role and contexts
-        if (user.role === 'super_admin' || user.role === 'admin') {
+        if (user.role === 'super_admin' || user.role === 'admin' || user.role === 'support_officer') {
           router.push('/admin');
         } else if (contexts && contexts.length > 0) {
           // Store contexts in sessionStorage for the select-context page
@@ -204,6 +220,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Logout error:', error);
     } finally {
       apiClient.setToken(null);
+      setToken(null);
       setUser(null);
       router.push('/auth/login');
     }
@@ -214,9 +231,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await apiClient.googleAuth(accessToken);
       
       if (response.success && response.data) {
-        const { user, token } = response.data;
-        apiClient.setToken(token);
-        setUser(user);
+        const { user, token: authToken } = response.data;
+        apiClient.setToken(authToken);
+        setToken(authToken);
+        
+        // Add computed property for support ticket access
+        const userData = {
+          ...user,
+          canHandleSupportTickets: ['admin', 'super_admin', 'support_officer'].includes(user.role),
+        };
+        setUser(userData);
         
         // Check if user needs onboarding
         const needsOnboarding = await checkOnboardingStatus();
@@ -240,6 +264,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = {
     user,
+    token,
     isAuthenticated,
     isLoading,
     needsOnboarding,
