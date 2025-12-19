@@ -1027,14 +1027,14 @@ class ApiClient {
 
   async updateTicketStatus(id: number, data: { status: string }): Promise<ApiResponse> {
     return this.request(`/admin/tickets/${id}/status`, {
-      method: 'PUT',
+      method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async updateTicketPriority(id: number, data: { priority: string }): Promise<ApiResponse> {
     return this.request(`/admin/tickets/${id}/priority`, {
-      method: 'PUT',
+      method: 'POST',
       body: JSON.stringify(data),
     });
   }

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { apiClient } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -139,6 +140,7 @@ interface TicketStats {
 
 export default function AdminTicketsPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [stats, setStats] = useState<TicketStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -147,6 +149,9 @@ export default function AdminTicketsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+
+  // Check if current user is a support officer (can only self-assign)
+  const isSupportOfficer = user?.role === 'support_officer';
 
   // Dialog states
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -537,15 +542,17 @@ export default function AdminTicketsPage() {
                         {ticket.assigned_to ? (
                           <div className="flex items-center gap-2">
                             <span>{ticket.assigned_to.name}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => handleOpenAssignDialog(ticket)}
-                              title="Reassign"
-                            >
-                              <UserPlus className="h-3 w-3" />
-                            </Button>
+                            {!isSupportOfficer && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => handleOpenAssignDialog(ticket)}
+                                title="Reassign"
+                              >
+                                <UserPlus className="h-3 w-3" />
+                              </Button>
+                            )}
                           </div>
                         ) : (
                           <div className="flex items-center gap-1">
@@ -559,15 +566,17 @@ export default function AdminTicketsPage() {
                             >
                               <Hand className="h-3 w-3" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => handleOpenAssignDialog(ticket)}
-                              title="Assign to someone"
-                            >
-                              <UserPlus className="h-3 w-3" />
-                            </Button>
+                            {!isSupportOfficer && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => handleOpenAssignDialog(ticket)}
+                                title="Assign to someone"
+                              >
+                                <UserPlus className="h-3 w-3" />
+                              </Button>
+                            )}
                           </div>
                         )}
                       </TableCell>
@@ -824,36 +833,41 @@ export default function AdminTicketsPage() {
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Assign Ticket</DialogTitle>
+            <DialogTitle>{isSupportOfficer ? 'Take Ticket' : 'Assign Ticket'}</DialogTitle>
             <DialogDescription>
-              Assign ticket {selectedTicket?.ticket_number} to a support staff member.
+              {isSupportOfficer 
+                ? `Take ownership of ticket ${selectedTicket?.ticket_number}.`
+                : `Assign ticket ${selectedTicket?.ticket_number} to a support staff member.`
+              }
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Select Staff Member</Label>
-              <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select staff member" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableStaff.map((staff) => (
-                    <SelectItem key={staff.id} value={staff.id.toString()}>
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${staff.is_online ? 'bg-green-500' : 'bg-gray-300'}`} />
-                        <span>{staff.name}</span>
-                        <span className="text-muted-foreground text-xs">
-                          ({staff.active_tickets_count} active)
-                        </span>
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {staff.role.replace('_', ' ')}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!isSupportOfficer && (
+              <div className="space-y-2">
+                <Label>Select Staff Member</Label>
+                <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select staff member" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableStaff.map((staff) => (
+                      <SelectItem key={staff.id} value={staff.id.toString()}>
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${staff.is_online ? 'bg-green-500' : 'bg-gray-300'}`} />
+                          <span>{staff.name}</span>
+                          <span className="text-muted-foreground text-xs">
+                            ({staff.active_tickets_count} active)
+                          </span>
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {staff.role.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Notes (optional)</Label>
               <Textarea
@@ -864,16 +878,19 @@ export default function AdminTicketsPage() {
               />
             </div>
             <div className="flex items-center justify-between pt-2">
-              <Button
-                variant="outline"
-                onClick={() => selectedTicket && handleAutoAssign(selectedTicket.id)}
-              >
-                <Zap className="h-4 w-4 mr-2" />
-                Auto-Assign
-              </Button>
+              {!isSupportOfficer && (
+                <Button
+                  variant="outline"
+                  onClick={() => selectedTicket && handleAutoAssign(selectedTicket.id)}
+                >
+                  <Zap className="h-4 w-4 mr-2" />
+                  Auto-Assign
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 onClick={() => selectedTicket && handleSelfAssign(selectedTicket.id)}
+                className={isSupportOfficer ? 'w-full' : ''}
               >
                 <Hand className="h-4 w-4 mr-2" />
                 Take It
@@ -884,9 +901,11 @@ export default function AdminTicketsPage() {
             <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAssignTicket} disabled={!selectedStaffId}>
-              Assign Ticket
-            </Button>
+            {!isSupportOfficer && (
+              <Button onClick={handleAssignTicket} disabled={!selectedStaffId}>
+                Assign Ticket
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

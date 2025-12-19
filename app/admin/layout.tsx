@@ -44,13 +44,13 @@ const adminNavItems = [
     title: 'Users',
     href: '/admin/users',
     icon: Users,
-    roles: ['admin', 'super_admin'],
+    roles: ['admin', 'super_admin', 'support_officer'],
   },
   {
     title: 'Subscriptions',
     href: '/admin/subscriptions',
     icon: CreditCard,
-    roles: ['admin', 'super_admin'],
+    roles: ['admin', 'super_admin', 'support_officer'],
   },
   {
     title: 'Support Tickets',
@@ -62,7 +62,7 @@ const adminNavItems = [
     title: 'Activity Logs',
     href: '/admin/activity',
     icon: Activity,
-    roles: ['admin', 'super_admin'],
+    roles: ['admin', 'super_admin', 'support_officer'],
   },
   {
     title: 'Platform Settings',
@@ -74,7 +74,7 @@ const adminNavItems = [
     title: 'Franchises',
     href: '/admin/franchises',
     icon: Building,
-    roles: ['super_admin'],
+    roles: ['admin', 'super_admin', 'support_officer'],
   },
 ];
 
