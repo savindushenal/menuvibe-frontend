@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { apiClient } from '@/lib/api';
 import { useAuth } from './auth-context';
 
@@ -83,7 +83,8 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refreshSubscription = async () => {
+  // OPTIMIZED: Wrap in useCallback to prevent function recreation on every render
+  const refreshSubscription = useCallback(async () => {
     // Don't attempt to load subscription if not authenticated
     if (!isAuthenticated) {
       setLoading(false);
@@ -107,9 +108,10 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAuthenticated]);
 
-  const canPerformAction = (action: string, currentCount: number = 0): boolean => {
+  // OPTIMIZED: Wrap in useCallback to prevent recreation on every render
+  const canPerformAction = useCallback((action: string, currentCount: number = 0): boolean => {
     if (!subscription?.plan) return false;
     
     const limit = subscription.plan.limits[action as keyof typeof subscription.plan.limits];
@@ -125,9 +127,10 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     }
     
     return false;
-  };
+  }, [subscription?.plan]);
 
-  const getRemainingQuota = (action: string, currentCount: number = 0): number => {
+  // OPTIMIZED: Wrap in useCallback to prevent recreation on every render
+  const getRemainingQuota = useCallback((action: string, currentCount: number = 0): number => {
     if (!subscription?.plan) return 0;
     
     const limit = subscription.plan.limits[action as keyof typeof subscription.plan.limits];
@@ -139,19 +142,22 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     }
     
     return 0;
-  };
+  }, [subscription?.plan]);
 
-  const showUpgradePrompt = (feature: string) => {
+  // OPTIMIZED: Wrap in useCallback to prevent recreation on every render
+  const showUpgradePrompt = useCallback((feature: string) => {
     // This could trigger a modal or redirect to upgrade page
     console.log(`Upgrade required for feature: ${feature}`);
     // TODO: Implement upgrade prompt UI
-  };
+  }, []);
 
-  const getCurrentPlan = (): string => {
+  // OPTIMIZED: Memoize current plan to avoid recalculation
+  const currentPlan = useMemo(() => {
     return subscription?.plan?.name || 'Free';
-  };
+  }, [subscription?.plan?.name]);
 
-  const canAccessFeature = (feature: string): boolean => {
+  // OPTIMIZED: Wrap in useCallback to prevent recreation on every render
+  const canAccessFeature = useCallback((feature: string): boolean => {
     if (!subscription?.plan) return false;
     
     const planSlug = subscription.plan.slug;
@@ -172,7 +178,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     
     const requiredPlans = featureAccess[feature];
     return requiredPlans ? requiredPlans.includes(planSlug) : false;
-  };
+  }, [subscription?.plan]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -184,9 +190,10 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         setLoading(false);
       }
     }
-  }, [isAuthenticated, authLoading]);
+  }, [isAuthenticated, authLoading, refreshSubscription]);
 
-  const contextValue: SubscriptionContextType = {
+  // OPTIMIZED: Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo<SubscriptionContextType>(() => ({
     subscription,
     loading,
     error,
@@ -194,9 +201,19 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     canPerformAction,
     getRemainingQuota,
     showUpgradePrompt,
-    currentPlan: getCurrentPlan(),
+    currentPlan,
     canAccessFeature,
-  };
+  }), [
+    subscription,
+    loading,
+    error,
+    refreshSubscription,
+    canPerformAction,
+    getRemainingQuota,
+    showUpgradePrompt,
+    currentPlan,
+    canAccessFeature,
+  ]);
 
   return (
     <SubscriptionContext.Provider value={contextValue}>

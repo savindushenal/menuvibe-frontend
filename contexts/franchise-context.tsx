@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { apiClient } from '@/lib/api';
 
 // ============================================
@@ -503,8 +503,8 @@ export function FranchiseProvider({ children, franchiseSlug }: FranchiseProvider
     }
   };
 
-  // Permission check based on current franchise role
-  const hasPermission = (resource: string, action: string): boolean => {
+  // OPTIMIZED: Wrap in useCallback to prevent recreation on every render
+  const hasPermission = useCallback((resource: string, action: string): boolean => {
     if (!currentFranchise?.my_role) return false;
     
     const role = currentFranchise.my_role;
@@ -542,14 +542,16 @@ export function FranchiseProvider({ children, franchiseSlug }: FranchiseProvider
     
     const permissions = rolePermissions[role];
     return permissions?.[resource]?.includes(action) ?? false;
-  };
+  }, [currentFranchise?.my_role]);
 
-  const myRole = currentFranchise?.my_role || null;
-  const isOwner = myRole === 'owner';
-  const isAdmin = myRole === 'owner' || myRole === 'admin';
-  const isWhiteLabeled = branding !== null;
+  // OPTIMIZED: Memoize derived values
+  const myRole = useMemo(() => currentFranchise?.my_role || null, [currentFranchise?.my_role]);
+  const isOwner = useMemo(() => myRole === 'owner', [myRole]);
+  const isAdmin = useMemo(() => myRole === 'owner' || myRole === 'admin', [myRole]);
+  const isWhiteLabeled = useMemo(() => branding !== null, [branding]);
 
-  const value: FranchiseContextType = {
+  // OPTIMIZED: Memoize context value to prevent unnecessary re-renders
+  const value = useMemo<FranchiseContextType>(() => ({
     branding,
     isWhiteLabeled,
     franchises,
@@ -569,7 +571,19 @@ export function FranchiseProvider({ children, franchiseSlug }: FranchiseProvider
     isOwner,
     isAdmin,
     myRole,
-  };
+  }), [
+    branding,
+    isWhiteLabeled,
+    franchises,
+    currentFranchise,
+    isBrandingLoading,
+    isFranchisesLoading,
+    fetchFranchises,
+    hasPermission,
+    isOwner,
+    isAdmin,
+    myRole,
+  ]);
 
   return (
     <FranchiseContext.Provider value={value}>

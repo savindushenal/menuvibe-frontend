@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient, User } from '@/lib/api';
 
@@ -262,7 +262,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await checkAuthStatus();
   };
 
-  const value = {
+  // OPTIMIZED: Memoize context value to prevent unnecessary re-renders
+  const value = useMemo(() => ({
     user,
     token,
     isAuthenticated,
@@ -275,7 +276,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     googleAuth,
     checkOnboardingStatus,
     refreshAuth,
-  };
+  }), [
+    user,
+    token,
+    isAuthenticated,
+    isLoading,
+    needsOnboarding,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
