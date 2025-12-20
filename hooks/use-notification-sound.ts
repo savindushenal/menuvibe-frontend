@@ -100,7 +100,10 @@ export function getNotificationSoundType(notificationType: string, priority?: st
 
 // Map ticket actions to sound types
 export function getTicketActionSoundType(action: string, priority?: string): SoundType {
+  console.log('getTicketActionSoundType called:', { action, priority });
+  
   if (priority === 'urgent') {
+    console.log('Urgent priority detected, returning ticket_urgent');
     return 'ticket_urgent';
   }
   
@@ -127,24 +130,32 @@ export function getTicketActionSoundType(action: string, priority?: string): Sou
 export function useNotificationSound() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const isEnabledRef = useRef<boolean>(true);
+  const hasUserInteracted = useRef<boolean>(false);
 
   // Initialize audio context on first user interaction
   useEffect(() => {
     const initAudioContext = () => {
+      hasUserInteracted.current = true;
       if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        try {
+          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+          console.log('AudioContext initialized');
+        } catch (e) {
+          console.error('Failed to create AudioContext:', e);
+        }
       }
     };
 
     // Initialize on any user interaction
     const events = ['click', 'touchstart', 'keydown'];
     events.forEach(event => {
-      document.addEventListener(event, initAudioContext, { once: true });
+      document.addEventListener(event, initAudioContext, { once: false });
     });
 
     // Check localStorage for sound preference
     const soundEnabled = localStorage.getItem('notification_sound_enabled');
     isEnabledRef.current = soundEnabled !== 'false';
+    console.log('Sound enabled from localStorage:', isEnabledRef.current, 'raw value:', soundEnabled);
 
     return () => {
       events.forEach(event => {
@@ -154,7 +165,10 @@ export function useNotificationSound() {
   }, []);
 
   const playSound = useCallback(async (soundType: SoundType) => {
-    if (!isEnabledRef.current) return;
+    if (!isEnabledRef.current) {
+      console.log('Sound disabled, not playing');
+      return;
+    }
 
     try {
       // Initialize audio context if needed
@@ -166,9 +180,11 @@ export function useNotificationSound() {
       
       // Resume if suspended (browser autoplay policy)
       if (ctx.state === 'suspended') {
+        console.log('Resuming suspended AudioContext');
         await ctx.resume();
       }
 
+      console.log(`Playing sound: ${soundType}`);
       const config = SOUND_CONFIGS[soundType];
       let startTime = ctx.currentTime;
 

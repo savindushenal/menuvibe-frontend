@@ -52,6 +52,7 @@ import {
   RotateCcw,
   X,
   Send,
+  Volume2,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { useNotificationSound, getTicketActionSoundType } from '@/hooks/use-notification-sound';
@@ -597,6 +598,18 @@ export default function AdminTicketsPage() {
           <p className="text-muted-foreground">Manage customer support requests</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Test Sound Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              console.log('Testing urgent sound...');
+              playSound('ticket_urgent');
+            }}
+            title="Test urgent notification sound"
+          >
+            <Volume2 className="h-4 w-4" />
+          </Button>
           {/* Real-time connection indicator */}
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-gray-400'}`} />
@@ -803,6 +816,10 @@ export default function AdminTicketsPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => {
+                              // Clear previous ticket state before loading new one
+                              setPendingMessages([]);
+                              setReplyMessage('');
+                              setIsInternalNote(false);
                               fetchTicketDetails(ticket.id);
                               setViewDialogOpen(true);
                             }}
