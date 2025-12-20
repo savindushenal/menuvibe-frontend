@@ -23,10 +23,13 @@ import {
   Loader2,
   Wifi,
   WifiOff,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { useRealTimeNotifications } from '@/hooks/use-realtime-notifications';
+import { useNotificationSound, getNotificationSoundType } from '@/hooks/use-notification-sound';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Notification {
@@ -47,6 +50,21 @@ export function NotificationsDropdown() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  
+  // Sound hook
+  const { playSound, setEnabled, isEnabled } = useNotificationSound();
+  
+  // Initialize sound state from hook
+  useEffect(() => {
+    setSoundEnabled(isEnabled());
+  }, [isEnabled]);
+  
+  const toggleSound = () => {
+    const newState = !soundEnabled;
+    setSoundEnabled(newState);
+    setEnabled(newState);
+  };
 
   // Real-time notifications hook
   const { isConnected, connectionError } = useRealTimeNotifications({
@@ -55,6 +73,10 @@ export function NotificationsDropdown() {
       if (notification && notification.id && notification.message !== undefined) {
         setNotifications(prev => [notification, ...prev].slice(0, 10));
         setUnreadCount(prev => prev + 1);
+        
+        // Play sound based on notification type and priority
+        const soundType = getNotificationSoundType(notification.type, notification.data?.priority);
+        playSound(soundType);
       }
     },
     showToasts: true, // Show toast notifications
@@ -218,7 +240,35 @@ export function NotificationsDropdown() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
         <DropdownMenuLabel className="flex items-center justify-between">
-          <span>Notifications</span>
+          <div className="flex items-center gap-2">
+            <span>Notifications</span>
+            {/* Sound toggle */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleSound();
+                    }}
+                    className="h-6 w-6 p-0"
+                  >
+                    {soundEnabled ? (
+                      <Volume2 className="h-3.5 w-3.5 text-emerald-600" />
+                    ) : (
+                      <VolumeX className="h-3.5 w-3.5 text-muted-foreground" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="text-xs">{soundEnabled ? 'Sound on' : 'Sound off'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           {unreadCount > 0 && (
             <Button
               variant="ghost"

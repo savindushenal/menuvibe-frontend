@@ -63,10 +63,34 @@ interface StaffStatusChange {
   status: 'online' | 'offline';
 }
 
+interface TicketMessage {
+  message: {
+    id: number;
+    ticket_id: number;
+    message: string;
+    is_internal: boolean;
+    created_at: string;
+    user: {
+      id: number;
+      name: string;
+      role: string;
+    };
+  };
+  ticket: {
+    id: number;
+    ticket_number: string;
+    subject: string;
+    priority: string;
+    status: string;
+  };
+}
+
 interface UseRealTimeNotificationsOptions {
   onNotification?: (notification: Notification) => void;
   onTicketUpdate?: (update: TicketUpdate) => void;
   onStaffStatusChange?: (change: StaffStatusChange) => void;
+  onTicketMessage?: (message: TicketMessage) => void;
+  ticketId?: number; // Subscribe to specific ticket messages
   showToasts?: boolean;
   autoSubscribe?: boolean;
 }
@@ -76,6 +100,8 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
     onNotification,
     onTicketUpdate,
     onStaffStatusChange,
+    onTicketMessage,
+    ticketId,
     showToasts = true,
     autoSubscribe = true,
   } = options;
@@ -224,6 +250,29 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
       });
   }, [onTicketUpdate, showToasts]);
 
+  // Subscribe to specific ticket messages
+  const subscribeToTicketMessages = useCallback(() => {
+    const echo = echoRef.current;
+    if (!echo || !ticketId) return;
+
+    echo.private(`ticket.${ticketId}`)
+      .listen('.message.sent', (data: TicketMessage) => {
+        if (onTicketMessage) {
+          onTicketMessage(data);
+        }
+
+        // Show toast for messages from other users
+        if (showToasts && data.message.user.id !== user?.id) {
+          toast.info('New Message', {
+            description: `${data.message.user.name} replied to ticket #${data.ticket.ticket_number}`,
+          });
+        }
+      })
+      .error((error: any) => {
+        console.error('Ticket message channel error:', error);
+      });
+  }, [ticketId, onTicketMessage, showToasts, user?.id]);
+
   // Subscribe to staff status changes
   const subscribeToStaffStatus = useCallback(() => {
     const echo = echoRef.current;
@@ -281,6 +330,11 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
     subscribeToNotifications();
     subscribeToTicketUpdates();
     subscribeToStaffStatus();
+    
+    // Subscribe to specific ticket messages if ticketId is provided
+    if (ticketId) {
+      subscribeToTicketMessages();
+    }
 
     return () => {
       // Cleanup subscriptions
@@ -288,16 +342,21 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
         echo.leave(`admin.notifications.${user.id}`);
         echo.leave('admin.tickets');
         echo.leave('admin.staff-status');
+        if (ticketId) {
+          echo.leave(`ticket.${ticketId}`);
+        }
       }
     };
   }, [
     autoSubscribe,
     token,
     user,
+    ticketId,
     initializeEcho,
     subscribeToNotifications,
     subscribeToTicketUpdates,
     subscribeToStaffStatus,
+    subscribeToTicketMessages,
   ]);
 
   // Cleanup on unmount

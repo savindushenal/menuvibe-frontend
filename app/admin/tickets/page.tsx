@@ -48,8 +48,13 @@ import {
   Zap,
   Hand,
   RefreshCw,
+  Loader2,
+  RotateCcw,
+  X,
+  Send,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { useNotificationSound, getTicketActionSoundType } from '@/hooks/use-notification-sound';
 
 interface SupportTicket {
   id: number;
@@ -143,6 +148,7 @@ interface TicketStats {
 export default function AdminTicketsPage() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { playSound } = useNotificationSound();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [stats, setStats] = useState<TicketStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -160,6 +166,8 @@ export default function AdminTicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [isInternalNote, setIsInternalNote] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [pendingMessages, setPendingMessages] = useState<{id: string; message: string; sending: boolean; failed: boolean}[]>([]);
   
   // Assignment states
   const [availableStaff, setAvailableStaff] = useState<SupportStaff[]>([]);
@@ -222,8 +230,11 @@ export default function AdminTicketsPage() {
   const handleTicketUpdate = useCallback((update: any) => {
     const { ticket, action, actor } = update;
     
-    // Show toast for important updates (not from current user)
+    // Play sound for important updates (not from current user)
     if (actor?.id !== user?.id) {
+      const soundType = getTicketActionSoundType(action, ticket.priority);
+      playSound(soundType);
+      
       const actorName = actor?.name || 'System';
       let toastMessage = '';
       
@@ -242,6 +253,9 @@ export default function AdminTicketsPage() {
           break;
         case 'status_changed':
           toastMessage = `Ticket #${ticket.ticket_number} status changed to ${ticket.status}`;
+          break;
+        case 'new_message':
+          toastMessage = `New message on ticket #${ticket.ticket_number}`;
           break;
       }
       
@@ -282,7 +296,7 @@ export default function AdminTicketsPage() {
     if (['created', 'assigned', 'auto_assigned', 'self_assigned', 'status_changed'].includes(action)) {
       fetchStats();
     }
-  }, [fetchStats, toast, user?.id]);
+  }, [fetchStats, toast, user?.id, playSound]);
 
   // Handle refresh when needed (from real-time updates)
   useEffect(() => {
@@ -300,12 +314,38 @@ export default function AdminTicketsPage() {
     }
   }, [selectedTicket, fetchTicketDetails]);
 
+  // Handle real-time message updates for the selected ticket
+  const handleTicketMessage = useCallback((messageData: any) => {
+    if (!selectedTicket || selectedTicket.id !== messageData.message.ticket_id) return;
+    
+    // Play sound for new message from others
+    if (messageData.message.user.id !== user?.id) {
+      playSound('message');
+    }
+    
+    // Add the new message to the selected ticket's messages
+    setSelectedTicket(prev => {
+      if (!prev) return prev;
+      
+      // Check if message already exists
+      const existingMessage = prev.messages?.find(m => m.id === messageData.message.id);
+      if (existingMessage) return prev;
+      
+      return {
+        ...prev,
+        messages: [...(prev.messages || []), messageData.message],
+      };
+    });
+  }, [selectedTicket, user?.id, playSound]);
+
   // Subscribe to real-time ticket updates
   const { isConnected } = useRealTimeNotifications({
     onTicketUpdate: (update) => {
       handleTicketUpdate(update);
       handleTicketUpdateForDetails(update);
     },
+    onTicketMessage: handleTicketMessage,
+    ticketId: selectedTicket?.id, // Subscribe to the selected ticket's messages
     showToasts: false, // We handle our own toasts
   });
 
@@ -440,25 +480,81 @@ export default function AdminTicketsPage() {
   };
 
   const handleSendReply = async () => {
-    if (!selectedTicket || !replyMessage.trim()) return;
+    if (!selectedTicket || !replyMessage.trim() || sendingMessage) return;
+
+    const tempId = `temp-${Date.now()}`;
+    const messageText = replyMessage.trim();
+    
+    // Optimistic update - add message immediately with pending state
+    const optimisticMessage = {
+      id: tempId,
+      message: messageText,
+      sending: true,
+      failed: false,
+    };
+    setPendingMessages(prev => [...prev, optimisticMessage]);
+    setReplyMessage('');
+    setSendingMessage(true);
 
     try {
       const response = await apiClient.addTicketMessage(selectedTicket.id, {
-        message: replyMessage,
+        message: messageText,
+        is_internal: isInternalNote,
       });
+      
       if (response.success) {
-        toast({ title: 'Success', description: 'Reply sent' });
-        setReplyMessage('');
+        // Remove from pending and refresh to get the real message
+        setPendingMessages(prev => prev.filter(m => m.id !== tempId));
         setIsInternalNote(false);
         fetchTicketDetails(selectedTicket.id);
       }
     } catch (err: any) {
+      // Mark as failed but keep it visible with retry option
+      setPendingMessages(prev => 
+        prev.map(m => m.id === tempId ? { ...m, sending: false, failed: true } : m)
+      );
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to send reply',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  const retryMessage = async (pendingMsg: typeof pendingMessages[0]) => {
+    if (!selectedTicket) return;
+    
+    // Update to sending state
+    setPendingMessages(prev =>
+      prev.map(m => m.id === pendingMsg.id ? { ...m, sending: true, failed: false } : m)
+    );
+
+    try {
+      const response = await apiClient.addTicketMessage(selectedTicket.id, {
+        message: pendingMsg.message,
+        is_internal: isInternalNote,
+      });
+      
+      if (response.success) {
+        setPendingMessages(prev => prev.filter(m => m.id !== pendingMsg.id));
+        fetchTicketDetails(selectedTicket.id);
+      }
+    } catch (err: any) {
+      setPendingMessages(prev =>
+        prev.map(m => m.id === pendingMsg.id ? { ...m, sending: false, failed: true } : m)
+      );
       toast({
         title: 'Error',
         description: err.message || 'Failed to send reply',
         variant: 'destructive',
       });
     }
+  };
+
+  const removePendingMessage = (id: string) => {
+    setPendingMessages(prev => prev.filter(m => m.id !== id));
   };
 
   const getPriorityBadge = (priority: string) => {
@@ -863,6 +959,60 @@ export default function AdminTicketsPage() {
                       <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
                     </div>
                   ))}
+                  
+                  {/* Pending messages with preloaders */}
+                  {pendingMessages.map((pendingMsg) => (
+                    <div
+                      key={pendingMsg.id}
+                      className={`p-3 rounded-lg border ${
+                        pendingMsg.failed
+                          ? 'bg-red-50 border-red-200'
+                          : 'bg-emerald-50 border-emerald-200 opacity-70'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">{user?.name}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            Staff
+                          </Badge>
+                          {pendingMsg.sending && (
+                            <span className="flex items-center text-xs text-muted-foreground">
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              Sending...
+                            </span>
+                          )}
+                          {pendingMsg.failed && (
+                            <Badge variant="destructive" className="text-xs">
+                              Failed to send
+                            </Badge>
+                          )}
+                        </div>
+                        {pendingMsg.failed && (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => retryMessage(pendingMsg)}
+                              className="h-6 px-2 text-xs"
+                            >
+                              <RotateCcw className="h-3 w-3 mr-1" />
+                              Retry
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removePendingMessage(pendingMsg.id)}
+                              className="h-6 px-2 text-xs text-red-500 hover:text-red-700"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap">{pendingMsg.message}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -885,11 +1035,25 @@ export default function AdminTicketsPage() {
                   onChange={(e) => setReplyMessage(e.target.value)}
                   placeholder="Type your reply..."
                   rows={3}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                      handleSendReply();
+                    }
+                  }}
                 />
-                <Button onClick={handleSendReply} disabled={!replyMessage.trim()}>
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Send Reply
-                </Button>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    Press Ctrl+Enter to send
+                  </span>
+                  <Button onClick={handleSendReply} disabled={!replyMessage.trim() || sendingMessage}>
+                    {sendingMessage ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4 mr-2" />
+                    )}
+                    {sendingMessage ? 'Sending...' : 'Send Reply'}
+                  </Button>
+                </div>
               </div>
 
               {/* Views/Assignment History */}
