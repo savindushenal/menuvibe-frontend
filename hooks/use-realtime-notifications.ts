@@ -205,49 +205,59 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
     const echo = echoRef.current;
     if (!echo) return;
 
-    echo.private('admin.tickets')
-      .listen('.ticket.updated', (data: TicketUpdate) => {
-        if (onTicketUpdate) {
-          onTicketUpdate(data);
+    console.log('Subscribing to admin.tickets channel...');
+    
+    const channel = echo.private('admin.tickets');
+    
+    channel.subscribed(() => {
+      console.log('Successfully subscribed to admin.tickets channel');
+    });
+    
+    channel.error((error: any) => {
+      console.error('Failed to subscribe to admin.tickets channel:', error);
+    });
+    
+    channel.listen('.ticket.updated', (data: TicketUpdate) => {
+      console.log('Received ticket update event:', data);
+      
+      if (onTicketUpdate) {
+        onTicketUpdate(data);
+      }
+
+      if (showToasts) {
+        const { ticket, action, actor } = data;
+        let message = '';
+        const actorName = actor?.name || 'System';
+        
+        switch (action) {
+          case 'created':
+            message = `New ticket #${ticket.ticket_number}: ${ticket.subject}`;
+            break;
+          case 'assigned':
+            message = `${actorName} assigned ticket #${ticket.ticket_number}`;
+            break;
+          case 'auto_assigned':
+            message = `Ticket #${ticket.ticket_number} auto-assigned to ${ticket.assignedTo?.name || 'staff'}`;
+            break;
+          case 'self_assigned':
+            message = `${actorName} took ticket #${ticket.ticket_number}`;
+            break;
+          case 'status_changed':
+            message = `Ticket #${ticket.ticket_number} status changed to ${ticket.status}`;
+            break;
+          case 'priority_changed':
+            message = `Ticket #${ticket.ticket_number} priority changed to ${ticket.priority}`;
+            break;
+          case 'new_message':
+            message = `${actorName} replied to ticket #${ticket.ticket_number}`;
+            break;
+          default:
+            message = `Ticket #${ticket.ticket_number} was updated`;
         }
 
-        if (showToasts) {
-          const { ticket, action, actor } = data;
-          let message = '';
-          const actorName = actor?.name || 'System';
-          
-          switch (action) {
-            case 'created':
-              message = `New ticket #${ticket.ticket_number}: ${ticket.subject}`;
-              break;
-            case 'assigned':
-              message = `${actorName} assigned ticket #${ticket.ticket_number}`;
-              break;
-            case 'auto_assigned':
-              message = `Ticket #${ticket.ticket_number} auto-assigned to ${ticket.assignedTo?.name || 'staff'}`;
-              break;
-            case 'self_assigned':
-              message = `${actorName} took ticket #${ticket.ticket_number}`;
-              break;
-            case 'status_changed':
-              message = `Ticket #${ticket.ticket_number} status changed to ${ticket.status}`;
-              break;
-            case 'priority_changed':
-              message = `Ticket #${ticket.ticket_number} priority changed to ${ticket.priority}`;
-              break;
-            case 'new_message':
-              message = `${actorName} replied to ticket #${ticket.ticket_number}`;
-              break;
-            default:
-              message = `Ticket #${ticket.ticket_number} was updated`;
-          }
-
-          toast.info('Ticket Update', { description: message });
-        }
-      })
-      .error((error: any) => {
-        console.error('Ticket channel error:', error);
-      });
+        toast.info('Ticket Update', { description: message });
+      }
+    });
   }, [onTicketUpdate, showToasts]);
 
   // Subscribe to specific ticket messages

@@ -229,6 +229,7 @@ export default function AdminTicketsPage() {
 
   // Real-time updates - update tickets when any ticket changes
   const handleTicketUpdate = useCallback((update: any) => {
+    console.log('handleTicketUpdate called with:', update);
     const { ticket, action, actor } = update;
     
     // Play sound for important updates (not from current user)
