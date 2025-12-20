@@ -16,7 +16,7 @@ export default function FranchiseDashboardLayout({
 
   return (
     <ProtectedRoute>
-      <FranchiseProvider>
+      <FranchiseProvider franchiseSlug={franchiseSlug}>
         <div className="flex h-screen overflow-hidden bg-neutral-100">
           <FranchiseSidebar franchiseSlug={franchiseSlug} />
           <div className="flex-1 flex flex-col overflow-hidden">

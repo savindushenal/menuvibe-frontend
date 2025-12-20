@@ -34,6 +34,9 @@ export function FranchiseSidebar({ franchiseSlug }: FranchiseSidebarProps) {
   const { logout } = useAuth();
   const { currentFranchise, branding, myRole } = useFranchise();
 
+  // Debug logging
+  console.log('FranchiseSidebar - myRole:', myRole, 'currentFranchise:', currentFranchise?.name, 'my_role from franchise:', currentFranchise?.my_role);
+
   // Define which roles can access which menu items
   // Backend roles are: 'owner', 'admin', 'manager', 'viewer'
   const isOwnerOrAdmin = ['owner', 'admin'].includes(myRole || '');
@@ -57,8 +60,12 @@ export function FranchiseSidebar({ franchiseSlug }: FranchiseSidebarProps) {
   const menuItems = allMenuItems.filter(item => {
     if (item.roles.includes('all')) return true;
     if (!myRole) return false;
-    return item.roles.includes(myRole);
+    const hasAccess = item.roles.includes(myRole);
+    console.log(`Menu item "${item.label}" - roles: ${item.roles.join(', ')}, myRole: ${myRole}, hasAccess: ${hasAccess}`);
+    return hasAccess;
   });
+
+  console.log('Filtered menuItems count:', menuItems.length);
 
   // Auto-collapse on mobile on initial load
   useEffect(() => {

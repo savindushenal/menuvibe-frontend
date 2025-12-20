@@ -132,12 +132,70 @@ const FranchiseContext = createContext<FranchiseContextType | undefined>(undefin
 // PROVIDER COMPONENT
 // ============================================
 
-export function FranchiseProvider({ children }: { children: React.ReactNode }) {
+interface FranchiseProviderProps {
+  children: React.ReactNode;
+  franchiseSlug?: string;
+}
+
+export function FranchiseProvider({ children, franchiseSlug }: FranchiseProviderProps) {
   const [branding, setBranding] = useState<FranchiseBranding | null>(null);
   const [franchises, setFranchises] = useState<Franchise[]>([]);
   const [currentFranchise, setCurrentFranchise] = useState<Franchise | null>(null);
   const [isBrandingLoading, setIsBrandingLoading] = useState(true);
   const [isFranchisesLoading, setIsFranchisesLoading] = useState(false);
+
+  // Load franchise by slug when provided
+  useEffect(() => {
+    const loadFranchiseBySlug = async () => {
+      if (!franchiseSlug) return;
+      
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+      
+      try {
+        // Use the dashboard endpoint which returns franchise info with role
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/franchise/${franchiseSlug}/dashboard`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json',
+            },
+          }
+        );
+        
+        const data = await response.json();
+        console.log('Loaded franchise by slug:', franchiseSlug, data);
+        
+        if (data.success && data.data?.franchise) {
+          const franchiseData = {
+            ...data.data.franchise,
+            my_role: data.data.user_role, // Map user_role to my_role
+          };
+          console.log('Setting currentFranchise with my_role:', franchiseData);
+          setCurrentFranchise(franchiseData);
+          
+          // Also load branding separately if needed
+          try {
+            const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/api$/, '');
+            const brandingResponse = await fetch(`${baseUrl}/api/branding/${franchiseSlug}`);
+            const brandingData = await brandingResponse.json();
+            
+            if (brandingData.success && brandingData.data?.branding) {
+              setBranding(brandingData.data.branding);
+              applyBrandingStyles(brandingData.data.branding);
+            }
+          } catch (brandingError) {
+            console.error('Failed to load branding:', brandingError);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load franchise by slug:', error);
+      }
+    };
+    
+    loadFranchiseBySlug();
+  }, [franchiseSlug]);
 
   // Detect and load branding on mount
   useEffect(() => {
