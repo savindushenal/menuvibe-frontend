@@ -35,20 +35,22 @@ export function FranchiseSidebar({ franchiseSlug }: FranchiseSidebarProps) {
   const { currentFranchise, branding, myRole } = useFranchise();
 
   // Define which roles can access which menu items
-  const isOwnerOrAdmin = ['owner', 'franchise_owner', 'franchise_admin', 'admin'].includes(myRole || '');
-  const isBranchManager = ['branch_manager', 'manager'].includes(myRole || '');
-  const isStaff = myRole === 'staff';
+  // Backend roles are: 'owner', 'admin', 'manager', 'viewer'
+  const isOwnerOrAdmin = ['owner', 'admin'].includes(myRole || '');
+  const isManager = myRole === 'manager';
+  const isViewer = myRole === 'viewer';
 
   // All menu items with role restrictions
+  // Roles: 'owner', 'admin', 'manager', 'viewer' (from backend)
   const allMenuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: `/${franchiseSlug}/dashboard`, roles: ['all'] },
-    { icon: ChefHat, label: 'Master Menu', href: `/${franchiseSlug}/dashboard/menus/master`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin'] },
-    { icon: Tag, label: 'Offers', href: `/${franchiseSlug}/dashboard/menus/offers`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin'] },
-    { icon: UtensilsCrossed, label: 'Branch Menus', href: `/${franchiseSlug}/dashboard/menus`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin', 'branch_manager', 'manager', 'staff'] },
-    { icon: Building2, label: 'Branches', href: `/${franchiseSlug}/dashboard/branches`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin'] },
-    { icon: Users, label: 'Team', href: `/${franchiseSlug}/dashboard/team`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin', 'branch_manager', 'manager'] },
+    { icon: ChefHat, label: 'Master Menu', href: `/${franchiseSlug}/dashboard/menus/master`, roles: ['owner', 'admin'] },
+    { icon: Tag, label: 'Offers', href: `/${franchiseSlug}/dashboard/menus/offers`, roles: ['owner', 'admin'] },
+    { icon: UtensilsCrossed, label: 'Branch Menus', href: `/${franchiseSlug}/dashboard/menus`, roles: ['owner', 'admin', 'manager'] },
+    { icon: Building2, label: 'Branches', href: `/${franchiseSlug}/dashboard/branches`, roles: ['owner', 'admin'] },
+    { icon: Users, label: 'Team', href: `/${franchiseSlug}/dashboard/team`, roles: ['owner', 'admin', 'manager'] },
     { icon: HelpCircle, label: 'Help & Support', href: `/${franchiseSlug}/dashboard/help`, roles: ['all'] },
-    { icon: Settings, label: 'Settings', href: `/${franchiseSlug}/dashboard/settings`, roles: ['owner', 'franchise_owner', 'franchise_admin', 'admin'] },
+    { icon: Settings, label: 'Settings', href: `/${franchiseSlug}/dashboard/settings`, roles: ['owner', 'admin'] },
   ];
 
   // Filter menu items based on user role
