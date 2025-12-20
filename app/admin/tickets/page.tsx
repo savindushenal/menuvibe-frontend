@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { apiClient } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
+import { useRealTimeNotifications } from '@/hooks/use-realtime-notifications';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +47,7 @@ import {
   Eye,
   Zap,
   Hand,
+  RefreshCw,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
@@ -165,6 +167,9 @@ export default function AdminTicketsPage() {
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
   const [assignmentNotes, setAssignmentNotes] = useState('');
 
+  // Track if we need to refresh (set by real-time updates)
+  const [needsRefresh, setNeedsRefresh] = useState(false);
+
   const fetchTickets = useCallback(async () => {
     try {
       const params = new URLSearchParams();
@@ -187,7 +192,7 @@ export default function AdminTicketsPage() {
     }
   }, [page, search, statusFilter, priorityFilter, toast]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await apiClient.getAdminTicketStats();
       if (response.success) {
@@ -196,9 +201,9 @@ export default function AdminTicketsPage() {
     } catch (err) {
       console.error('Failed to load stats:', err);
     }
-  };
+  }, []);
 
-  const fetchTicketDetails = async (id: number) => {
+  const fetchTicketDetails = useCallback(async (id: number) => {
     try {
       const response = await apiClient.getAdminTicket(id);
       if (response.success) {
@@ -211,7 +216,98 @@ export default function AdminTicketsPage() {
         variant: 'destructive',
       });
     }
-  };
+  }, [toast]);
+
+  // Real-time updates - update tickets when any ticket changes
+  const handleTicketUpdate = useCallback((update: any) => {
+    const { ticket, action, actor } = update;
+    
+    // Show toast for important updates (not from current user)
+    if (actor?.id !== user?.id) {
+      const actorName = actor?.name || 'System';
+      let toastMessage = '';
+      
+      switch (action) {
+        case 'created':
+          toastMessage = `New ticket #${ticket.ticket_number} created`;
+          break;
+        case 'assigned':
+          toastMessage = `${actorName} assigned ticket #${ticket.ticket_number} to ${ticket.assignedTo?.name || 'someone'}`;
+          break;
+        case 'auto_assigned':
+          toastMessage = `Ticket #${ticket.ticket_number} auto-assigned to ${ticket.assignedTo?.name || 'staff'}`;
+          break;
+        case 'self_assigned':
+          toastMessage = `${actorName} took ticket #${ticket.ticket_number}`;
+          break;
+        case 'status_changed':
+          toastMessage = `Ticket #${ticket.ticket_number} status changed to ${ticket.status}`;
+          break;
+      }
+      
+      if (toastMessage) {
+        toast({
+          title: 'Ticket Update',
+          description: toastMessage,
+        });
+      }
+    }
+    
+    // Update the ticket in our local state immediately for instant feedback
+    setTickets(prevTickets => {
+      const ticketIndex = prevTickets.findIndex(t => t.id === ticket.id);
+      
+      if (action === 'created') {
+        // New ticket - trigger a refresh
+        setNeedsRefresh(true);
+        return prevTickets;
+      }
+      
+      if (ticketIndex !== -1) {
+        // Update existing ticket with new data
+        const updatedTickets = [...prevTickets];
+        updatedTickets[ticketIndex] = {
+          ...updatedTickets[ticketIndex],
+          status: ticket.status,
+          priority: ticket.priority,
+          assigned_to: ticket.assignedTo || null,
+        };
+        return updatedTickets;
+      }
+      
+      return prevTickets;
+    });
+
+    // Also refresh stats for status/assignment changes
+    if (['created', 'assigned', 'auto_assigned', 'self_assigned', 'status_changed'].includes(action)) {
+      fetchStats();
+    }
+  }, [fetchStats, toast, user?.id]);
+
+  // Handle refresh when needed (from real-time updates)
+  useEffect(() => {
+    if (needsRefresh) {
+      fetchTickets();
+      fetchStats();
+      setNeedsRefresh(false);
+    }
+  }, [needsRefresh, fetchTickets, fetchStats]);
+
+  // Refresh selected ticket details when it's updated in real-time
+  const handleTicketUpdateForDetails = useCallback((update: any) => {
+    if (selectedTicket?.id === update.ticket?.id) {
+      fetchTicketDetails(update.ticket.id);
+    }
+  }, [selectedTicket, fetchTicketDetails]);
+
+  // Subscribe to real-time ticket updates
+  const { isConnected } = useRealTimeNotifications({
+    onTicketUpdate: (update) => {
+      handleTicketUpdate(update);
+      handleTicketUpdateForDetails(update);
+    },
+    showToasts: false, // We handle our own toasts
+  });
 
   useEffect(() => {
     const loadAll = async () => {
@@ -399,9 +495,31 @@ export default function AdminTicketsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Support Tickets</h1>
-        <p className="text-muted-foreground">Manage customer support requests</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Support Tickets</h1>
+          <p className="text-muted-foreground">Manage customer support requests</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {/* Real-time connection indicator */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-gray-400'}`} />
+            <span>{isConnected ? 'Live updates' : 'Connecting...'}</span>
+          </div>
+          {/* Manual refresh button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              fetchTickets();
+              fetchStats();
+            }}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
