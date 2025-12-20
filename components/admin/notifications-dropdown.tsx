@@ -51,9 +51,11 @@ export function NotificationsDropdown() {
   // Real-time notifications hook
   const { isConnected, connectionError } = useRealTimeNotifications({
     onNotification: (notification) => {
-      // Add new notification to the list
-      setNotifications(prev => [notification, ...prev].slice(0, 10));
-      setUnreadCount(prev => prev + 1);
+      // Validate notification has required fields before adding
+      if (notification && notification.id && notification.message !== undefined) {
+        setNotifications(prev => [notification, ...prev].slice(0, 10));
+        setUnreadCount(prev => prev + 1);
+      }
     },
     showToasts: true, // Show toast notifications
   });
@@ -62,7 +64,11 @@ export function NotificationsDropdown() {
     try {
       const response = await apiClient.getNotifications(new URLSearchParams({ per_page: '10' }));
       if (response.success) {
-        setNotifications(response.data as Notification[]);
+        // Filter out any malformed notifications
+        const validNotifications = (response.data as Notification[]).filter(
+          n => n && n.id && n.message !== undefined
+        );
+        setNotifications(validNotifications);
         if (response.meta?.unread_count !== undefined) {
           setUnreadCount(response.meta.unread_count);
         }
@@ -233,7 +239,9 @@ export function NotificationsDropdown() {
               <p className="text-sm">No notifications</p>
             </div>
           ) : (
-            notifications.map((notification) => (
+            notifications
+              .filter(notification => notification && notification.id && notification.message !== undefined)
+              .map((notification) => (
               <DropdownMenuItem
                 key={notification.id}
                 onClick={() => handleNotificationClick(notification)}

@@ -130,8 +130,14 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
     if (!echo || !user) return;
 
     echo.private(`admin.notifications.${user.id}`)
-      .listen('.notification.new', (data: { notification: Notification }) => {
-        const notification = data.notification;
+      .listen('.notification.new', (data: { notification?: Notification } & Partial<Notification>) => {
+        // Handle both wrapped { notification: {...} } and unwrapped {...} formats
+        const notification = data.notification || (data.id ? data as unknown as Notification : null);
+        
+        if (!notification || !notification.message) {
+          console.warn('Received invalid notification data:', data);
+          return;
+        }
         
         if (onNotification) {
           onNotification(notification);
