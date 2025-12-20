@@ -154,8 +154,10 @@ export function FranchiseProvider({ children, franchiseSlug }: FranchiseProvider
       
       try {
         // Use the dashboard endpoint which returns franchise info with role
+        // Remove /api suffix if it exists to avoid double /api/api
+        const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/api$/, '');
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/franchise/${franchiseSlug}/dashboard`,
+          `${baseUrl}/api/franchise/${franchiseSlug}/dashboard`,
           {
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -177,7 +179,6 @@ export function FranchiseProvider({ children, franchiseSlug }: FranchiseProvider
           
           // Also load branding separately if needed
           try {
-            const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/api$/, '');
             const brandingResponse = await fetch(`${baseUrl}/api/branding/${franchiseSlug}`);
             const brandingData = await brandingResponse.json();
             
