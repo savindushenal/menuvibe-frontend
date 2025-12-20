@@ -38,20 +38,21 @@ export function FranchiseSidebar({ franchiseSlug }: FranchiseSidebarProps) {
   console.log('FranchiseSidebar - myRole:', myRole, 'currentFranchise:', currentFranchise?.name, 'my_role from franchise:', currentFranchise?.my_role);
 
   // Define which roles can access which menu items
-  // Backend roles are: 'owner', 'admin', 'manager', 'viewer'
+  // Backend roles can be: 'owner', 'admin', 'manager', 'branch_manager', 'staff', 'viewer'
   const isOwnerOrAdmin = ['owner', 'admin'].includes(myRole || '');
-  const isManager = myRole === 'manager';
+  const isManager = ['manager', 'branch_manager'].includes(myRole || '');
+  const isStaff = myRole === 'staff';
   const isViewer = myRole === 'viewer';
 
   // All menu items with role restrictions
-  // Roles: 'owner', 'admin', 'manager', 'viewer' (from backend)
+  // Include both 'manager' and 'branch_manager' for manager-level access
   const allMenuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: `/${franchiseSlug}/dashboard`, roles: ['all'] },
     { icon: ChefHat, label: 'Master Menu', href: `/${franchiseSlug}/dashboard/menus/master`, roles: ['owner', 'admin'] },
     { icon: Tag, label: 'Offers', href: `/${franchiseSlug}/dashboard/menus/offers`, roles: ['owner', 'admin'] },
-    { icon: UtensilsCrossed, label: 'Branch Menus', href: `/${franchiseSlug}/dashboard/menus`, roles: ['owner', 'admin', 'manager'] },
+    { icon: UtensilsCrossed, label: 'Branch Menus', href: `/${franchiseSlug}/dashboard/menus`, roles: ['owner', 'admin', 'manager', 'branch_manager'] },
     { icon: Building2, label: 'Branches', href: `/${franchiseSlug}/dashboard/branches`, roles: ['owner', 'admin'] },
-    { icon: Users, label: 'Team', href: `/${franchiseSlug}/dashboard/team`, roles: ['owner', 'admin', 'manager'] },
+    { icon: Users, label: 'Team', href: `/${franchiseSlug}/dashboard/team`, roles: ['owner', 'admin', 'manager', 'branch_manager'] },
     { icon: HelpCircle, label: 'Help & Support', href: `/${franchiseSlug}/dashboard/help`, roles: ['all'] },
     { icon: Settings, label: 'Settings', href: `/${franchiseSlug}/dashboard/settings`, roles: ['owner', 'admin'] },
   ];
@@ -81,7 +82,6 @@ export function FranchiseSidebar({ franchiseSlug }: FranchiseSidebarProps) {
 
   const franchiseName = currentFranchise?.name || branding?.name || franchiseSlug;
   const franchiseLogo = currentFranchise?.logo_url || branding?.logo_url;
-  const brandColor = branding?.primary_color || '#10b981';
 
   const handleLogout = async () => {
     try {
@@ -123,8 +123,7 @@ export function FranchiseSidebar({ franchiseSlug }: FranchiseSidebarProps) {
                 />
               ) : (
                 <div 
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md text-white font-bold"
-                  style={{ backgroundColor: brandColor }}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md text-white font-bold bg-gradient-to-br from-emerald-500 to-emerald-600"
                 >
                   {franchiseName.charAt(0).toUpperCase()}
                 </div>
@@ -178,7 +177,6 @@ export function FranchiseSidebar({ franchiseSlug }: FranchiseSidebarProps) {
                   : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900",
                 collapsed && "justify-center px-0"
               )}
-              style={isActive ? { backgroundColor: `${brandColor}15`, color: brandColor } : undefined}
             >
               <item.icon className={cn(
                 "w-5 h-5 flex-shrink-0",
