@@ -37,13 +37,18 @@ interface TicketUpdate {
       id: number;
       name: string;
       email: string;
-    };
+    } | null;
+    user?: {
+      id: number;
+      name: string;
+      email: string;
+    } | null;
   };
   action: string;
-  actor: {
+  actor?: {
     id: number;
     name: string;
-  };
+  } | null;
 }
 
 interface StaffStatusChange {
@@ -177,16 +182,20 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
         if (showToasts) {
           const { ticket, action, actor } = data;
           let message = '';
+          const actorName = actor?.name || 'System';
           
           switch (action) {
+            case 'created':
+              message = `New ticket #${ticket.ticket_number}: ${ticket.subject}`;
+              break;
             case 'assigned':
-              message = `${actor.name} assigned ticket #${ticket.ticket_number}`;
+              message = `${actorName} assigned ticket #${ticket.ticket_number}`;
               break;
             case 'auto_assigned':
-              message = `Ticket #${ticket.ticket_number} auto-assigned to ${ticket.assignedTo?.name}`;
+              message = `Ticket #${ticket.ticket_number} auto-assigned to ${ticket.assignedTo?.name || 'staff'}`;
               break;
             case 'self_assigned':
-              message = `${actor.name} took ticket #${ticket.ticket_number}`;
+              message = `${actorName} took ticket #${ticket.ticket_number}`;
               break;
             case 'status_changed':
               message = `Ticket #${ticket.ticket_number} status changed to ${ticket.status}`;
@@ -195,7 +204,7 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
               message = `Ticket #${ticket.ticket_number} priority changed to ${ticket.priority}`;
               break;
             case 'new_message':
-              message = `${actor.name} replied to ticket #${ticket.ticket_number}`;
+              message = `${actorName} replied to ticket #${ticket.ticket_number}`;
               break;
             default:
               message = `Ticket #${ticket.ticket_number} was updated`;
