@@ -5,6 +5,7 @@ import { PremiumTemplate } from '@/components/templates/premium';
 import { ClassicTemplate } from '@/components/templates/classic';
 import { MinimalTemplate } from '@/components/templates/minimal';
 import { CustomTemplate } from '@/components/templates/custom';
+import { BaristaTemplate } from '@/components/templates/barista';
 import type { FranchiseInfo, LocationInfo, MenuItem, DesignTokens } from '@/components/templates/premium/types';
 
 interface FranchiseMenuClientProps {
@@ -43,6 +44,15 @@ function MenuContent({ franchise, location, menuItems }: FranchiseMenuClientProp
 
   // Switch between templates based on templateType
   switch (templateType) {
+    case 'barista':
+      return (
+        <BaristaTemplate
+          franchise={franchise}
+          location={location}
+          menuItems={menuItems}
+        />
+      );
+    
     case 'premium':
       return (
         <PremiumTemplate
