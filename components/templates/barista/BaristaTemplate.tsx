@@ -5,12 +5,17 @@ import { ShoppingBag, Star, Plus, Coffee, MapPin, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { BaristaTemplateProps } from './types';
 import Image from 'next/image';
+import BaristaLogo from './BaristaLogo';
+import CartSheet from './CartSheet';
+import SuccessScreen from './SuccessScreen';
 
 export function BaristaTemplate({ franchise, location, menuItems }: BaristaTemplateProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [cart, setCart] = useState<any[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [orderId, setOrderId] = useState('');
 
   // Get unique categories
   const categories = useMemo(() => {
@@ -31,6 +36,28 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
     if (hour < 12) return "Good Morning";
     if (hour < 17) return "Good Afternoon";
     return "Good Evening";
+  };
+
+  const handleUpdateQuantity = (itemId: string, newQuantity: number) => {
+    if (newQuantity === 0) {
+      setCart(cart.filter(item => item.item.id !== itemId));
+    } else {
+      setCart(cart.map(item => 
+        item.item.id === itemId ? { ...item, quantity: newQuantity } : item
+      ));
+    }
+  };
+
+  const handleConfirmOrder = () => {
+    const newOrderId = `ORD${Date.now().toString().slice(-6)}`;
+    setOrderId(newOrderId);
+    setIsCartOpen(false);
+    setIsSuccessOpen(true);
+    setCart([]);
+  };
+
+  const handleCloseSuccess = () => {
+    setIsSuccessOpen(false);
   };
 
   return (
@@ -55,7 +82,7 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
             {/* Logo */}
             <div className="flex items-center gap-2">
               {franchise.logoUrl ? (
-                <Image src={franchise.logoUrl} alt={franchise.name} width={120} height={40} className="h-8 w-auto" />
+                <BaristaLogo size="md" variant="dark" />
               ) : (
                 <div className="flex items-center gap-2">
                   <Coffee className="w-8 h-8 text-[#F26522]" />
@@ -256,24 +283,23 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
         </div>
       </footer>
 
-      {/* Simple Cart Sheet - Placeholder */}
-      {isCartOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50" onClick={() => setIsCartOpen(false)}>
-          <div 
-            className="absolute right-0 top-0 h-full w-full max-w-md bg-white p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-2xl font-bold mb-4">Your Cart ({cartCount})</h2>
-            {/* Cart items would go here */}
-            <button 
-              onClick={() => setIsCartOpen(false)}
-              className="mt-4 w-full bg-[#F26522] text-white py-3 rounded-lg"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Cart Sheet */}
+      <CartSheet
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cartItems={cart}
+        onUpdateQuantity={handleUpdateQuantity}
+        onConfirmOrder={handleConfirmOrder}
+        locationName={location.name}
+      />
+
+      {/* Success Screen */}
+      <SuccessScreen
+        isOpen={isSuccessOpen}
+        orderId={orderId}
+        onClose={handleCloseSuccess}
+        locationName={location.name}
+      />
     </div>
   );
 }
