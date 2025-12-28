@@ -113,7 +113,7 @@ export default function MasterMenuPreviewPage() {
     id: franchise.id,
     name: franchise.name,
     slug: franchise.slug,
-    logoUrl: franchise.logo_url,
+    logoUrl: franchise.logo_url || undefined,
     designTokens: franchise.design_tokens || {
       colors: {
         primary: '#F26522',
@@ -124,7 +124,7 @@ export default function MasterMenuPreviewPage() {
         accent: '#F26522',
       },
     },
-    templateType: franchise.template_type || 'premium',
+    templateType: (franchise.template_type || 'premium') as 'premium' | 'classic' | 'minimal' | 'custom' | 'barista',
   };
 
   const locationInfo = {
@@ -142,7 +142,7 @@ export default function MasterMenuPreviewPage() {
       name: item.name,
       price: parseFloat(item.price.toString()),
       description: item.description || '',
-      image: item.image_url,
+      image: item.image_url || undefined,
       category: category.name,
       isAvailable: item.is_available,
       customizations: [],
