@@ -155,11 +155,20 @@ export default function FranchiseMenusPage() {
                   <span>{getTotalItems(menu)} items</span>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => window.location.href = `/${franchiseSlug}/dashboard/menus/branch/${menu.id}`}
+                  >
                     <Edit className="w-3 h-3 mr-1" />
                     Edit
                   </Button>
-                  <Button variant="ghost" size="sm">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => window.location.href = `/${franchiseSlug}/menu/${menu.location.branch_id || menu.location.id}`}
+                  >
                     <Eye className="w-3 h-3 mr-1" />
                     Preview
                   </Button>
