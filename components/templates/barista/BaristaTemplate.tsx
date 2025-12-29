@@ -8,6 +8,7 @@ import Image from 'next/image';
 import BaristaLogo from './BaristaLogo';
 import CartSheet from './CartSheet';
 import SuccessScreen from './SuccessScreen';
+import ToastNotification from './ToastNotification';
 
 export function BaristaTemplate({ franchise, location, menuItems }: BaristaTemplateProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -16,6 +17,8 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [orderId, setOrderId] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   // Get unique categories
   const categories = useMemo(() => {
@@ -46,6 +49,27 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
         item.item.id === itemId ? { ...item, quantity: newQuantity } : item
       ));
     }
+  };
+
+  const handleAddToCart = (item: any) => {
+    // Check if item already exists in cart
+    const existingItem = cart.find(cartItem => cartItem.item.id === item.id);
+    
+    if (existingItem) {
+      // Increase quantity
+      setCart(cart.map(cartItem => 
+        cartItem.item.id === item.id 
+          ? { ...cartItem, quantity: cartItem.quantity + 1 }
+          : cartItem
+      ));
+    } else {
+      // Add new item
+      setCart([...cart, { item, quantity: 1, customizations: [] }]);
+    }
+    
+    // Show toast notification
+    setToastMessage(item.name);
+    setShowToast(true);
   };
 
   const handleConfirmOrder = () => {
@@ -258,7 +282,7 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        setCart([...cart, { item, quantity: 1, customizations: [] }]);
+                        handleAddToCart(item);
                       }}
                       className="bg-[#F26522] text-white p-2 rounded-full hover:bg-[#E55518] transition-colors"
                     >
@@ -300,6 +324,13 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
         orderId={orderId}
         onClose={handleCloseSuccess}
         locationName={location.name}
+      />
+
+      {/* Toast Notification */}
+      <ToastNotification
+        show={showToast}
+        message={toastMessage}
+        onClose={() => setShowToast(false)}
       />
     </div>
   );
