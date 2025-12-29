@@ -60,6 +60,7 @@ interface Menu {
     id: number;
     name: string;
     branch_code: string;
+    branch_id?: number | null;
   };
   categories: Category[];
 }
@@ -354,7 +355,7 @@ export default function BranchMenuEditPage() {
                             size="sm"
                             onClick={() => handleResetItem(item.id)}
                           >
-                            <RefreshCw className="h-3 h-3" />
+                            <RefreshCw className="h-3 w-3" />
                           </Button>
                         )}
                       </div>
