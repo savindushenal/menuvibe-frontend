@@ -378,19 +378,16 @@ export default function BranchMenuEditPage() {
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-neutral-600 mb-4">
-              QR code management for branch locations coming soon. For now, use the main 
-              <a href="/dashboard/endpoints" className="text-blue-600 underline ml-1">
-                Tables & QR Codes
-              </a> page.
+              Generate and manage QR codes for tables at {menu.location.name}.
             </p>
             <Button 
               onClick={() => {
                 setQrDialog(false);
-                router.push('/dashboard/endpoints');
+                router.push(`/${franchiseSlug}/dashboard`);
               }}
               className="w-full"
             >
-              Go to QR Codes
+              Go to Branch Dashboard
             </Button>
           </div>
         </DialogContent>
