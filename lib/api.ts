@@ -1653,7 +1653,7 @@ class ApiClient {
 
   // Public Menu APIs (for fetching menu by short code)
   async getPublicMenu(shortCode: string): Promise<ApiResponse> {
-    return this.request(`/menu/${shortCode}`);
+    return this.request(`/public/menu/endpoint/${shortCode}`);
   }
 
   async getPublicMenuData(shortCode: string): Promise<ApiResponse> {
