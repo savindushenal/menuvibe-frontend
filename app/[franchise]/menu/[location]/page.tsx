@@ -12,10 +12,12 @@ interface PageProps {
 // Fetch franchise and location data
 async function getFranchiseData(franchiseSlug: string, locationSlug: string) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  // Remove trailing /api if present to avoid duplication
+  const baseUrl = apiUrl.replace(/\/api\/?$/, '');
   
   try {
     // Fetch franchise branding
-    const franchiseRes = await fetch(`${apiUrl}/api/public/franchise/${franchiseSlug}`, {
+    const franchiseRes = await fetch(`${baseUrl}/api/public/franchise/${franchiseSlug}`, {
       next: { revalidate: 60 }, // Cache for 60 seconds
     });
     
@@ -26,7 +28,7 @@ async function getFranchiseData(franchiseSlug: string, locationSlug: string) {
     const franchiseData = await franchiseRes.json();
     
     // Fetch location menu
-    const menuRes = await fetch(`${apiUrl}/api/public/franchise/${franchiseSlug}/location/${locationSlug}/menu`, {
+    const menuRes = await fetch(`${baseUrl}/api/public/franchise/${franchiseSlug}/location/${locationSlug}/menu`, {
       next: { revalidate: 60 },
     });
     
