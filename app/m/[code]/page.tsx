@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { X, Loader2 } from 'lucide-react';
-import { apiClient } from '@/lib/api';
-import { TemplateRenderer, PublicMenuData } from './templates';
+import { BaristaTemplate } from '@/components/templates/barista';
+import { PremiumTemplate } from '@/components/templates/premium';
+import { ClassicTemplate } from '@/components/templates/classic';
+import { MinimalTemplate } from '@/components/templates/minimal';
+import type { FranchiseInfo, LocationInfo, MenuItem } from '@/components/templates/premium/types';
 
 function LoadingFallback() {
   return (
@@ -19,49 +22,38 @@ function LoadingFallback() {
 
 function PublicMenuContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const shortCode = params.code as string;
+  const tableNumber = searchParams?.get('table');
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [menuData, setMenuData] = useState<PublicMenuData | null>(null);
+  const [menuData, setMenuData] = useState<any>(null);
 
   useEffect(() => {
     loadMenu();
-    recordScan();
   }, [shortCode]);
 
   const loadMenu = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await apiClient.getPublicMenu(shortCode);
-      if (response.success && response.data) {
-        // Map API response to expected format
-        const apiData = response.data;
-        const mappedData: PublicMenuData = {
-          endpoint: apiData.endpoint,
-          template: apiData.template,
-          business: apiData.business || null,
-          categories: apiData.menu?.categories || [],
-          offers: apiData.offers || [],
-          overrides: apiData.menu?.overrides || {},
-        };
-        setMenuData(mappedData);
-      } else {
-        setError('Menu not found');
+      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/public/menu/endpoint/${shortCode}`);
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        setError(data.message || 'Menu not found');
+        return;
       }
+
+      setMenuData(data.data);
     } catch (err: any) {
+      console.error('Failed to load menu:', err);
       setError(err.message || 'Failed to load menu');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const recordScan = async () => {
-    try {
-      await apiClient.recordMenuScan(shortCode);
-    } catch {
-      // Silent fail for analytics
     }
   };
 
@@ -92,8 +84,86 @@ function PublicMenuContent() {
     );
   }
 
-  // Render using the template system
-  return <TemplateRenderer menuData={menuData} />;
+  // Transform API data to template format
+  const franchise: FranchiseInfo = {
+    id: menuData.franchise.id,
+    name: menuData.franchise.name,
+    slug: menuData.franchise.slug,
+    logoUrl: menuData.franchise.logo_url,
+    designTokens: menuData.franchise.design_tokens || {
+      colors: {
+        primary: '#F26522',
+        secondary: '#E53935',
+        background: '#FFF8F0',
+        dark: '#1A1A1A',
+        neutral: '#F5F5F5',
+        accent: '#F26522',
+      },
+    },
+    templateType: menuData.franchise.template_type || 'premium',
+  };
+
+  const location: LocationInfo = {
+    id: menuData.location.id,
+    name: menuData.location.name,
+    slug: menuData.location.slug,
+    address: menuData.location.address,
+    phone: menuData.location.phone,
+    hours: menuData.location.operating_hours,
+  };
+
+  const menuItems: MenuItem[] = (menuData.menu_items || []).map((item: any) => ({
+    id: item.id.toString(),
+    name: item.name,
+    price: parseFloat(item.price),
+    description: item.description || '',
+    image: item.image_url,
+    category: item.category?.name || 'Uncategorized',
+    isAvailable: item.is_available,
+    customizations: item.customizations || [],
+  }));
+
+  // Render appropriate template based on franchise template_type
+  const templateType = franchise.templateType || 'premium';
+
+  switch (templateType) {
+    case 'barista':
+      return (
+        <BaristaTemplate
+          franchise={franchise}
+          location={location}
+          menuItems={menuItems}
+          tableNumber={tableNumber || menuData.endpoint?.identifier}
+        />
+      );
+    
+    case 'classic':
+      return (
+        <ClassicTemplate
+          franchise={franchise}
+          location={location}
+          menuItems={menuItems}
+        />
+      );
+    
+    case 'minimal':
+      return (
+        <MinimalTemplate
+          franchise={franchise}
+          location={location}
+          menuItems={menuItems}
+        />
+      );
+    
+    default:
+      return (
+        <PremiumTemplate
+          franchise={franchise}
+          location={location}
+          menuItems={menuItems}
+        />
+      );
+  }
 }
 
 export default function PublicMenuPage() {
