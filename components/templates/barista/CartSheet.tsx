@@ -147,16 +147,50 @@ export default function CartSheet({
                 </div>
               ) : (
                 <>
-                  {/* 🔐 OTP Verification - Shows first when cart has items */}
+                  {/* 🔐 Optional Loyalty Verification */}
                   {showOtpVerification && !loyaltySession && franchiseSlug === 'barista' && (
                     <div className="mb-6">
-                      <LoyaltyOtpVerification
-                        franchiseSlug={franchiseSlug}
-                        onVerified={(data) => {
-                          setLoyaltySession(data);
-                          setShowOtpVerification(false);
-                        }}
-                      />
+                      <div className="bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl">🎁</span>
+                            <div>
+                              <h3 className="font-semibold text-orange-900">Unlock Loyalty Rewards</h3>
+                              <p className="text-xs text-orange-700">Earn points & save payment methods</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setShowOtpVerification(false)}
+                            className="flex-1 px-4 py-2 bg-white border border-orange-300 text-orange-700 rounded-lg hover:bg-orange-50 transition-colors text-sm font-medium"
+                          >
+                            Skip for now
+                          </button>
+                          <button
+                            onClick={() => {
+                              // Trigger OTP modal/expansion
+                              const otpSection = document.getElementById('otp-verification-section');
+                              if (otpSection) otpSection.style.display = 'block';
+                            }}
+                            className="flex-1 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-colors text-sm font-medium"
+                          >
+                            Verify Loyalty
+                          </button>
+                        </div>
+
+                        {/* Expandable OTP Section */}
+                        <div id="otp-verification-section" style={{ display: 'none' }} className="mt-4">
+                          <LoyaltyOtpVerification
+                            franchiseSlug={franchiseSlug}
+                            onVerified={(data) => {
+                              setLoyaltySession(data);
+                              setShowOtpVerification(false);
+                            }}
+                          />
+                        </div>
+                      </div>
                     </div>
                   )}
 
