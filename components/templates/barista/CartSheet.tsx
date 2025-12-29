@@ -364,44 +364,44 @@ export default function CartSheet({
                     <Lock className="w-4 h-4 lg:w-5 lg:h-5 text-gray-400" />
                   </div>
 
-                  {/* Payment Method Selection - Only for non-guest users */}
-                  {!loyaltySession.isGuest && (
-                    <div className="space-y-2">
-                      <label className="block text-sm font-semibold text-[#1A1A1A]">Payment Method</label>
-                      
-                      {/* Saved Cards (if available) */}
-                      {loyaltySession.savedCards && loyaltySession.savedCards.length > 0 && (
-                        <div className="space-y-2">
-                          {loyaltySession.savedCards.map((card: any) => (
-                            <button
-                              key={card.id}
-                              onClick={() => setSelectedPaymentMethod(`card_${card.id}`)}
-                              className={`w-full p-3 rounded-xl border-2 transition-all ${
-                                selectedPaymentMethod === `card_${card.id}`
-                                  ? 'border-orange-500 bg-orange-50'
-                                  : 'border-gray-200 bg-white hover:border-orange-300'
-                              }`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <CreditCard className="w-5 h-5 text-[#F26522]" />
-                                  <div className="text-left">
-                                    <p className="font-medium">{card.brand} •••• {card.last4}</p>
-                                    <p className="text-xs text-gray-500">
-                                      Expires {card.exp_month}/{card.exp_year}
-                                    </p>
-                                  </div>
+                  {/* Payment Method Selection */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-[#1A1A1A]">Payment Method</label>
+                    
+                    {/* Saved Cards (only for loyalty members with saved cards) */}
+                    {!loyaltySession.isGuest && loyaltySession.savedCards && loyaltySession.savedCards.length > 0 && (
+                      <div className="space-y-2">
+                        {loyaltySession.savedCards.map((card: any) => (
+                          <button
+                            key={card.id}
+                            onClick={() => setSelectedPaymentMethod(`card_${card.id}`)}
+                            className={`w-full p-3 rounded-xl border-2 transition-all ${
+                              selectedPaymentMethod === `card_${card.id}`
+                                ? 'border-orange-500 bg-orange-50'
+                                : 'border-gray-200 bg-white hover:border-orange-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <CreditCard className="w-5 h-5 text-[#F26522]" />
+                                <div className="text-left">
+                                  <p className="font-medium">{card.brand} •••• {card.last4}</p>
+                                  <p className="text-xs text-gray-500">
+                                    Expires {card.exp_month}/{card.exp_year}
+                                  </p>
                                 </div>
-                                {card.is_default && (
-                                  <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">Default</span>
-                                )}
                               </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                              {card.is_default && (
+                                <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">Default</span>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
-                      {/* Add New Card Button */}
+                    {/* Add New Card Button - only for loyalty members */}
+                    {!loyaltySession.isGuest && (
                       <button
                         onClick={() => setShowAddCard(true)}
                         className="w-full p-3 rounded-xl border-2 border-dashed border-orange-300 bg-orange-50 hover:bg-orange-100 transition-all"
@@ -411,59 +411,77 @@ export default function CartSheet({
                           <p className="font-medium text-orange-600">Add New Card</p>
                         </div>
                       </button>
+                    )}
 
-                      {/* Demo Card Option */}
-                      <button
-                        onClick={() => setSelectedPaymentMethod('demo_card')}
-                        className={`w-full p-3 rounded-xl border-2 transition-all ${
-                          selectedPaymentMethod === 'demo_card'
-                            ? 'border-orange-500 bg-orange-50'
-                            : 'border-gray-200 bg-white hover:border-orange-300'
-                        }`}
-                      >
+                    {/* Apple Pay / Google Pay Option */}
+                    <button
+                      onClick={() => setSelectedPaymentMethod('digital_wallet')}
+                      className={`w-full p-3 rounded-xl border-2 transition-all ${
+                        selectedPaymentMethod === 'digital_wallet'
+                          ? 'border-orange-500 bg-orange-50'
+                          : 'border-gray-200 bg-white hover:border-orange-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-5 h-5 flex items-center justify-center text-lg">📱</div>
+                        <div className="text-left">
+                          <p className="font-medium">Apple Pay / Google Pay</p>
+                          <p className="text-xs text-gray-500">Quick digital payment</p>
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Demo Card Option */}
+                    <button
+                      onClick={() => setSelectedPaymentMethod('demo_card')}
+                      className={`w-full p-3 rounded-xl border-2 transition-all ${
+                        selectedPaymentMethod === 'demo_card'
+                          ? 'border-orange-500 bg-orange-50'
+                          : 'border-gray-200 bg-white hover:border-orange-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <CreditCard className="w-5 h-5 text-[#F26522]" />
+                        <div className="text-left">
+                          <p className="font-medium">Demo Card •••• 4242</p>
+                          <p className="text-xs text-gray-500">Visa - For testing only</p>
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Cash Payment Option */}
+                    <button
+                      onClick={() => setSelectedPaymentMethod('cash')}
+                      className={`w-full p-3 rounded-xl border-2 transition-all ${
+                        selectedPaymentMethod === 'cash'
+                          ? 'border-orange-500 bg-orange-50'
+                          : 'border-gray-200 bg-white hover:border-orange-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <CreditCard className="w-5 h-5 text-[#F26522]" />
+                          <div className="w-5 h-5 flex items-center justify-center">💵</div>
                           <div className="text-left">
-                            <p className="font-medium">Demo Card •••• 4242</p>
-                            <p className="text-xs text-gray-500">Visa - For testing only</p>
+                            <p className="font-medium">Pay at Counter</p>
+                            <p className="text-xs text-gray-500">Cash or Card</p>
                           </div>
                         </div>
-                      </button>
-
-                      {/* Cash Payment Option */}
-                      <button
-                        onClick={() => setSelectedPaymentMethod('cash')}
-                        className={`w-full p-3 rounded-xl border-2 transition-all ${
-                          selectedPaymentMethod === 'cash'
-                            ? 'border-orange-500 bg-orange-50'
-                            : 'border-gray-200 bg-white hover:border-orange-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-5 h-5 flex items-center justify-center">💵</div>
-                            <div className="text-left">
-                              <p className="font-medium">Pay at Counter</p>
-                              <p className="text-xs text-gray-500">Cash or Card</p>
-                            </div>
+                        {selectedPaymentMethod === 'cash' && (
+                          <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                            <motion.svg
+                              className="w-3 h-3 text-white"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="3"
+                            >
+                              <path d="M5 12l5 5L20 7" />
+                            </motion.svg>
                           </div>
-                          {selectedPaymentMethod === 'cash' && (
-                            <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                              <motion.svg
-                                className="w-3 h-3 text-white"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="3"
-                              >
-                                <path d="M5 12l5 5L20 7" />
-                              </motion.svg>
-                            </div>
-                          )}
-                        </div>
-                      </button>
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -505,11 +523,11 @@ export default function CartSheet({
                     </span>
                   </div>
                   
-                  {/* Guest Payment Notice */}
-                  {loyaltySession.isGuest && (
-                    <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                      <p className="text-sm text-gray-700 text-center">
-                        💵 Payment at counter only for guest orders
+                  {/* Payment method selection reminder for guests */}
+                  {loyaltySession.isGuest && !selectedPaymentMethod && (
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800 text-center">
+                        💳 Select your payment method above to continue
                       </p>
                     </div>
                   )}
@@ -527,16 +545,17 @@ export default function CartSheet({
             </div>
 
             {/* Slide to Confirm (mobile) / Button (desktop) */}
-            {cartItems.length > 0 && loyaltySession && (loyaltySession.isGuest || selectedPaymentMethod) && !showAddCard && (
+            {cartItems.length > 0 && loyaltySession && selectedPaymentMethod && !showAddCard && (
               <div className="p-4 lg:p-6 bg-white border-t border-gray-100">
                 {/* Payment Summary */}
                 <div className="mb-3 p-3 bg-orange-50 rounded-lg">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-orange-900">
-                      {loyaltySession.isGuest ? '💵 Pay at Counter (Guest)' :
-                       selectedPaymentMethod === 'cash' ? '💵 Pay at Counter' : 
+                      {selectedPaymentMethod === 'cash' ? '💵 Pay at Counter' :
+                       selectedPaymentMethod === 'digital_wallet' ? '📱 Apple/Google Pay' :
                        selectedPaymentMethod === 'demo_card' ? '💳 Demo Card ••••4242' :
-                       '💳 Saved Card'}
+                       selectedPaymentMethod.startsWith('card_') ? '💳 Saved Card' :
+                       '💳 Card Payment'}
                     </span>
                     <span className="font-bold text-orange-900">Rs. {calculateTotal().toFixed(2)}</span>
                   </div>
