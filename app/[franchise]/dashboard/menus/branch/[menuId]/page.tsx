@@ -237,13 +237,13 @@ export default function BranchMenuEditPage() {
               {changes.size} unsaved change{changes.size !== 1 ? 's' : ''}
             </Badge>
           )}
-          <Button variant="outline" onClick={() => setQrDialog(true)}>
+          <Button variant="outline" onClick={() => router.push(`/${franchiseSlug}/dashboard/tables-qr`)}>
             <QrCode className="h-4 w-4 mr-2" />
             QR Codes
           </Button>
           <Button
             variant="outline"
-            onClick={() => router.push(`/${franchiseSlug}/dashboard/menus/master/${menuId}/preview`)}
+            onClick={() => router.push(`/${franchiseSlug}/menu/${menu.location.branch_id || menu.location.id}`)}
           >
             <Eye className="h-4 w-4 mr-2" />
             Preview

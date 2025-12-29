@@ -15,6 +15,7 @@ import {
   ChefHat,
   Tag,
   HelpCircle,
+  QrCode,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useParams, useRouter } from 'next/navigation';
@@ -51,6 +52,7 @@ export function FranchiseSidebar({ franchiseSlug }: FranchiseSidebarProps) {
     { icon: ChefHat, label: 'Master Menu', href: `/${franchiseSlug}/dashboard/menus/master`, roles: ['owner', 'admin'] },
     { icon: Tag, label: 'Offers', href: `/${franchiseSlug}/dashboard/menus/offers`, roles: ['owner', 'admin'] },
     { icon: UtensilsCrossed, label: 'Branch Menus', href: `/${franchiseSlug}/dashboard/menus`, roles: ['owner', 'admin', 'manager', 'branch_manager'] },
+    { icon: QrCode, label: 'Tables & QR', href: `/${franchiseSlug}/dashboard/tables-qr`, roles: ['owner', 'admin', 'manager', 'branch_manager'] },
     { icon: Building2, label: 'Branches', href: `/${franchiseSlug}/dashboard/branches`, roles: ['owner', 'admin'] },
     { icon: Users, label: 'Team', href: `/${franchiseSlug}/dashboard/team`, roles: ['owner', 'admin', 'manager', 'branch_manager'] },
     { icon: HelpCircle, label: 'Help & Support', href: `/${franchiseSlug}/dashboard/help`, roles: ['all'] },
