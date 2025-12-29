@@ -30,7 +30,8 @@ import {
   Sparkles,
   Zap,
   Calendar,
-  Save
+  Save,
+  Eye
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -317,6 +318,13 @@ export default function MasterMenuEditorPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => router.push(`/${franchiseSlug}/dashboard/menus/master/${menuId}/preview`)}
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            Preview
+          </Button>
           <Button variant="outline" onClick={() => setSyncDialog(true)}>
             <Building2 className="h-4 w-4 mr-2" />
             Sync Settings
@@ -535,6 +543,10 @@ export default function MasterMenuEditorPage() {
                                       <DropdownMenuItem onClick={() => setItemDialog({ open: true, item, categoryId: category.id })}>
                                         <Edit className="h-4 w-4 mr-2" />
                                         Edit Item
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => router.push(`/${franchiseSlug}/dashboard/menus/master/${menuId}/preview`)}>
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        Preview Menu
                                       </DropdownMenuItem>
                                       <DropdownMenuSeparator />
                                       <DropdownMenuItem 
