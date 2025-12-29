@@ -31,10 +31,10 @@ export default function ToastNotification({
     <AnimatePresence>
       {show && (
         <motion.div
-          initial={{ opacity: 0, y: -100 }}
+          initial={{ opacity: 0, y: 100 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -100 }}
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-md"
+          exit={{ opacity: 0, y: 100 }}
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-md"
         >
           <div className="bg-white rounded-xl shadow-2xl border-2 border-green-500 overflow-hidden">
             <div className="flex items-center gap-3 p-4">
