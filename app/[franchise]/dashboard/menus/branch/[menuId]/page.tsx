@@ -244,7 +244,7 @@ export default function BranchMenuEditPage() {
           </Button>
           <Button
             variant="outline"
-            onClick={() => router.push(`/${franchiseSlug}/menu/${menu.location.branch_id || menu.location.id}`)}
+            onClick={() => router.push(`/${franchiseSlug}/menu/${menu.location.id}`)}
           >
             <Eye className="h-4 w-4 mr-2" />
             Preview
