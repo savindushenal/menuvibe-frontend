@@ -187,10 +187,21 @@ export default function BranchMenuEditPage() {
     return (
       <Card className="border-red-200 bg-red-50">
         <CardContent className="pt-6">
-          <p className="text-red-600">Menu not found</p>
-          <Button variant="outline" onClick={() => router.back()} className="mt-4">
-            Go Back
-          </Button>
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-red-900 mb-2">Menu Not Found</h3>
+            <p className="text-red-600 mb-4">
+              This menu hasn't been synced to the branch location yet. 
+              Please sync your Master Menu to create branch menus first.
+            </p>
+            <div className="flex gap-2 justify-center">
+              <Button variant="outline" onClick={() => router.back()}>
+                Go Back
+              </Button>
+              <Button onClick={() => router.push(`/${franchiseSlug}/dashboard/menus/master`)}>
+                Go to Master Menu
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
