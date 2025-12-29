@@ -291,6 +291,7 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
         onUpdateQuantity={handleUpdateQuantity}
         onConfirmOrder={handleConfirmOrder}
         locationName={location.name}
+        franchiseSlug="barista"
       />
 
       {/* Success Screen */}

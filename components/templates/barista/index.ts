@@ -6,3 +6,5 @@ export type { BaristaTemplateProps } from './types';
 export { default as BaristaLogo } from './BaristaLogo';
 export { default as CartSheet } from './CartSheet';
 export { default as SuccessScreen } from './SuccessScreen';
+export { default as LoyaltyOtpVerification } from './LoyaltyOtpVerification';
+export { default as LoyaltySessionDisplay } from './LoyaltySessionDisplay';

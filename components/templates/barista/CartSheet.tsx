@@ -4,6 +4,8 @@ import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-mo
 import { X, MapPin, CreditCard, Lock, Plus, Minus, ChevronRight, Sparkles } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
+import LoyaltyOtpVerification from './LoyaltyOtpVerification';
+import LoyaltySessionDisplay from './LoyaltySessionDisplay';
 
 interface CartItem {
   item: any;
@@ -18,6 +20,7 @@ interface CartSheetProps {
   onUpdateQuantity: (itemId: string, quantity: number) => void;
   onConfirmOrder: () => void;
   locationName?: string;
+  franchiseSlug?: string;
 }
 
 export default function CartSheet({
@@ -26,10 +29,13 @@ export default function CartSheet({
   cartItems,
   onUpdateQuantity,
   onConfirmOrder,
-  locationName = 'Table 12'
+  locationName = 'Table 12',
+  franchiseSlug = 'barista'
 }: CartSheetProps) {
   const [isConfirming, setIsConfirming] = useState(false);
   const [sliderWidth, setSliderWidth] = useState(0);
+  const [loyaltySession, setLoyaltySession] = useState<any>(null);
+  const [showOtpVerification, setShowOtpVerification] = useState(true);
   const sliderRef = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
 
@@ -140,7 +146,32 @@ export default function CartSheet({
                   <p className="text-sm mt-2">Add some delicious items to get started</p>
                 </div>
               ) : (
-                <div className="space-y-4 lg:space-y-6">
+                <>
+                  {/* 🔐 OTP Verification - Shows first when cart has items */}
+                  {showOtpVerification && !loyaltySession && franchiseSlug === 'barista' && (
+                    <div className="mb-6">
+                      <LoyaltyOtpVerification
+                        franchiseSlug={franchiseSlug}
+                        onVerified={(data) => {
+                          setLoyaltySession(data);
+                          setShowOtpVerification(false);
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* ✅ Show loyalty info after verification */}
+                  {loyaltySession && (
+                    <div className="mb-6">
+                      <LoyaltySessionDisplay
+                        loyaltyInfo={loyaltySession.loyaltyInfo}
+                        savedCards={loyaltySession.savedCards}
+                        mobileNumber={loyaltySession.mobileNumber}
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-4 lg:space-y-6">
                   {cartItems.map((cartItem) => {
                     const itemTotal = cartItem.item.price * cartItem.quantity;
 
@@ -196,6 +227,7 @@ export default function CartSheet({
                     );
                   })}
                 </div>
+                </>
               )}
 
               {/* Order Details */}
