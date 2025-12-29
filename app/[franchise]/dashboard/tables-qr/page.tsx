@@ -87,6 +87,13 @@ export default function FranchiseTablesQRPage() {
   const [selectedEndpoint, setSelectedEndpoint] = useState<MenuEndpoint | null>(null);
   const [qrCodeData, setQrCodeData] = useState<{ url: string; short_url: string; qr_code_url: string } | null>(null);
 
+  // Loading states for actions
+  const [isCreating, setIsCreating] = useState(false);
+  const [isBulkCreating, setIsBulkCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
   const [formData, setFormData] = useState<{
     name: string;
     type: EndpointType;
@@ -136,6 +143,7 @@ export default function FranchiseTablesQRPage() {
 
   const handleCreate = async () => {
     try {
+      setIsCreating(true);
       const response = await api.post(`/franchise/${franchiseSlug}/endpoints`, formData);
       if (response.data.success) {
         toast.success('Endpoint created successfully');
@@ -145,11 +153,14 @@ export default function FranchiseTablesQRPage() {
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to create endpoint');
+    } finally {
+      setIsCreating(false);
     }
   };
 
   const handleBulkCreate = async () => {
     try {
+      setIsBulkCreating(true);
       const response = await api.post(`/franchise/${franchiseSlug}/endpoints/bulk`, bulkFormData);
       if (response.data.success) {
         const count = response.data.data?.length || bulkFormData.count;
@@ -160,12 +171,15 @@ export default function FranchiseTablesQRPage() {
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to create endpoints');
+    } finally {
+      setIsBulkCreating(false);
     }
   };
 
   const handleUpdate = async () => {
     if (!selectedEndpoint) return;
     try {
+      setIsUpdating(true);
       const response = await api.put(`/franchise/${franchiseSlug}/endpoints/${selectedEndpoint.id}`, formData);
       if (response.data.success) {
         toast.success('Endpoint updated successfully');
@@ -174,12 +188,15 @@ export default function FranchiseTablesQRPage() {
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update endpoint');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   const handleDelete = async () => {
     if (!selectedEndpoint) return;
     try {
+      setIsDeleting(true);
       const response = await api.delete(`/franchise/${franchiseSlug}/endpoints/${selectedEndpoint.id}`);
       if (response.data.success) {
         toast.success('Endpoint deleted successfully');
@@ -189,6 +206,8 @@ export default function FranchiseTablesQRPage() {
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to delete endpoint');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -217,6 +236,7 @@ export default function FranchiseTablesQRPage() {
   const handleRegenerateQR = async () => {
     if (!selectedEndpoint) return;
     try {
+      setIsRegenerating(true);
       const response = await api.post(`/franchise/${franchiseSlug}/endpoints/${selectedEndpoint.id}/qr/regenerate`);
       if (response.data.success) {
         toast.success('QR code regenerated successfully');
@@ -225,6 +245,8 @@ export default function FranchiseTablesQRPage() {
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to regenerate QR code');
+    } finally {
+      setIsRegenerating(false);
     }
   };
 
@@ -504,11 +526,11 @@ export default function FranchiseTablesQRPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+            <Button variant="outline" onClick={() => setIsCreateOpen(false)} disabled={isCreating}>
               Cancel
             </Button>
-            <Button onClick={handleCreate} disabled={!formData.name || !formData.identifier}>
-              Create Endpoint
+            <Button onClick={handleCreate} disabled={!formData.name || !formData.identifier || isCreating}>
+              {isCreating ? 'Creating...' : 'Create Endpoint'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -561,11 +583,11 @@ export default function FranchiseTablesQRPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+            <Button variant="outline" onClick={() => setIsEditOpen(false)} disabled={isUpdating}>
               Cancel
             </Button>
-            <Button onClick={handleUpdate}>
-              Save Changes
+            <Button onClick={handleUpdate} disabled={isUpdating}>
+              {isUpdating ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -628,11 +650,11 @@ export default function FranchiseTablesQRPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsBulkCreateOpen(false)}>
+            <Button variant="outline" onClick={() => setIsBulkCreateOpen(false)} disabled={isBulkCreating}>
               Cancel
             </Button>
-            <Button onClick={handleBulkCreate}>
-              Create {bulkFormData.count} Endpoints
+            <Button onClick={handleBulkCreate} disabled={isBulkCreating}>
+              {isBulkCreating ? 'Creating...' : `Create ${bulkFormData.count} Endpoints`}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -648,11 +670,11 @@ export default function FranchiseTablesQRPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDeleteOpen(false)} disabled={isDeleting}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete
+            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -713,9 +735,9 @@ export default function FranchiseTablesQRPage() {
                   <Download className="h-4 w-4 mr-2" />
                   Download
                 </Button>
-                <Button variant="outline" className="flex-1" onClick={handleRegenerateQR}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Regenerate
+                <Button variant="outline" className="flex-1" onClick={handleRegenerateQR} disabled={isRegenerating}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isRegenerating ? 'animate-spin' : ''}`} />
+                  {isRegenerating ? 'Regenerating...' : 'Regenerate'}
                 </Button>
               </div>
             </div>
