@@ -40,7 +40,7 @@ function PublicMenuContent() {
       setError(null);
       
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/public/menu/endpoint/${shortCode}`);
+      const response = await fetch(`${apiUrl}/public/menu/endpoint/${shortCode}`);
       const data = await response.json();
       
       if (!response.ok || !data.success) {
