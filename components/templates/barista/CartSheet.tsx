@@ -36,6 +36,7 @@ export default function CartSheet({
   const [sliderWidth, setSliderWidth] = useState(0);
   const [loyaltySession, setLoyaltySession] = useState<any>(null);
   const [showOtpVerification, setShowOtpVerification] = useState(true);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('cash');
   const sliderRef = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
 
@@ -147,55 +148,100 @@ export default function CartSheet({
                 </div>
               ) : (
                 <>
-                  {/* 🔐 Optional Loyalty Verification */}
-                  {showOtpVerification && !loyaltySession && franchiseSlug === 'barista' && (
+                  {/* 🔐 Required Loyalty Verification - Must complete before checkout */}
+                  {!loyaltySession && franchiseSlug === 'barista' && (
                     <div className="mb-6">
-                      <div className="bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
+                      <div className="bg-gradient-to-r from-orange-50 to-orange-100 border-2 border-orange-300 rounded-xl p-5 shadow-sm">
+                        <div className="flex items-start gap-3 mb-4">
+                          <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
                             <span className="text-2xl">🎁</span>
-                            <div>
-                              <h3 className="font-semibold text-orange-900">Unlock Loyalty Rewards</h3>
-                              <p className="text-xs text-orange-700">Earn points & save payment methods</p>
-                            </div>
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-orange-900 text-lg">Verify Your Number</h3>
+                            <p className="text-sm text-orange-700 mt-1">
+                              Quick verification to unlock rewards & faster checkout
+                            </p>
                           </div>
                         </div>
-                        
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setShowOtpVerification(false)}
-                            className="flex-1 px-4 py-2 bg-white border border-orange-300 text-orange-700 rounded-lg hover:bg-orange-50 transition-colors text-sm font-medium"
-                          >
-                            Skip for now
-                          </button>
-                          <button
-                            onClick={() => {
-                              // Trigger OTP modal/expansion
-                              const otpSection = document.getElementById('otp-verification-section');
-                              if (otpSection) otpSection.style.display = 'block';
-                            }}
-                            className="flex-1 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-colors text-sm font-medium"
-                          >
-                            Verify Loyalty
-                          </button>
-                        </div>
 
-                        {/* Expandable OTP Section */}
-                        <div id="otp-verification-section" style={{ display: 'none' }} className="mt-4">
-                          <LoyaltyOtpVerification
-                            franchiseSlug={franchiseSlug}
-                            onVerified={(data) => {
-                              setLoyaltySession(data);
-                              setShowOtpVerification(false);
-                            }}
-                          />
-                        </div>
+                        {showOtpVerification ? (
+                          <>
+                            <LoyaltyOtpVerification
+                              franchiseSlug={franchiseSlug}
+                              onVerified={(data) => {
+                                setLoyaltySession(data);
+                                setShowOtpVerification(false);
+                              }}
+                            />
+                            
+                            {/* Quick Actions */}
+                            <div className="mt-4 p-3 bg-white rounded-lg border border-orange-200">
+                              <p className="text-xs font-semibold text-orange-900 mb-2">🚀 Quick Actions:</p>
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  onClick={() => {
+                                    // Auto-fill demo number
+                                    const mobileInput = document.querySelector('input[type="tel"]') as HTMLInputElement;
+                                    if (mobileInput) {
+                                      mobileInput.value = '0771234567';
+                                      mobileInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                    }
+                                  }}
+                                  className="text-xs px-3 py-1.5 bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200 transition-colors font-medium"
+                                >
+                                  Use Demo: 0771234567
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const mobileInput = document.querySelector('input[type="tel"]') as HTMLInputElement;
+                                    if (mobileInput) {
+                                      mobileInput.value = '0777654321';
+                                      mobileInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                    }
+                                  }}
+                                  className="text-xs px-3 py-1.5 bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200 transition-colors font-medium"
+                                >
+                                  Use Demo: 0777654321
+                                </button>
+                              </div>
+                              <p className="text-xs text-orange-600 mt-2">💡 OTP will be: 123456</p>
+                            </div>
+
+                            {/* Guest Checkout Option */}
+                            <div className="mt-4">
+                              <button
+                                onClick={() => {
+                                  // Create guest session without loyalty
+                                  setLoyaltySession({
+                                    mobileNumber: 'guest',
+                                    loyaltyInfo: null,
+                                    savedCards: [],
+                                    sessionToken: 'guest_session',
+                                    isGuest: true,
+                                  });
+                                  setShowOtpVerification(false);
+                                }}
+                                className="w-full text-sm text-orange-700 hover:text-orange-900 underline font-medium"
+                              >
+                                Continue as Guest (No Rewards)
+                              </button>
+                            </div>
+                          </>
+                        ) : null}
                       </div>
                     </div>
                   )}
 
-                  {/* ✅ Show loyalty info after verification */}
-                  {loyaltySession && (
+                  {/* ✅ Show loyalty info or guest notice after verification */}
+                  {loyaltySession && loyaltySession.isGuest && (
+                    <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                      <p className="text-sm text-gray-700">
+                        👤 <strong>Guest Checkout</strong> - You won't earn loyalty points on this order.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {loyaltySession && !loyaltySession.isGuest && (
                     <div className="mb-6">
                       <LoyaltySessionDisplay
                         loyaltyInfo={loyaltySession.loyaltyInfo}
@@ -265,7 +311,7 @@ export default function CartSheet({
               )}
 
               {/* Order Details */}
-              {cartItems.length > 0 && (
+              {cartItems.length > 0 && loyaltySession && (
                 <div className="mt-6 lg:mt-8 space-y-3 lg:space-y-4">
                   <h3 className="font-semibold text-[#1A1A1A] lg:text-lg">Order Details</h3>
 
@@ -280,31 +326,98 @@ export default function CartSheet({
                     <Lock className="w-4 h-4 lg:w-5 lg:h-5 text-gray-400" />
                   </div>
 
-                  <div className="flex items-center justify-between p-3 lg:p-4 bg-[#FFF8F0] rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <CreditCard className="w-5 h-5 lg:w-6 lg:h-6 text-[#F26522]" />
-                      <div>
-                        <p className="font-medium lg:text-lg">Pay at Counter</p>
-                        <p className="text-sm text-gray-500">Cash or Card accepted</p>
+                  {/* Payment Method Selection */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-[#1A1A1A]">Payment Method</label>
+                    
+                    {/* Saved Cards (if available) */}
+                    {loyaltySession.savedCards && loyaltySession.savedCards.length > 0 && (
+                      <div className="space-y-2">
+                        {loyaltySession.savedCards.map((card: any) => (
+                          <button
+                            key={card.id}
+                            onClick={() => setSelectedPaymentMethod(`card_${card.id}`)}
+                            className={`w-full p-3 rounded-xl border-2 transition-all ${
+                              selectedPaymentMethod === `card_${card.id}`
+                                ? 'border-orange-500 bg-orange-50'
+                                : 'border-gray-200 bg-white hover:border-orange-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <CreditCard className="w-5 h-5 text-[#F26522]" />
+                                <div className="text-left">
+                                  <p className="font-medium">{card.brand} •••• {card.last4}</p>
+                                  <p className="text-xs text-gray-500">
+                                    Expires {card.exp_month}/{card.exp_year}
+                                  </p>
+                                </div>
+                              </div>
+                              {card.is_default && (
+                                <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">Default</span>
+                              )}
+                            </div>
+                          </button>
+                        ))}
                       </div>
-                    </div>
-                    <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-full bg-green-500 flex items-center justify-center">
-                      <motion.svg
-                        className="w-3 h-3 lg:w-4 lg:h-4 text-white"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                      >
-                        <path d="M5 12l5 5L20 7" />
-                      </motion.svg>
-                    </div>
+                    )}
+
+                    {/* Demo Card Option */}
+                    <button
+                      onClick={() => setSelectedPaymentMethod('demo_card')}
+                      className={`w-full p-3 rounded-xl border-2 transition-all ${
+                        selectedPaymentMethod === 'demo_card'
+                          ? 'border-orange-500 bg-orange-50'
+                          : 'border-gray-200 bg-white hover:border-orange-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <CreditCard className="w-5 h-5 text-[#F26522]" />
+                        <div className="text-left">
+                          <p className="font-medium">Demo Card •••• 4242</p>
+                          <p className="text-xs text-gray-500">Visa - For testing only</p>
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Cash Payment Option */}
+                    <button
+                      onClick={() => setSelectedPaymentMethod('cash')}
+                      className={`w-full p-3 rounded-xl border-2 transition-all ${
+                        selectedPaymentMethod === 'cash'
+                          ? 'border-orange-500 bg-orange-50'
+                          : 'border-gray-200 bg-white hover:border-orange-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-5 h-5 flex items-center justify-center">💵</div>
+                          <div className="text-left">
+                            <p className="font-medium">Pay at Counter</p>
+                            <p className="text-xs text-gray-500">Cash or Card</p>
+                          </div>
+                        </div>
+                        {selectedPaymentMethod === 'cash' && (
+                          <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                            <motion.svg
+                              className="w-3 h-3 text-white"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="3"
+                            >
+                              <path d="M5 12l5 5L20 7" />
+                            </motion.svg>
+                          </div>
+                        )}
+                      </div>
+                    </button>
                   </div>
                 </div>
               )}
 
               {/* Summary */}
-              {cartItems.length > 0 && (
+              {cartItems.length > 0 && loyaltySession && (
                 <div className="mt-6 lg:mt-8 pt-4 border-t border-gray-200">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-gray-500 lg:text-lg">Subtotal</span>
@@ -325,8 +438,25 @@ export default function CartSheet({
             </div>
 
             {/* Slide to Confirm (mobile) / Button (desktop) */}
-            {cartItems.length > 0 && (
+            {cartItems.length > 0 && loyaltySession && selectedPaymentMethod && (
               <div className="p-4 lg:p-6 bg-white border-t border-gray-100">
+                {/* Payment Summary */}
+                <div className="mb-3 p-3 bg-orange-50 rounded-lg">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-orange-900">
+                      {selectedPaymentMethod === 'cash' ? '💵 Pay at Counter' : 
+                       selectedPaymentMethod === 'demo_card' ? '💳 Demo Card ••••4242' :
+                       '💳 Saved Card'}
+                    </span>
+                    <span className="font-bold text-orange-900">Rs. {calculateTotal().toFixed(2)}</span>
+                  </div>
+                  {!loyaltySession.isGuest && loyaltySession.loyaltyInfo && (
+                    <p className="text-xs text-orange-700 mt-1">
+                      +{Math.floor(calculateTotal() / 10)} loyalty points will be added
+                    </p>
+                  )}
+                </div>
+
                 {/* Mobile: Slide to confirm */}
                 <div
                   ref={sliderRef}
@@ -344,7 +474,7 @@ export default function CartSheet({
                       className="text-[#F26522] font-semibold text-sm"
                       style={{ opacity: labelOpacity }}
                     >
-                      {isConfirming ? 'Confirming...' : 'Slide to Confirm →'}
+                      {isConfirming ? 'Processing Payment...' : 'Slide to Pay →'}
                     </motion.span>
                   </div>
 
@@ -371,13 +501,25 @@ export default function CartSheet({
 
                 {/* Desktop: Button */}
                 <motion.button
-                  onClick={onConfirmOrder}
+                  onClick={() => {
+                    console.log('Payment:', { method: selectedPaymentMethod, amount: calculateTotal(), loyalty: loyaltySession });
+                    onConfirmOrder();
+                  }}
                   className="hidden lg:flex w-full py-4 bg-[#F26522] hover:bg-orange-600 text-white rounded-2xl font-semibold text-lg items-center justify-center gap-2 transition-colors"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  Confirm Order • Rs. {calculateTotal().toFixed(2)}
+                  {selectedPaymentMethod === 'cash' ? 'Confirm Order' : 'Pay Now'} • Rs. {calculateTotal().toFixed(2)}
                 </motion.button>
+              </div>
+            )}
+
+            {/* Warning if no loyalty session */}
+            {cartItems.length > 0 && !loyaltySession && (
+              <div className="p-4 lg:p-6 bg-orange-50 border-t-2 border-orange-300">
+                <p className="text-center text-sm text-orange-900 font-medium">
+                  ⚠️ Please verify your number above to continue
+                </p>
               </div>
             )}
           </motion.div>
