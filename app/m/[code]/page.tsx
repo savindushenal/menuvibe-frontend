@@ -87,7 +87,10 @@ function PublicMenuContent() {
   }
 
   // Transform API data to template format
-  const franchise: FranchiseInfo = {
+  // Handle both franchise and business menus
+  const isFranchise = !!menuData.franchise;
+  
+  const franchise: FranchiseInfo = isFranchise ? {
     id: menuData.franchise.id,
     name: menuData.franchise.name,
     slug: menuData.franchise.slug,
@@ -103,25 +106,42 @@ function PublicMenuContent() {
       },
     },
     templateType: menuData.franchise.template_type || 'premium',
+  } : {
+    // For business menus, use business profile data
+    id: menuData.business?.id || 0,
+    name: menuData.business?.name || menuData.template?.name || 'Menu',
+    slug: menuData.business?.slug || 'menu',
+    logoUrl: menuData.business?.logo_url || null,
+    designTokens: {
+      colors: {
+        primary: menuData.business?.primary_color || '#10b981',
+        secondary: menuData.business?.secondary_color || '#3b82f6',
+        background: '#FFF8F0',
+        dark: '#1A1A1A',
+        neutral: '#F5F5F5',
+        accent: menuData.business?.primary_color || '#10b981',
+      },
+    },
+    templateType: menuData.template?.type || 'premium',
   };
 
   const location: LocationInfo = {
-    id: menuData.location.id,
-    name: menuData.location.name,
-    slug: menuData.location.slug,
-    address: menuData.location.address,
-    phone: menuData.location.phone,
-    hours: menuData.location.operating_hours,
+    id: menuData.location?.id || menuData.endpoint?.id || 0,
+    name: menuData.location?.name || menuData.business?.branch_name || menuData.endpoint?.name || 'Location',
+    slug: menuData.location?.slug || 'location',
+    address: menuData.location?.address || menuData.business?.address?.join(', ') || '',
+    phone: menuData.location?.phone || menuData.business?.phone || '',
+    hours: menuData.location?.operating_hours || menuData.business?.operating_hours || {},
   };
 
-  const menuItems: MenuItem[] = (menuData.menu_items || []).map((item: any) => ({
-    id: item.id.toString(),
-    name: item.name,
-    price: parseFloat(item.price),
+  const menuItems: MenuItem[] = (menuData.menu_items || menuData.menu?.categories?.flatMap((cat: any) => cat.items || []) || []).map((item: any) => ({
+    id: item.id?.toString() || Math.random().toString(),
+    name: item.name || 'Unnamed Item',
+    price: parseFloat(item.price || 0),
     description: item.description || '',
-    image: item.image_url,
+    image: item.image_url || null,
     category: item.category?.name || 'Uncategorized',
-    isAvailable: item.is_available,
+    isAvailable: item.is_available !== false,
     customizations: item.customizations || [],
   }));
 
