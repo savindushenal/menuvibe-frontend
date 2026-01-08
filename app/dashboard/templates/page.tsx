@@ -15,6 +15,7 @@ import {
   Settings2,
   Palette,
   Check,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -523,34 +524,92 @@ export default function TemplatesPage() {
               </select>
             </div>
             
+            {/* Design Template Selection */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4" />
+                Design Template
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                {designTemplates.map((template) => {
+                  const hasAccess = !template.isPremium || canAccessFeature('premium_templates');
+                  const isSelected = formData.template_type === template.id;
+                  
+                  return (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => {
+                        if (hasAccess) {
+                          setFormData({ ...formData, template_type: template.id });
+                        }
+                      }}
+                      disabled={!hasAccess}
+                      className={`relative p-3 rounded-lg border-2 transition-all text-left ${
+                        isSelected
+                          ? 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50'
+                          : hasAccess
+                          ? 'border-neutral-200 hover:border-neutral-300 bg-white'
+                          : 'border-neutral-200 bg-neutral-50 opacity-60 cursor-not-allowed'
+                      }`}
+                    >
+                      {isSelected && (
+                        <div className="absolute top-2 right-2 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                          <Check className="w-3 h-3 text-white" />
+                        </div>
+                      )}
+                      <div className="flex items-start gap-2 mb-2">
+                        <span className="text-2xl">{template.preview}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm">{template.name}</span>
+                            {template.isPremium && !hasAccess && (
+                              <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700">
+                                <Sparkles className="w-3 h-3 mr-1" />
+                                Premium
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-neutral-600 mt-0.5">{template.description}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {template.features.slice(0, 3).map((feature, idx) => (
+                          <Badge key={idx} variant="outline" className="text-xs px-1.5 py-0">
+                            {feature}
+                          </Badge>
+                        ))}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Layout Template Selection */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <TableProperties className="w-4 h-4" />
-                Layout Template
+                Layout Type (Internal)
               </Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {layoutTemplates.map((layout) => (
                   <button
                     key={layout.id}
                     type="button"
                     onClick={() => setFormData({ ...formData, layout: layout.id })}
-                    className={`relative p-3 rounded-lg border-2 transition-all text-left ${
+                    className={`relative p-2 rounded-lg border-2 transition-all text-center ${
                       formData.layout === layout.id
                         ? 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50'
                         : 'border-neutral-200 hover:border-neutral-300 bg-white'
                     }`}
                   >
                     {formData.layout === layout.id && (
-                      <div className="absolute top-1 right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
-                        <Check className="w-3 h-3 text-white" />
+                      <div className="absolute top-1 right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
+                        <Check className="w-2.5 h-2.5 text-white" />
                       </div>
                     )}
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xl"></span>
-                      <span className="font-medium text-sm">{layout.name}</span>
-                    </div>
-                    <p className="text-xs text-neutral-500"></p>
+                    <span className="font-medium text-xs">{layout.name}</span>
                   </button>
                 ))}
               </div>
@@ -649,34 +708,92 @@ export default function TemplatesPage() {
               </select>
             </div>
             
+            {/* Design Template Selection */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4" />
+                Design Template
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                {designTemplates.map((template) => {
+                  const hasAccess = !template.isPremium || canAccessFeature('premium_templates');
+                  const isSelected = formData.template_type === template.id;
+                  
+                  return (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => {
+                        if (hasAccess) {
+                          setFormData({ ...formData, template_type: template.id });
+                        }
+                      }}
+                      disabled={!hasAccess}
+                      className={`relative p-3 rounded-lg border-2 transition-all text-left ${
+                        isSelected
+                          ? 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50'
+                          : hasAccess
+                          ? 'border-neutral-200 hover:border-neutral-300 bg-white'
+                          : 'border-neutral-200 bg-neutral-50 opacity-60 cursor-not-allowed'
+                      }`}
+                    >
+                      {isSelected && (
+                        <div className="absolute top-2 right-2 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                          <Check className="w-3 h-3 text-white" />
+                        </div>
+                      )}
+                      <div className="flex items-start gap-2 mb-2">
+                        <span className="text-2xl">{template.preview}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm">{template.name}</span>
+                            {template.isPremium && !hasAccess && (
+                              <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700">
+                                <Sparkles className="w-3 h-3 mr-1" />
+                                Premium
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-neutral-600 mt-0.5">{template.description}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {template.features.slice(0, 3).map((feature, idx) => (
+                          <Badge key={idx} variant="outline" className="text-xs px-1.5 py-0">
+                            {feature}
+                          </Badge>
+                        ))}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Layout Template Selection */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <TableProperties className="w-4 h-4" />
-                Layout Template
+                Layout Type (Internal)
               </Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {layoutTemplates.map((layout) => (
                   <button
                     key={layout.id}
                     type="button"
                     onClick={() => setFormData({ ...formData, layout: layout.id })}
-                    className={`relative p-3 rounded-lg border-2 transition-all text-left ${
+                    className={`relative p-2 rounded-lg border-2 transition-all text-center ${
                       formData.layout === layout.id
                         ? 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50'
                         : 'border-neutral-200 hover:border-neutral-300 bg-white'
                     }`}
                   >
                     {formData.layout === layout.id && (
-                      <div className="absolute top-1 right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
-                        <Check className="w-3 h-3 text-white" />
+                      <div className="absolute top-1 right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
+                        <Check className="w-2.5 h-2.5 text-white" />
                       </div>
                     )}
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xl"></span>
-                      <span className="font-medium text-sm">{layout.name}</span>
-                    </div>
-                    <p className="text-xs text-neutral-500"></p>
+                    <span className="font-medium text-xs">{layout.name}</span>
                   </button>
                 ))}
               </div>
