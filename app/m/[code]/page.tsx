@@ -129,7 +129,7 @@ function PublicMenuContent() {
     id: menuData.location?.id || menuData.endpoint?.id || 0,
     name: menuData.location?.name || menuData.business?.branch_name || menuData.endpoint?.name || 'Location',
     slug: menuData.location?.slug || 'location',
-    address: menuData.location?.address || menuData.business?.address?.join(', ') || '',
+    address: menuData.location?.address || (Array.isArray(menuData.business?.address) ? menuData.business.address.join(', ') : '') || '',
     phone: menuData.location?.phone || menuData.business?.phone || '',
     hours: menuData.location?.operating_hours || menuData.business?.operating_hours || {},
   };
