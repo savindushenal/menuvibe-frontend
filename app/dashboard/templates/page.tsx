@@ -71,36 +71,52 @@ const currencies = [
   { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham' },
 ];
 
-// Menu design templates - Layout Types
-const layoutTemplates = [
+// Menu design templates - These are visual template types
+const designTemplates = [
   { 
-    id: 'standard', 
-    name: 'Standard', 
-    description: 'Simple collapsible categories with item cards',
-    preview: '📋',
-    features: ['Collapsible categories', 'Item cards', 'Quick add to cart']
-  },
-  { 
-    id: 'premium', 
-    name: 'Premium', 
-    description: 'Full-featured with hero, top picks & animations',
-    preview: '✨',
-    features: ['Hero banner', 'Top picks carousel', 'Animated transitions', 'Rating display']
-  },
-  { 
-    id: 'minimal', 
-    name: 'Minimal', 
-    description: 'Clean grid-based card layout',
-    preview: '🎯',
-    features: ['Grid layout', 'Large images', 'Quick view', 'Bottom sheet cart']
+    id: 'barista', 
+    name: 'Barista', 
+    description: 'Modern coffee shop style with hero banner and quick ordering',
+    preview: '☕',
+    isPremium: false,
+    features: ['Hero banner', 'Category filters', 'Quick add to cart', 'Animated UI'],
+    previewImage: '/templates/barista-preview.jpg'
   },
   { 
     id: 'classic', 
     name: 'Classic', 
-    description: 'Traditional list-based menu style',
+    description: 'Traditional restaurant menu with elegant list layout',
     preview: '📜',
-    features: ['List layout', 'Category sidebar', 'Detailed descriptions']
+    isPremium: false,
+    features: ['List layout', 'Category navigation', 'Detailed descriptions', 'Print-friendly'],
+    previewImage: '/templates/classic-preview.jpg'
   },
+  { 
+    id: 'minimal', 
+    name: 'Minimal', 
+    description: 'Clean and simple grid-based modern design',
+    preview: '🎯',
+    isPremium: false,
+    features: ['Grid layout', 'Large images', 'Quick view', 'Bottom sheet cart'],
+    previewImage: '/templates/minimal-preview.jpg'
+  },
+  { 
+    id: 'premium', 
+    name: 'Premium', 
+    description: 'Full-featured luxury template with advanced animations',
+    preview: '✨',
+    isPremium: true,
+    features: ['Top picks carousel', 'Advanced animations', 'Rating display', 'Special offers', 'Premium styling'],
+    previewImage: '/templates/premium-preview.jpg',
+    badge: 'Paid Plans Only'
+  },
+];
+
+// Layout options (for internal use)
+const layoutTemplates = [
+  { id: 'standard', name: 'Standard' },
+  { id: 'grid', name: 'Grid' },
+  { id: 'list', name: 'List' },
 ];
 
 // Color themes that can be applied to any layout
@@ -132,10 +148,14 @@ export default function TemplatesPage() {
     currency: 'USD',
     layout: 'standard',
     colorTheme: 'modern',
+    template_type: 'barista',
   });
   const [duplicateName, setDuplicateName] = useState('');
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<typeof designTemplates[0] | null>(null);
   const { toast } = useToast();
   const { currentLocation } = useLocation();
+  const { subscription, canAccessFeature } = useSubscription();
 
   useEffect(() => {
     loadTemplates();
@@ -166,7 +186,11 @@ export default function TemplatesPage() {
       const response = await apiClient.createMenuTemplate({
         ...formData,
         location_id: currentLocation?.id ? parseInt(currentLocation.id) : undefined,
-        settings: { layout: formData.layout, colorTheme: formData.colorTheme },
+        settings: { 
+          layout: formData.layout, 
+          colorTheme: formData.colorTheme,
+          template_type: formData.template_type 
+        },
       });
       if (response.success) {
         toast({
@@ -174,7 +198,7 @@ export default function TemplatesPage() {
           description: 'Template created successfully',
         });
         setIsCreateOpen(false);
-        setFormData({ name: '', description: '', currency: 'USD', layout: 'standard', colorTheme: 'modern' });
+        setFormData({ name: '', description: '', currency: 'USD', layout: 'standard', colorTheme: 'modern', template_type: 'barista' });
         loadTemplates();
       }
     } catch (error: any) {
@@ -193,7 +217,11 @@ export default function TemplatesPage() {
         name: formData.name,
         description: formData.description,
         currency: formData.currency,
-        settings: { layout: formData.layout, colorTheme: formData.colorTheme },
+        settings: { 
+          layout: formData.layout, 
+          colorTheme: formData.colorTheme,
+          template_type: formData.template_type 
+        },
       });
       if (response.success) {
         toast({
