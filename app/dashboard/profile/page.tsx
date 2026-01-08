@@ -82,6 +82,13 @@ export default function RestaurantProfilePage() {
       setLoading(true);
       const response = await apiClient.getBusinessProfile();
       
+      // Defensive check for response structure
+      if (!response || !response.data) {
+        console.warn('Invalid response structure:', response);
+        setLoading(false);
+        return;
+      }
+      
       if (response.success && response.data) {
         const profile = response.data.business_profile;
         
