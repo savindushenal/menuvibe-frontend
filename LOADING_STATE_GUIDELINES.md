@@ -156,6 +156,44 @@ For each action button/form:
 - [ ] Change button text during loading
 - [ ] Show toast on success/error
 
+## Using with Existing Components
+
+### MenuItemForm Example
+The `MenuItemForm` component already accepts `isLoading` prop. Use the hook in the parent component:
+
+```tsx
+import { useAsyncAction } from '@/hooks/use-async-action';
+
+function MenuCustomization() {
+  const { execute: executeAddItem, isLoading: isAddingItem } = useAsyncAction({
+    successMessage: 'Menu item added successfully',
+    onSuccess: () => refetchMenu(),
+  });
+
+  const handleAddItem = async (data: any, image?: File) => {
+    await executeAddItem(async () => {
+      const response = await api.post(`/menus/${menuId}/items`, data);
+      if (image) {
+        // Upload image if needed
+        await uploadImage(response.data.id, image);
+      }
+      return response.data;
+    });
+  };
+
+  return (
+    <MenuItemForm
+      menuId={menuId}
+      isOpen={isOpen}
+      onClose={onClose}
+      onSubmit={handleAddItem}
+      isLoading={isAddingItem}  // Pass loading state
+      // ... other props
+    />
+  );
+}
+```
+
 ## Testing
 
 To verify duplicate prevention:
