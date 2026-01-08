@@ -83,7 +83,7 @@ export default function RestaurantProfilePage() {
       const response = await apiClient.getBusinessProfile();
       
       if (response.success && response.data) {
-        const profile = response.data;
+        const profile = response.data.business_profile;
         setBusinessProfile(profile);
         
         // Initialize form data
@@ -156,12 +156,13 @@ export default function RestaurantProfilePage() {
       
       if (response.success && response.data) {
         // Update local state with fresh data from API
-        setBusinessProfile(response.data);
+        const updatedProfile = response.data.business_profile || response.data;
+        setBusinessProfile(updatedProfile);
         
         // Update logo URL if changed
-        if (response.data.logo_url) {
-          console.log('Logo saved, new URL:', response.data.logo_url);
-          setLogo(response.data.logo_url);
+        if (updatedProfile.logo_url) {
+          console.log('Logo saved, new URL:', updatedProfile.logo_url);
+          setLogo(updatedProfile.logo_url);
         }
         
         setIsEditing(false);
