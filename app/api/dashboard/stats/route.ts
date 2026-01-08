@@ -12,9 +12,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
     
-    const response = await fetch(`${backendUrl}/api/dashboard/stats`, {
+    const response = await fetch(`${backendUrl}/dashboard/stats`, {
       headers: {
         'Authorization': token,
         'Content-Type': 'application/json',
