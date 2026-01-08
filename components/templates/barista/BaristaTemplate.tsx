@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { ShoppingBag, Star, Plus, Coffee, MapPin, Clock } from 'lucide-react';
+import { ShoppingBag, Star, Plus, Coffee, MapPin, Clock, Loader2, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { BaristaTemplateProps } from './types';
 import Image from 'next/image';
@@ -19,6 +19,8 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
   const [orderId, setOrderId] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [addingItemId, setAddingItemId] = useState<string | null>(null);
+  const [addedItemId, setAddedItemId] = useState<string | null>(null);
 
   // Get unique categories
   const categories = useMemo(() => {
@@ -51,7 +53,18 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
     }
   };
 
-  const handleAddToCart = (item: any) => {
+  const handleAddToCart = async (item: any) => {
+    // Start adding animation
+    setAddingItemId(item.id);
+    
+    // Haptic feedback
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(50);
+    }
+    
+    // Wait for animation
+    await new Promise(resolve => setTimeout(resolve, 400));
+    
     // Check if item already exists in cart
     const existingItem = cart.find(cartItem => cartItem.item.id === item.id);
     
@@ -67,9 +80,23 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
       setCart([...cart, { item, quantity: 1, customizations: [] }]);
     }
     
+    // Show success state
+    setAddingItemId(null);
+    setAddedItemId(item.id);
+    
+    // Play success haptic
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate([50, 50, 50]);
+    }
+    
     // Show toast notification
     setToastMessage(item.name);
     setShowToast(true);
+    
+    // Reset success state
+    setTimeout(() => {
+      setAddedItemId(null);
+    }, 800);
   };
 
   const handleConfirmOrder = () => {
@@ -281,15 +308,52 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
                     <span className="text-lg sm:text-xl font-bold text-[#F26522] truncate">
                       Rs. {item.price.toFixed(2)}
                     </span>
-                    <button 
+                    <motion.button 
                       onClick={(e) => {
                         e.stopPropagation();
                         handleAddToCart(item);
                       }}
-                      className="bg-[#F26522] text-white p-2 rounded-full hover:bg-[#E55518] transition-colors flex-shrink-0"
+                      disabled={addingItemId === item.id || addedItemId === item.id}
+                      className={`${
+                        addedItemId === item.id 
+                          ? 'bg-green-500' 
+                          : 'bg-[#F26522] hover:bg-[#E55518]'
+                      } text-white p-2 rounded-full transition-all flex-shrink-0 disabled:opacity-70`}
+                      whileTap={{ scale: 0.95 }}
                     >
-                      <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </button>
+                      <AnimatePresence mode="wait">
+                        {addingItemId === item.id ? (
+                          <motion.div
+                            key="loading"
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1, rotate: 360 }}
+                            exit={{ opacity: 0, scale: 0.5 }}
+                            transition={{ duration: 0.3 }}
+                          >
+                            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                          </motion.div>
+                        ) : addedItemId === item.id ? (
+                          <motion.div
+                            key="added"
+                            initial={{ opacity: 0, scale: 0.3 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                          >
+                            <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            key="add"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                          >
+                            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.button>
                   </div>
                 </div>
               </motion.div>
