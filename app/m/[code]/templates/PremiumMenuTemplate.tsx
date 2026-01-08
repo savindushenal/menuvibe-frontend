@@ -118,7 +118,7 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: design.bg }}>
+    <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: design.bg }}>
       {/* Hero Header with Business Info */}
       <header className="relative overflow-hidden">
         <div 
@@ -127,7 +127,7 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
             background: `linear-gradient(135deg, ${design.accent} 0%, ${design.bg} 100%)` 
           }}
         />
-        <div className="relative max-w-lg mx-auto px-4 pt-8 pb-6">
+        <div className="relative max-w-lg mx-auto px-3 sm:px-4 md:px-6 pt-6 sm:pt-7 md:pt-8 pb-4 sm:pb-5 md:pb-6">
           {/* Logo & Cart */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -227,32 +227,32 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
           )}
 
           {/* Greeting */}
-          <h1 className="text-3xl font-bold mb-4" style={{ color: design.text }}>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4" style={{ color: design.text }}>
             {greeting}
           </h1>
-          <p className="text-lg opacity-70 mb-6" style={{ color: design.text }}>
+          <p className="text-base sm:text-lg opacity-70 mb-4 sm:mb-5 md:mb-6" style={{ color: design.text }}>
             What would you like today?
           </p>
 
           {/* Stats Row */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 sm:gap-6">
             <div className="text-center">
-              <div className="text-2xl font-bold" style={{ color: design.accent }}>
+              <div className="text-xl sm:text-2xl font-bold" style={{ color: design.accent }}>
                 {totalItems}+
               </div>
-              <div className="text-xs opacity-60" style={{ color: design.text }}>ITEMS</div>
+              <div className="text-[10px] sm:text-xs opacity-60" style={{ color: design.text }}>ITEMS</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold flex items-center gap-1" style={{ color: design.accent }}>
-                4.9 <Star className="w-4 h-4 fill-current" />
+              <div className="text-xl sm:text-2xl font-bold flex items-center gap-1" style={{ color: design.accent }}>
+                4.9 <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-current" />
               </div>
-              <div className="text-xs opacity-60" style={{ color: design.text }}>RATING</div>
+              <div className="text-[10px] sm:text-xs opacity-60" style={{ color: design.text }}>RATING</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold" style={{ color: design.accent }}>
+              <div className="text-xl sm:text-2xl font-bold" style={{ color: design.accent }}>
                 ~5m
               </div>
-              <div className="text-xs opacity-60" style={{ color: design.text }}>WAIT</div>
+              <div className="text-[10px] sm:text-xs opacity-60" style={{ color: design.text }}>WAIT</div>
             </div>
           </div>
         </div>
@@ -260,7 +260,7 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
 
       {/* Offers Banner */}
       {menuData.offers.length > 0 && (
-        <div className="max-w-lg mx-auto px-4 py-4">
+        <div className="max-w-lg mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4">
           <div className="overflow-x-auto scrollbar-hide">
             <div className="flex gap-3">
               {menuData.offers.map((offer) => (
@@ -294,8 +294,8 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
 
       {/* Top Picks Section */}
       {topPicks.length > 0 && (
-        <section className="max-w-lg mx-auto px-4 py-4">
-          <h2 className="text-xl font-bold mb-4" style={{ color: design.text }}>
+        <section className="max-w-lg mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+          <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4" style={{ color: design.text }}>
             Top Picks for You
           </h2>
           <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
