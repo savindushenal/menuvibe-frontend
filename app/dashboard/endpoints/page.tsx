@@ -595,7 +595,7 @@ function EndpointsPageContent() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={isCreateOpen || isEditOpen} onOpenChange={() => { setIsCreateOpen(false); setIsEditOpen(false); }}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{isEditOpen ? 'Edit Endpoint' : 'Create Endpoint'}</DialogTitle>
             <DialogDescription>
@@ -690,7 +690,7 @@ function EndpointsPageContent() {
 
       {/* Bulk Create Dialog */}
       <Dialog open={isBulkCreateOpen} onOpenChange={setIsBulkCreateOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Bulk Create Endpoints</DialogTitle>
             <DialogDescription>
