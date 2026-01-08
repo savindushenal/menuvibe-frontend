@@ -93,41 +93,41 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: design.bg }}>
+    <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: design.bg }}>
       {/* Minimal Header with Business Info */}
       <header className="sticky top-0 z-40 backdrop-blur-md border-b" style={{ backgroundColor: design.bg + 'ee' }}>
-        <div className="max-w-3xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
               {menuData.business?.logo_url || menuData.template.image_url ? (
                 <img 
                   src={menuData.business?.logo_url || menuData.template.image_url || ''} 
                   alt={menuData.business?.name || menuData.template.name}
-                  className="w-10 h-10 rounded-lg object-cover"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover flex-shrink-0"
                 />
               ) : (
                 <div 
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm sm:text-base flex-shrink-0"
                   style={{ backgroundColor: menuData.business?.primary_color || design.accent }}
                 >
                   {(menuData.business?.name || menuData.template.name).charAt(0)}
                 </div>
               )}
-              <div>
-                <h1 className="text-xl font-bold" style={{ color: design.text }}>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-base sm:text-lg md:text-xl font-bold truncate" style={{ color: design.text }}>
                   {menuData.business?.name || menuData.template.name}
                 </h1>
                 {/* Show branch name if different from business name */}
                 {menuData.business?.branch_name && menuData.business.branch_name !== menuData.business.name ? (
-                  <p className="text-sm font-medium opacity-80" style={{ color: design.text }}>
+                  <p className="text-xs sm:text-sm font-medium opacity-80 truncate" style={{ color: design.text }}>
                     {menuData.business.branch_name}
                   </p>
                 ) : (
-                  <p className="text-sm opacity-60 flex items-center gap-1" style={{ color: design.text }}>
+                  <p className="text-xs sm:text-sm opacity-60 flex items-center gap-1 truncate" style={{ color: design.text }}>
                     {menuData.business?.cuisine_type ? (
-                      <><UtensilsCrossed className="w-3 h-3" /> {menuData.business.cuisine_type}</>
+                      <><UtensilsCrossed className="w-3 h-3 flex-shrink-0" /> <span className="truncate">{menuData.business.cuisine_type}</span></>
                     ) : (
-                      menuData.endpoint.name
+                      <span className="truncate">{menuData.endpoint.name}</span>
                     )}
                   </p>
                 )}
@@ -135,13 +135,13 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
             </div>
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative p-3 rounded-full"
+              className="relative p-2 sm:p-2.5 md:p-3 rounded-full flex-shrink-0"
               style={{ backgroundColor: design.card, color: design.text }}
             >
-              <ShoppingCart className="w-5 h-5" />
+              <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
               {getCartCount() > 0 && (
                 <span 
-                  className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-white text-xs flex items-center justify-center"
+                  className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full text-white text-[10px] sm:text-xs flex items-center justify-center"
                   style={{ backgroundColor: design.accent }}
                 >
                   {getCartCount()}
@@ -151,7 +151,7 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
           </div>
           {/* Quick contact links */}
           {menuData.business && (menuData.business.phone || menuData.business.website) && (
-            <div className="flex gap-2 mt-2">
+            <div className="hidden sm:flex gap-2 mt-2">
               {menuData.business.phone && (
                 <a href={`tel:${menuData.business.phone}`} className="flex items-center gap-1 text-xs opacity-60" style={{ color: design.text }}>
                   <Phone className="w-3 h-3" /> {menuData.business.phone}
@@ -163,13 +163,13 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
       </header>
 
       {/* Category Pills */}
-      <nav className="max-w-3xl mx-auto px-4 py-4">
+      <nav className="max-w-3xl mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4">
         <div className="flex overflow-x-auto gap-2 scrollbar-hide">
           {menuData.categories.map((category) => (
             <button
               key={category.id}
               onClick={() => setActiveCategory(category.name)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all`}
+              className={`flex-shrink-0 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all whitespace-nowrap`}
               style={
                 activeCategory === category.name
                   ? { backgroundColor: design.accent, color: 'white' }
@@ -184,8 +184,8 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
       </nav>
 
       {/* Grid Menu */}
-      <main className="max-w-3xl mx-auto px-4 pb-32">
-        <div className="grid grid-cols-2 gap-4">
+      <main className="max-w-3xl mx-auto px-3 sm:px-4 md:px-6 pb-24 sm:pb-28 md:pb-32">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {activeItems.map((item) => {
             const available = isItemAvailable(item, menuData.overrides);
             const price = getItemPrice(item, menuData.overrides);

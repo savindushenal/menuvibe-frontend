@@ -94,51 +94,51 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: design.bg }}>
+    <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: design.bg }}>
       {/* Classic Header with Business Info */}
       <header className="border-b" style={{ backgroundColor: design.card }}>
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 flex-1">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-5 md:py-6">
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
               {menuData.business?.logo_url || menuData.template.image_url ? (
                 <img 
                   src={menuData.business?.logo_url || menuData.template.image_url || ''} 
                   alt={menuData.business?.name || menuData.template.name}
-                  className="w-14 h-14 rounded-lg object-cover"
+                  className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg object-cover flex-shrink-0"
                 />
               ) : (
                 <div 
-                  className="w-14 h-14 rounded-lg flex items-center justify-center text-white font-bold text-xl"
+                  className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg flex items-center justify-center text-white font-bold text-base sm:text-lg md:text-xl flex-shrink-0"
                   style={{ backgroundColor: menuData.business?.primary_color || design.accent }}
                 >
                   {(menuData.business?.name || menuData.template.name).charAt(0)}
                 </div>
               )}
-              <div>
-                <h1 className="text-2xl font-serif font-bold" style={{ color: design.text }}>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-xl md:text-2xl font-serif font-bold truncate" style={{ color: design.text }}>
                   {menuData.business?.name || menuData.template.name}
                 </h1>
-                <div className="flex items-center gap-3 mt-1">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
                   {/* Show branch name if different from business name */}
                   {menuData.business?.branch_name && menuData.business.branch_name !== menuData.business.name && (
-                    <span className="text-sm font-medium opacity-80" style={{ color: design.text }}>
+                    <span className="text-xs sm:text-sm font-medium opacity-80 truncate" style={{ color: design.text }}>
                       {menuData.business.branch_name}
                     </span>
                   )}
                   {menuData.business?.cuisine_type && (
-                    <span className="text-sm opacity-60 flex items-center gap-1" style={{ color: design.text }}>
-                      <UtensilsCrossed className="w-3 h-3" /> {menuData.business.cuisine_type}
+                    <span className="text-xs sm:text-sm opacity-60 flex items-center gap-1" style={{ color: design.text }}>
+                      <UtensilsCrossed className="w-3 h-3" /> <span className="hidden sm:inline">{menuData.business.cuisine_type}</span>
                     </span>
                   )}
-                  {!menuData.business?.branch_name && (
-                    <span className="text-sm opacity-60" style={{ color: design.text }}>
+                  {!menuData.business?.branch_name && !menuData.business?.cuisine_type && (
+                    <span className="text-xs sm:text-sm opacity-60 truncate" style={{ color: design.text }}>
                       {menuData.endpoint.name}
                     </span>
                   )}
                 </div>
                 {/* Contact info */}
                 {menuData.business && (menuData.business.phone || menuData.business.website) && (
-                  <div className="flex gap-4 mt-2">
+                  <div className="hidden sm:flex gap-3 md:gap-4 mt-2">
                     {menuData.business.phone && (
                       <a href={`tel:${menuData.business.phone}`} className="flex items-center gap-1 text-xs" style={{ color: design.accent }}>
                         <Phone className="w-3 h-3" /> {menuData.business.phone}
@@ -155,7 +155,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
             </div>
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative p-3 rounded-lg border"
+              className="relative p-2 sm:p-2.5 md:p-3 rounded-lg border flex-shrink-0"
               style={{ borderColor: design.accent, color: design.accent }}
             >
               <ShoppingCart className="w-5 h-5" />
@@ -172,10 +172,32 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
         </div>
       </header>
 
+      {/* Mobile Category Pills - Show only on mobile */}
+      <nav className="lg:hidden border-b" style={{ backgroundColor: design.card }}>
+        <div className="overflow-x-auto scrollbar-hide">
+          <div className="flex gap-2 px-3 py-3 min-w-max">
+            {menuData.categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setActiveCategory(category.id)}
+                className={`flex-shrink-0 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all whitespace-nowrap`}
+                style={{
+                  backgroundColor: activeCategory === category.id ? design.accent : design.bg,
+                  color: activeCategory === category.id ? 'white' : design.text,
+                }}
+              >
+                {category.icon && <span className="mr-1.5">{category.icon}</span>}
+                {category.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </nav>
+
       {/* Two Column Layout */}
       <div className="max-w-6xl mx-auto flex">
-        {/* Category Sidebar */}
-        <aside className="w-48 flex-shrink-0 border-r sticky top-0 h-screen overflow-y-auto" style={{ backgroundColor: design.card }}>
+        {/* Category Sidebar - Desktop only */}
+        <aside className="hidden lg:block w-48 xl:w-56 flex-shrink-0 border-r sticky top-0 h-screen overflow-y-auto" style={{ backgroundColor: design.card }}>
           <nav className="py-4">
             {menuData.categories.map((category) => (
               <button
@@ -203,16 +225,16 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
         </aside>
 
         {/* Menu Content */}
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-3 sm:p-4 md:p-5 lg:p-6 pb-24 sm:pb-28 md:pb-32">
           {/* Category Header */}
           {activeCategoryData && (
-            <div className="mb-6">
-              <h2 className="text-2xl font-serif font-bold" style={{ color: design.text }}>
+            <div className="mb-4 sm:mb-5 md:mb-6">
+              <h2 className="text-xl sm:text-2xl font-serif font-bold" style={{ color: design.text }}>
                 {activeCategoryData.icon && <span className="mr-2">{activeCategoryData.icon}</span>}
                 {activeCategoryData.name}
               </h2>
               {activeCategoryData.description && (
-                <p className="text-sm opacity-60 mt-1" style={{ color: design.text }}>
+                <p className="text-xs sm:text-sm opacity-60 mt-1" style={{ color: design.text }}>
                   {activeCategoryData.description}
                 </p>
               )}
@@ -220,7 +242,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
           )}
 
           {/* Items List */}
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {activeItems.map((item) => {
               const available = isItemAvailable(item, menuData.overrides);
               const price = getItemPrice(item, menuData.overrides);
@@ -231,34 +253,34 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                   key={item.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className={`flex gap-4 p-4 rounded-lg border ${!available ? 'opacity-50' : ''}`}
+                  className={`flex gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border ${!available ? 'opacity-50' : ''}`}
                   style={{ backgroundColor: design.card, borderColor: design.bg }}
                 >
                   {/* Details */}
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-semibold" style={{ color: design.text }}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm sm:text-base truncate" style={{ color: design.text }}>
                           {item.name}
                         </h3>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mt-1">
                           {item.is_featured && (
-                            <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                            <Star className="w-3 h-3 sm:w-4 sm:h-4 text-amber-500 fill-amber-500 flex-shrink-0" />
                           )}
                           {item.is_spicy && (
-                            <Flame className="w-4 h-4 text-red-500" />
+                            <Flame className="w-3 h-3 sm:w-4 sm:h-4 text-red-500 flex-shrink-0" />
                           )}
                           {item.dietary_info?.includes('vegetarian') && (
-                            <Leaf className="w-4 h-4 text-green-500" />
+                            <Leaf className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" />
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-lg font-bold" style={{ color: design.accent }}>
+                      <div className="text-right flex-shrink-0">
+                        <span className="text-base sm:text-lg font-bold whitespace-nowrap" style={{ color: design.accent }}>
                           {symbol}{formatPrice(price)}
                         </span>
                         {item.compare_at_price && Number(item.compare_at_price) > price && (
-                          <span className="block text-sm line-through opacity-40" style={{ color: design.text }}>
+                          <span className="block text-xs sm:text-sm line-through opacity-40 whitespace-nowrap" style={{ color: design.text }}>
                             {symbol}{formatPrice(item.compare_at_price)}
                           </span>
                         )}
@@ -266,26 +288,27 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                     </div>
 
                     {item.description && (
-                      <p className="text-sm opacity-60 mt-2 leading-relaxed" style={{ color: design.text }}>
+                      <p className="text-xs sm:text-sm opacity-60 mt-1.5 sm:mt-2 leading-relaxed line-clamp-2" style={{ color: design.text }}>
                         {item.description}
                       </p>
                     )}
 
                     {item.preparation_time && (
-                      <div className="flex items-center gap-1 text-xs opacity-40 mt-2" style={{ color: design.text }}>
+                      <div className="flex items-center gap-1 text-xs opacity-40 mt-1.5 sm:mt-2" style={{ color: design.text }}>
                         <Clock className="w-3 h-3" />
-                        {item.preparation_time} min preparation
+                        <span className="hidden sm:inline">{item.preparation_time} min preparation</span>
+                        <span className="sm:hidden">{item.preparation_time} min</span>
                       </div>
                     )}
 
                     {/* Add to Cart */}
-                    <div className="mt-3">
+                    <div className="mt-2 sm:mt-3">
                       {available ? (
                         cartItem ? (
                           <div className="inline-flex items-center gap-2 border rounded-lg px-2 py-1" style={{ borderColor: design.accent }}>
                             <button
                               onClick={() => removeFromCart(item.id)}
-                              className="w-7 h-7 rounded flex items-center justify-center hover:bg-neutral-100"
+                              className="w-6 h-6 sm:w-7 sm:h-7 rounded flex items-center justify-center hover:bg-neutral-100"
                               style={{ color: design.accent }}
                             >
                               <Minus className="w-4 h-4" />
