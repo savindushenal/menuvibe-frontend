@@ -38,6 +38,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from '@/contexts/location-context';
+import { useSubscription } from '@/contexts/subscription-context';
 import { apiClient } from '@/lib/api';
 import Link from 'next/link';
 import { LoadingSpinner } from '@/components/loading/spinner';
@@ -51,7 +52,7 @@ interface MenuTemplate {
   is_active: boolean;
   is_default: boolean;
   image_url: string | null;
-  settings?: { layout?: string; colorTheme?: string; design?: string } | null;
+  settings?: { layout?: string; colorTheme?: string; design?: string; template_type?: string } | null;
   categories_count?: number;
   items_count?: number;
   endpoints_count?: number;
@@ -296,6 +297,7 @@ export default function TemplatesPage() {
       currency: template.currency,
       layout: template.settings?.layout || 'standard',
       colorTheme: template.settings?.colorTheme || 'modern',
+      template_type: template.settings?.template_type || 'barista',
     });
     setIsEditOpen(true);
   };
@@ -335,7 +337,7 @@ export default function TemplatesPage() {
         </div>
         <Button
           onClick={() => {
-            setFormData({ name: '', description: '', currency: 'USD', layout: 'standard', colorTheme: 'modern' });
+            setFormData({ name: '', description: '', currency: 'USD', layout: 'standard', colorTheme: 'modern', template_type: 'barista' });
             setIsCreateOpen(true);
           }}
           className="bg-emerald-600 hover:bg-emerald-700"
@@ -545,10 +547,10 @@ export default function TemplatesPage() {
                       </div>
                     )}
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xl">{layout.preview}</span>
+                      <span className="text-xl"></span>
                       <span className="font-medium text-sm">{layout.name}</span>
                     </div>
-                    <p className="text-xs text-neutral-500">{layout.description}</p>
+                    <p className="text-xs text-neutral-500"></p>
                   </button>
                 ))}
               </div>
@@ -671,10 +673,10 @@ export default function TemplatesPage() {
                       </div>
                     )}
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xl">{layout.preview}</span>
+                      <span className="text-xl"></span>
                       <span className="font-medium text-sm">{layout.name}</span>
                     </div>
-                    <p className="text-xs text-neutral-500">{layout.description}</p>
+                    <p className="text-xs text-neutral-500"></p>
                   </button>
                 ))}
               </div>
@@ -790,3 +792,4 @@ export default function TemplatesPage() {
     </div>
   );
 }
+
