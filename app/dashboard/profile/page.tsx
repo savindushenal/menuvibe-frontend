@@ -84,20 +84,28 @@ export default function RestaurantProfilePage() {
       
       if (response.success && response.data) {
         const profile = response.data.business_profile;
+        
+        // Check if profile exists
+        if (!profile) {
+          console.warn('No business profile found');
+          setLoading(false);
+          return;
+        }
+        
         setBusinessProfile(profile);
         
-        // Initialize form data
+        // Initialize form data with safe fallbacks
         setFormData({
-          business_name: profile.business_name || '',
-          description: profile.description || '',
-          phone: profile.phone || '',
-          email: profile.email || '',
-          website: profile.website || '',
-          primaryColor: profile.primary_color || '#10b981',
-          secondaryColor: profile.secondary_color || '#3b82f6',
+          business_name: profile?.business_name || '',
+          description: profile?.description || '',
+          phone: profile?.phone || '',
+          email: profile?.email || '',
+          website: profile?.website || '',
+          primaryColor: profile?.primary_color || '#10b981',
+          secondaryColor: profile?.secondary_color || '#3b82f6',
         });
         
-        if (profile.logo_url) {
+        if (profile?.logo_url) {
           console.log('Loading logo from URL:', profile.logo_url);
           setLogo(profile.logo_url);
           setLogoError(false);
@@ -227,7 +235,7 @@ export default function RestaurantProfilePage() {
     );
   }
 
-  const fullAddress = `${businessProfile.address_line_1}${businessProfile.address_line_2 ? ', ' + businessProfile.address_line_2 : ''}, ${businessProfile.city}, ${businessProfile.state} ${businessProfile.postal_code}`;
+  const fullAddress = `${businessProfile?.address_line_1 || ''}${businessProfile?.address_line_2 ? ', ' + businessProfile.address_line_2 : ''}, ${businessProfile?.city || ''}, ${businessProfile?.state || ''} ${businessProfile?.postal_code || ''}`;
 
   return (
     <div className="p-8 space-y-8">
