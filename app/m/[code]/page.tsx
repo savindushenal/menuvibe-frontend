@@ -50,6 +50,7 @@ function PublicMenuContent() {
         return;
       }
 
+      console.log('Menu data received:', data.data);
       setMenuData(data.data);
     } catch (err: any) {
       console.error('Failed to load menu:', err);
@@ -90,6 +91,11 @@ function PublicMenuContent() {
   // Handle both franchise and business menus
   const isFranchise = !!menuData.franchise;
   
+  // Get template type from various possible sources
+  const templateType = isFranchise 
+    ? (menuData.franchise?.template_type || 'premium')
+    : (menuData.template?.settings?.template_type || menuData.template?.type || 'premium');
+  
   const franchise: FranchiseInfo = isFranchise ? {
     id: menuData.franchise.id,
     name: menuData.franchise.name,
@@ -105,7 +111,7 @@ function PublicMenuContent() {
         accent: '#F26522',
       },
     },
-    templateType: menuData.franchise.template_type || 'premium',
+    templateType: templateType,
   } : {
     // For business menus, use business profile data
     id: menuData.business?.id || 0,
@@ -114,15 +120,15 @@ function PublicMenuContent() {
     logoUrl: menuData.business?.logo_url || null,
     designTokens: {
       colors: {
-        primary: menuData.business?.primary_color || '#10b981',
-        secondary: menuData.business?.secondary_color || '#3b82f6',
-        background: '#FFF8F0',
-        dark: '#1A1A1A',
-        neutral: '#F5F5F5',
-        accent: menuData.business?.primary_color || '#10b981',
+        primary: menuData.business?.primary_color || menuData.template?.config?.colors?.primary || '#10b981',
+        secondary: menuData.business?.secondary_color || menuData.template?.config?.colors?.secondary || '#3b82f6',
+        background: menuData.template?.config?.colors?.background || '#FFF8F0',
+        dark: menuData.template?.config?.colors?.dark || '#1A1A1A',
+        neutral: menuData.template?.config?.colors?.neutral || '#F5F5F5',
+        accent: menuData.business?.primary_color || menuData.template?.config?.colors?.accent || '#10b981',
       },
     },
-    templateType: menuData.template?.type || 'premium',
+    templateType: templateType,
   };
 
   const location: LocationInfo = {
@@ -134,19 +140,45 @@ function PublicMenuContent() {
     hours: menuData.location?.operating_hours || menuData.business?.operating_hours || {},
   };
 
-  const menuItems: MenuItem[] = (menuData.menu_items || menuData.menu?.categories?.flatMap((cat: any) => cat.items || []) || []).map((item: any) => ({
-    id: item.id?.toString() || Math.random().toString(),
-    name: item.name || 'Unnamed Item',
-    price: parseFloat(item.price || 0),
-    description: item.description || '',
-    image: item.image_url || null,
-    category: item.category?.name || 'Uncategorized',
-    isAvailable: item.is_available !== false,
-    customizations: item.customizations || [],
-  }));
+  // Extract menu items from categories structure
+  const menuItems: MenuItem[] = [];
+  
+  if (menuData.menu?.categories && Array.isArray(menuData.menu.categories)) {
+    // Menu has categories structure
+    menuData.menu.categories.forEach((category: any) => {
+      if (category.items && Array.isArray(category.items)) {
+        category.items.forEach((item: any) => {
+          menuItems.push({
+            id: item.id?.toString() || Math.random().toString(),
+            name: item.name || 'Unnamed Item',
+            price: parseFloat(item.price || 0),
+            description: item.description || '',
+            image: item.image_url || null,
+            category: category.name || 'Uncategorized',
+            isAvailable: item.is_available !== false,
+            customizations: item.customizations || [],
+          });
+        });
+      }
+    });
+  } else if (menuData.menu_items && Array.isArray(menuData.menu_items)) {
+    // Fallback to flat menu_items array
+    menuData.menu_items.forEach((item: any) => {
+      menuItems.push({
+        id: item.id?.toString() || Math.random().toString(),
+        name: item.name || 'Unnamed Item',
+        price: parseFloat(item.price || 0),
+        description: item.description || '',
+        image: item.image_url || null,
+        category: item.category?.name || 'Uncategorized',
+        isAvailable: item.is_available !== false,
+        customizations: item.customizations || [],
+      });
+    });
+  }
 
-  // Render appropriate template based on franchise template_type
-  const templateType = franchise.templateType || 'premium';
+  // Render appropriate template based on template type
+  console.log('Rendering template:', templateType, 'with', menuItems.length, 'items');
 
   switch (templateType) {
     case 'barista':
