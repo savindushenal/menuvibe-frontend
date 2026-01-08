@@ -50,6 +50,8 @@ import { useLocation } from '@/contexts/location-context';
 import { apiClient } from '@/lib/api';
 import { useSearchParams } from 'next/navigation';
 import { LoadingSpinner } from '@/components/loading/spinner';
+import { useAsyncAction } from '@/hooks/use-async-action';
+import { Loader2 } from 'lucide-react';
 
 interface MenuTemplate {
   id: number;
@@ -139,6 +141,45 @@ function EndpointsPageContent() {
   const { toast } = useToast();
   const { currentLocation } = useLocation();
 
+  const { execute: executeCreate, isLoading: isCreating } = useAsyncAction({
+    successMessage: 'Endpoint created successfully',
+    onSuccess: () => {
+      setIsCreateOpen(false);
+      resetForm();
+      loadData();
+    },
+  });
+
+  const { execute: executeBulkCreate, isLoading: isBulkCreating } = useAsyncAction({
+    onSuccess: () => {
+      setIsBulkCreateOpen(false);
+      loadData();
+    },
+  });
+
+  const { execute: executeUpdate, isLoading: isUpdating } = useAsyncAction({
+    successMessage: 'Endpoint updated successfully',
+    onSuccess: () => {
+      setIsEditOpen(false);
+      setSelectedEndpoint(null);
+      loadData();
+    },
+  });
+
+  const { execute: executeDelete, isLoading: isDeleting } = useAsyncAction({
+    successMessage: 'Endpoint deleted successfully',
+    onSuccess: () => {
+      setIsDeleteOpen(false);
+      setSelectedEndpoint(null);
+      loadData();
+    },
+  });
+
+  const { execute: executeRegenerateQR, isLoading: isRegeneratingQR } = useAsyncAction({
+    successMessage: 'QR code regenerated successfully',
+    onSuccess: () => loadData(),
+  });
+
   useEffect(() => {
     loadData();
   }, [currentLocation, selectedTemplateId, selectedType]);
@@ -182,99 +223,42 @@ function EndpointsPageContent() {
   };
 
   const handleCreate = async () => {
-    try {
-      // Auto-generate identifier from name if not provided
-      const identifier = formData.identifier.trim() || formData.name.replace(/\s+/g, '-').toLowerCase();
-      const data = {
-        ...formData,
-        identifier,
-        location_id: currentLocation?.id ? parseInt(currentLocation.id) : undefined,
-      };
-      console.log('Creating endpoint with data:', data);
-      const response = await apiClient.createMenuEndpoint(data);
-      console.log('Create response:', response);
-      if (response.success) {
-        toast({ title: 'Success', description: 'Endpoint created successfully' });
-        setIsCreateOpen(false);
-        resetForm();
-        loadData();
-      }
-    } catch (error: any) {
-      console.error('Create endpoint error:', error);
-      const errorMsg = error.errors 
-        ? Object.values(error.errors).flat().join(', ')
-        : error.message || 'Failed to create endpoint';
-      toast({
-        title: 'Error',
-        description: errorMsg,
-        variant: 'destructive',
-      });
-    }
+    const identifier = formData.identifier.trim() || formData.name.replace(/\s+/g, '-').toLowerCase();
+    const data = {
+      ...formData,
+      identifier,
+      location_id: currentLocation?.id ? parseInt(currentLocation.id) : undefined,
+    };
+    
+    await executeCreate(apiClient.createMenuEndpoint(data));
   };
 
   const handleBulkCreate = async () => {
-    try {
-      const response = await apiClient.bulkCreateMenuEndpoints({
-        template_id: bulkFormData.template_id,
-        type: bulkFormData.type,
-        prefix: bulkFormData.prefix,
-        start_number: bulkFormData.start,
-        count: bulkFormData.count,
-        location_id: currentLocation?.id ? parseInt(currentLocation.id) : undefined,
-      });
-      if (response.success) {
-        toast({
-          title: 'Success',
-          description: `${bulkFormData.count} endpoints created successfully`,
-        });
-        setIsBulkCreateOpen(false);
-        loadData();
-      }
-    } catch (error: any) {
+    const result = await executeBulkCreate(apiClient.bulkCreateMenuEndpoints({
+      template_id: bulkFormData.template_id,
+      type: bulkFormData.type,
+      prefix: bulkFormData.prefix,
+      start_number: bulkFormData.start,
+      count: bulkFormData.count,
+      location_id: currentLocation?.id ? parseInt(currentLocation.id) : undefined,
+    }));
+
+    if (result) {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to create endpoints',
-        variant: 'destructive',
+        title: 'Success',
+        description: `${bulkFormData.count} endpoints created successfully`,
       });
     }
   };
 
   const handleEdit = async () => {
     if (!selectedEndpoint) return;
-    try {
-      const response = await apiClient.updateMenuEndpoint(selectedEndpoint.id, formData);
-      if (response.success) {
-        toast({ title: 'Success', description: 'Endpoint updated successfully' });
-        setIsEditOpen(false);
-        setSelectedEndpoint(null);
-        loadData();
-      }
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to update endpoint',
-        variant: 'destructive',
-      });
-    }
+    await executeUpdate(apiClient.updateMenuEndpoint(selectedEndpoint.id, formData));
   };
 
   const handleDelete = async () => {
     if (!selectedEndpoint) return;
-    try {
-      const response = await apiClient.deleteMenuEndpoint(selectedEndpoint.id);
-      if (response.success) {
-        toast({ title: 'Success', description: 'Endpoint deleted successfully' });
-        setIsDeleteOpen(false);
-        setSelectedEndpoint(null);
-        loadData();
-      }
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to delete endpoint',
-        variant: 'destructive',
-      });
-    }
+    await executeDelete(apiClient.deleteMenuEndpoint(selectedEndpoint.id));
   };
 
   const handleViewQR = async (endpoint: MenuEndpoint) => {
@@ -686,15 +670,19 @@ function EndpointsPageContent() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsCreateOpen(false); setIsEditOpen(false); }}>
+            <Button variant="outline" onClick={() => { setIsCreateOpen(false); setIsEditOpen(false); }} disabled={isCreating || isUpdating}>
               Cancel
             </Button>
             <Button
               onClick={isEditOpen ? handleEdit : handleCreate}
-              disabled={!formData.name.trim() || !formData.template_id}
+              disabled={isCreating || isUpdating || !formData.name.trim() || !formData.template_id}
               className="bg-emerald-600 hover:bg-emerald-700"
             >
-              {isEditOpen ? 'Save Changes' : 'Create Endpoint'}
+              {(isCreating || isUpdating) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {isEditOpen 
+                ? (isUpdating ? 'Saving...' : 'Save Changes')
+                : (isCreating ? 'Creating...' : 'Create Endpoint')
+              }
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -775,15 +763,16 @@ function EndpointsPageContent() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsBulkCreateOpen(false)}>
+            <Button variant="outline" onClick={() => setIsBulkCreateOpen(false)} disabled={isBulkCreating}>
               Cancel
             </Button>
             <Button
               onClick={handleBulkCreate}
-              disabled={!bulkFormData.template_id || !bulkFormData.prefix.trim()}
+              disabled={isBulkCreating || !bulkFormData.template_id || !bulkFormData.prefix.trim()}
               className="bg-emerald-600 hover:bg-emerald-700"
             >
-              Create {bulkFormData.count} Endpoints
+              {isBulkCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {isBulkCreating ? 'Creating...' : `Create ${bulkFormData.count} Endpoints`}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -862,11 +851,12 @@ function EndpointsPageContent() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDeleteOpen(false)} disabled={isDeleting}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete Endpoint
+            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {isDeleting ? 'Deleting...' : 'Delete Endpoint'}
             </Button>
           </DialogFooter>
         </DialogContent>
