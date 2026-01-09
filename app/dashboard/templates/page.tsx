@@ -154,7 +154,7 @@ export default function TemplatesPage() {
     currency: 'USD',
     layout: 'standard',
     colorTheme: 'modern',
-    template_type: 'barista',
+    template_type: 'classic', // Default to classic for business users
   });
   const [duplicateName, setDuplicateName] = useState('');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -162,6 +162,9 @@ export default function TemplatesPage() {
   const { toast } = useToast();
   const { currentLocation } = useLocation();
   const { subscription, canAccessFeature } = useSubscription();
+
+  // Filter templates for business users (exclude franchise-only templates)
+  const availableTemplates = designTemplates.filter(t => !t.isFranchiseOnly);
 
   useEffect(() => {
     loadTemplates();
@@ -204,7 +207,7 @@ export default function TemplatesPage() {
           description: 'Template created successfully',
         });
         setIsCreateOpen(false);
-        setFormData({ name: '', description: '', currency: 'USD', layout: 'standard', colorTheme: 'modern', template_type: 'barista' });
+        setFormData({ name: '', description: '', currency: 'USD', layout: 'standard', colorTheme: 'modern', template_type: 'classic' });
         loadTemplates();
       }
     } catch (error: any) {
@@ -342,7 +345,7 @@ export default function TemplatesPage() {
         </div>
         <Button
           onClick={() => {
-            setFormData({ name: '', description: '', currency: 'USD', layout: 'standard', colorTheme: 'modern', template_type: 'barista' });
+            setFormData({ name: '', description: '', currency: 'USD', layout: 'standard', colorTheme: 'modern', template_type: 'classic' });
             setIsCreateOpen(true);
           }}
           className="bg-emerald-600 hover:bg-emerald-700"
@@ -535,7 +538,7 @@ export default function TemplatesPage() {
                 Design Template
               </Label>
               <div className="grid grid-cols-2 gap-3">
-                {designTemplates.map((template) => {
+                {availableTemplates.map((template) => {
                   const hasAccess = !template.isPremium || canAccessFeature('premium_templates');
                   const isSelected = formData.template_type === template.id;
                   
@@ -719,7 +722,7 @@ export default function TemplatesPage() {
                 Design Template
               </Label>
               <div className="grid grid-cols-2 gap-3">
-                {designTemplates.map((template) => {
+                {availableTemplates.map((template) => {
                   const hasAccess = !template.isPremium || canAccessFeature('premium_templates');
                   const isSelected = formData.template_type === template.id;
                   
