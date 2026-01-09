@@ -111,9 +111,8 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
   const getCartTotal = () => {
     return cart.reduce(
       (sum, cartItem) => {
-        const basePrice = getItemPrice(cartItem.item, menuData.overrides);
-        const variationPrice = cartItem.selectedVariation?.price || 0;
-        return sum + (basePrice + variationPrice) * cartItem.quantity;
+        const price = cartItem.selectedVariation?.price || getItemPrice(cartItem.item, menuData.overrides);
+        return sum + price * cartItem.quantity;
       },
       0
     );
@@ -424,8 +423,13 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
                           <h3 className="font-medium text-sm truncate" style={{ color: design.text }}>
                             {cartItem.item.name}
                           </h3>
+                          {cartItem.selectedVariation && (
+                            <p className="text-xs opacity-60" style={{ color: design.text }}>
+                              {cartItem.selectedVariation.name}
+                            </p>
+                          )}
                           <p className="text-sm font-bold" style={{ color: design.accent }}>
-                            {symbol}{formatPrice(getItemPrice(cartItem.item, menuData.overrides))}
+                            {symbol}{formatPrice(cartItem.selectedVariation?.price || getItemPrice(cartItem.item, menuData.overrides))}
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
@@ -535,7 +539,7 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
                                 )}
                               </div>
                               <span className="font-bold" style={{ color: design.accent }}>
-                                +{symbol}{formatPrice(variation.price)}
+                                {symbol}{formatPrice(variation.price)}
                               </span>
                             </div>
                           </button>
@@ -549,7 +553,7 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-lg font-semibold" style={{ color: design.text }}>Total</span>
                     <span className="text-2xl font-bold" style={{ color: design.accent }}>
-                      {symbol}{formatPrice(getItemPrice(selectedItem, menuData.overrides) + (selectedVariation?.price || 0))}
+                      {symbol}{formatPrice(selectedVariation?.price || getItemPrice(selectedItem, menuData.overrides))}
                     </span>
                   </div>
                   <button

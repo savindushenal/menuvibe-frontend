@@ -130,9 +130,8 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
   const getCartTotal = () => {
     return cart.reduce(
       (sum, cartItem) => {
-        const basePrice = getItemPrice(cartItem.item, menuData.overrides);
-        const variationPrice = cartItem.selectedVariation?.price || 0;
-        return sum + (basePrice + variationPrice) * cartItem.quantity;
+        const price = cartItem.selectedVariation?.price || getItemPrice(cartItem.item, menuData.overrides);
+        return sum + price * cartItem.quantity;
       },
       0
     );
@@ -544,7 +543,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                             </p>
                           )}
                           <p className="text-sm font-bold" style={{ color: design.accent }}>
-                            {symbol}{formatPrice(getItemPrice(cartItem.item, menuData.overrides) + (cartItem.selectedVariation?.price || 0))}
+                            {symbol}{formatPrice(cartItem.selectedVariation?.price || getItemPrice(cartItem.item, menuData.overrides))}
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
@@ -695,7 +694,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                                 )}
                               </div>
                               <span className="font-bold" style={{ color: design.accent }}>
-                                +{symbol}{formatPrice(variation.price)}
+                                {symbol}{formatPrice(variation.price)}
                               </span>
                             </div>
                             {variation.is_available === false && (
@@ -754,7 +753,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-lg font-semibold" style={{ color: design.text }}>Total</span>
                     <span className="text-2xl font-bold" style={{ color: design.accent }}>
-                      {symbol}{formatPrice(getItemPrice(selectedItem, menuData.overrides) + (selectedVariation?.price || 0))}
+                      {symbol}{formatPrice(selectedVariation?.price || getItemPrice(selectedItem, menuData.overrides))}
                     </span>
                   </div>
                   <button
