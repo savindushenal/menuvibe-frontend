@@ -352,7 +352,7 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
       <nav className="sticky top-0 z-30 backdrop-blur-md border-b" style={{ backgroundColor: design.bg + 'ee' }}>
         <div className="max-w-lg mx-auto">
           <div className="flex overflow-x-auto py-3 px-4 gap-2 scrollbar-hide">
-            {menuData.categories.map((category) => (
+            {menuData.categories?.map((category) => (
               <button
                 key={category.id}
                 onClick={() => setActiveCategory(category.name)}

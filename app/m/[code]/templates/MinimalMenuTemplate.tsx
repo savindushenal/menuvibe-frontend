@@ -165,7 +165,7 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
       {/* Category Pills */}
       <nav className="max-w-3xl mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4">
         <div className="flex overflow-x-auto gap-2 scrollbar-hide">
-          {menuData.categories.map((category) => (
+          {menuData.categories?.map((category) => (
             <button
               key={category.id}
               onClick={() => setActiveCategory(category.name)}

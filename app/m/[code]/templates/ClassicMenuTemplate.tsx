@@ -176,7 +176,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
       <nav className="lg:hidden border-b" style={{ backgroundColor: design.card }}>
         <div className="overflow-x-auto scrollbar-hide">
           <div className="flex gap-2 px-3 py-3 min-w-max">
-            {menuData.categories.map((category) => (
+            {menuData.categories?.map((category) => (
               <button
                 key={category.id}
                 onClick={() => setActiveCategory(category.id)}
@@ -199,7 +199,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
         {/* Category Sidebar - Desktop only */}
         <aside className="hidden lg:block w-48 xl:w-56 flex-shrink-0 border-r sticky top-0 h-screen overflow-y-auto" style={{ backgroundColor: design.card }}>
           <nav className="py-4">
-            {menuData.categories.map((category) => (
+            {menuData.categories?.map((category) => (
               <button
                 key={category.id}
                 onClick={() => setActiveCategory(category.id)}
