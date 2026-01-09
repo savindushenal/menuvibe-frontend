@@ -514,6 +514,31 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
                   <div className="mb-6">
                     <h3 className="font-semibold mb-3" style={{ color: design.text }}>Choose Your Option</h3>
                     <div className="space-y-2">
+                      {/* Standard/Default Option */}
+                      <button
+                        onClick={() => setSelectedVariation(null)}
+                        className={`w-full p-3 rounded-lg border-2 transition-all cursor-pointer`}
+                        style={{
+                          borderColor: selectedVariation === null ? design.accent : design.bg,
+                          backgroundColor: selectedVariation === null ? design.accent + '10' : design.bg,
+                        }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium" style={{ color: design.text }}>Standard</span>
+                            {cart.find(c => c.item.id === selectedItem.id && !c.selectedVariation) && (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium text-white" style={{ backgroundColor: design.accent }}>
+                                {cart.find(c => c.item.id === selectedItem.id && !c.selectedVariation)?.quantity} in cart
+                              </span>
+                            )}
+                          </div>
+                          <span className="font-semibold" style={{ color: design.accent }}>
+                            {symbol}{formatPrice(getItemPrice(selectedItem, menuData.overrides))}
+                          </span>
+                        </div>
+                      </button>
+
+                      {/* Variations */}
                       {selectedItem.variations.map((variation, idx) => {
                         const inCart = cart.find(c => c.item.id === selectedItem.id && c.selectedVariation?.name === variation.name);
                         return (
