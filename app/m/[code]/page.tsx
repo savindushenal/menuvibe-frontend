@@ -193,17 +193,27 @@ function PublicMenuContent() {
   }
   
   // All other templates (Classic, Minimal, Premium) use menuData
+  // Transform the API response to match the template's expected structure
+  const transformedMenuData = {
+    endpoint: menuData.endpoint,
+    template: menuData.template,
+    business: menuData.business,
+    categories: menuData.menu?.categories || [],
+    offers: menuData.offers || [],
+    overrides: menuData.overrides || {},
+  };
+  
   // These are for BUSINESS users only
   switch (templateType) {
     case 'classic':
-      return <ClassicMenuTemplate menuData={menuData} />;
+      return <ClassicMenuTemplate menuData={transformedMenuData} />;
     
     case 'minimal':
-      return <MinimalMenuTemplate menuData={menuData} />;
+      return <MinimalMenuTemplate menuData={transformedMenuData} />;
     
     case 'premium':
     default:
-      return <PremiumMenuTemplate menuData={menuData} />;
+      return <PremiumMenuTemplate menuData={transformedMenuData} />;
   }
 }
 
