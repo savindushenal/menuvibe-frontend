@@ -36,7 +36,7 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>(
-    menuData.categories[0]?.name || 'All'
+    menuData.categories?.[0]?.name || 'All'
   );
 
   const design = getColorTheme(menuData.template.settings);
@@ -45,9 +45,9 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
   // Get all items for the active category
   const activeItems = useMemo(() => {
     if (activeCategory === 'All') {
-      return menuData.categories.flatMap((cat) => cat.items);
+      return menuData.categories?.flatMap((cat) => cat.items) || [];
     }
-    const category = menuData.categories.find((cat) => cat.name === activeCategory);
+    const category = menuData.categories?.find((cat) => cat.name === activeCategory);
     return category?.items || [];
   }, [menuData, activeCategory]);
 

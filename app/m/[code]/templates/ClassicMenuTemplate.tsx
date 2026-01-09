@@ -39,18 +39,18 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<number>(
-    menuData.categories[0]?.id || 0
+    menuData.categories?.[0]?.id || 0
   );
 
   const design = getColorTheme(menuData.template.settings);
   const symbol = getCurrencySymbol(menuData.template.currency);
 
   const activeItems = useMemo(() => {
-    const category = menuData.categories.find((cat) => cat.id === activeCategory);
+    const category = menuData.categories?.find((cat) => cat.id === activeCategory);
     return category?.items || [];
   }, [menuData, activeCategory]);
 
-  const activeCategoryData = menuData.categories.find((cat) => cat.id === activeCategory);
+  const activeCategoryData = menuData.categories?.find((cat) => cat.id === activeCategory);
 
   const addToCart = (item: PublicMenuItem) => {
     if (!isItemAvailable(item, menuData.overrides)) return;

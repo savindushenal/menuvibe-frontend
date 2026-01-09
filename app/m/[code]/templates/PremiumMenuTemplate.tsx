@@ -41,7 +41,7 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>(
-    menuData.categories[0]?.name || 'All'
+    menuData.categories?.[0]?.name || 'All'
   );
   const [selectedItem, setSelectedItem] = useState<PublicMenuItem | null>(null);
 
@@ -59,22 +59,22 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
   // Get featured/top picks items
   const topPicks = useMemo(() => {
     const featured = menuData.categories
-      .flatMap((cat) => cat.items)
-      .filter((item) => item.is_featured && isItemAvailable(item, menuData.overrides));
+      ?.flatMap((cat) => cat.items)
+      .filter((item) => item.is_featured && isItemAvailable(item, menuData.overrides)) || [];
     return featured.slice(0, 6);
   }, [menuData]);
 
   // Get all items for the active category
   const activeItems = useMemo(() => {
     if (activeCategory === 'All') {
-      return menuData.categories.flatMap((cat) => cat.items);
+      return menuData.categories?.flatMap((cat) => cat.items) || [];
     }
-    const category = menuData.categories.find((cat) => cat.name === activeCategory);
+    const category = menuData.categories?.find((cat) => cat.name === activeCategory);
     return category?.items || [];
   }, [menuData, activeCategory]);
 
   // Stats
-  const totalItems = menuData.categories.reduce((sum, cat) => sum + cat.items.length, 0);
+  const totalItems = menuData.categories?.reduce((sum, cat) => sum + cat.items.length, 0) || 0;
 
   const addToCart = (item: PublicMenuItem) => {
     if (!isItemAvailable(item, menuData.overrides)) return;
