@@ -143,7 +143,11 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
   };
 
   const getCartItem = (itemId: number) => {
-    return cart.find((c) => c.item.id === itemId);
+    // Get total quantity across all variations
+    const itemsInCart = cart.filter((c) => c.item.id === itemId);
+    if (itemsInCart.length === 0) return null;
+    const totalQuantity = itemsInCart.reduce((sum, item) => sum + item.quantity, 0);
+    return { ...itemsInCart[0], quantity: totalQuantity };
   };
 
   // If no categories, show empty state
@@ -387,7 +391,15 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                         cartItem ? (
                           <div className="inline-flex items-center gap-2 border rounded-lg px-2 py-1" style={{ borderColor: design.accent }}>
                             <button
-                              onClick={() => removeFromCart(item.id)}
+                              onClick={() => {
+                                // If item has variations, show modal to select which to remove
+                                if (item.variations && item.variations.length > 0) {
+                                  setSelectedItem(item);
+                                  setSelectedVariation(null);
+                                } else {
+                                  removeFromCart(item.id);
+                                }
+                              }}
                               className="w-6 h-6 sm:w-7 sm:h-7 rounded flex items-center justify-center hover:bg-neutral-100"
                               style={{ color: design.accent }}
                             >
@@ -397,7 +409,15 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                               {cartItem.quantity}
                             </span>
                             <button
-                              onClick={() => handleItemClick(item)}
+                              onClick={() => {
+                                // Always show modal if item has variations
+                                if (item.variations && item.variations.length > 0) {
+                                  setSelectedItem(item);
+                                  setSelectedVariation(null);
+                                } else {
+                                  addToCart(item);
+                                }
+                              }}
                               className="w-7 h-7 rounded flex items-center justify-center hover:bg-neutral-100"
                               style={{ color: design.accent }}
                             >
@@ -645,30 +665,45 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                   <div className="mb-6">
                     <h3 className="font-semibold mb-3" style={{ color: design.text }}>Choose Your Option</h3>
                     <div className="space-y-2">
-                      {selectedItem.variations.map((variation, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setSelectedVariation(variation)}
-                          disabled={variation.is_available === false}
-                          className={`w-full p-3 rounded-lg border-2 transition-all ${
-                            variation.is_available === false ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                          }`}
-                          style={{
-                            borderColor: selectedVariation?.name === variation.name ? design.accent : design.bg,
-                            backgroundColor: selectedVariation?.name === variation.name ? design.accent + '10' : design.bg,
-                          }}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium" style={{ color: design.text }}>{variation.name}</span>
-                            <span className="font-bold" style={{ color: design.accent }}>
-                              +{symbol}{formatPrice(variation.price)}
-                            </span>
-                          </div>
-                          {variation.is_available === false && (
-                            <span className="text-xs opacity-50" style={{ color: design.text }}>Out of stock</span>
-                          )}
-                        </button>
-                      ))}
+                      {selectedItem.variations.map((variation, idx) => {
+                        // Check if this variation is in cart
+                        const inCart = cart.find(c => 
+                          c.item.id === selectedItem.id && 
+                          c.selectedVariation?.name === variation.name
+                        );
+                        
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => setSelectedVariation(variation)}
+                            disabled={variation.is_available === false}
+                            className={`w-full p-3 rounded-lg border-2 transition-all ${
+                              variation.is_available === false ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                            }`}
+                            style={{
+                              borderColor: selectedVariation?.name === variation.name ? design.accent : design.bg,
+                              backgroundColor: selectedVariation?.name === variation.name ? design.accent + '10' : design.bg,
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium" style={{ color: design.text }}>{variation.name}</span>
+                                {inCart && (
+                                  <span className="px-2 py-0.5 rounded-full text-xs font-medium text-white" style={{ backgroundColor: design.accent }}>
+                                    {inCart.quantity} in cart
+                                  </span>
+                                )}
+                              </div>
+                              <span className="font-bold" style={{ color: design.accent }}>
+                                +{symbol}{formatPrice(variation.price)}
+                              </span>
+                            </div>
+                            {variation.is_available === false && (
+                              <span className="text-xs opacity-50" style={{ color: design.text }}>Out of stock</span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
