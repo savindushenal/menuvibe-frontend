@@ -58,11 +58,20 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
 
   const activeCategoryData = menuData.categories?.find((cat) => cat.id === activeCategory);
 
-  const addToCart = (item: PublicMenuItem) => {
-    addToCartWithVariation(item, null);
+  // Get recommended items based on category and features
+  const getRecommendedItems = (currentItem: PublicMenuItem) => {
+    const allItems = menuData.categories?.flatMap(cat => cat.items) || [];
+    return allItems
+      .filter(item => 
+        item.id !== currentItem.id && 
+        isItemAvailable(item, menuData.overrides) &&
+        (item.is_featured || item.compare_at_price) // Featured or on sale
+      )
+      .slice(0, 3);
   };
 
-  const removeFromCart = (itemId: number, variation: { name: string; price: number } | null = null) => {selection
+  const handleItemClick = (item: PublicMenuItem) => {
+    // If item has variations, show modal for selection
     if (item.variations && item.variations.length > 0) {
       setSelectedItem(item);
       setSelectedVariation(null);
@@ -75,7 +84,6 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
   const addToCartWithVariation = (item: PublicMenuItem, variation: { name: string; price: number } | null) => {
     if (!isItemAvailable(item, menuData.overrides)) return;
     setCart((prev) => {
-      const cartKey = variation ? `${item.id}-${variation.name}` : `${item.id}`;
       const existing = prev.find((i) => 
         i.item.id === item.id && 
         ((!i.selectedVariation && !variation) || (i.selectedVariation?.name === variation?.name))
@@ -521,14 +529,14 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                         </div>
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => removeFromCart(cartItem.item.id, cartItem.selectedVariation)}
+                            onClick={() => removeFromCart(cartItem.item.id, cartItem.selectedVariation || null)}
                             className="w-8 h-8 rounded-full flex items-center justify-center border"
                           >
                             <Minus className="w-4 h-4" />
                           </button>
                           <span className="w-8 text-center font-medium">{cartItem.quantity}</span>
                           <button
-                            onClick={() => addToCartWithVariation(cartItem.item, cartItem.selectedVariation)}
+                            onClick={() => addToCartWithVariation(cartItem.item, cartItem.selectedVariation || null)}
                             className="w-8 h-8 rounded-full flex items-center justify-center text-white"
                             style={{ backgroundColor: design.accent }}
                           >
@@ -672,7 +680,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                     <div className="mb-6">
                       <h3 className="font-semibold mb-3" style={{ color: design.text }}>You Might Also Like</h3>
                       <div className="grid grid-cols-3 gap-2">
-                        {recommendations.map((item) => (
+                        {recommendations.map((item: PublicMenuItem) => (
                           <button
                             key={item.id}
                             onClick={() => {
@@ -716,7 +724,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                   </div>
                   <button
                     onClick={() => addToCartWithVariation(selectedItem, selectedVariation)}
-                    disabled={selectedItem.variations && selectedItem.variations.length > 0 && !selectedVariation}
+                    disabled={!!(selectedItem.variations && selectedItem.variations.length > 0 && !selectedVariation)}
                     className="w-full py-4 rounded-lg text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ backgroundColor: design.accent }}
                   >
