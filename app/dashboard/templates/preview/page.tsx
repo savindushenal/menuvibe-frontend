@@ -17,6 +17,7 @@ const sampleMenuData = {
   endpoint: {
     id: 1,
     name: 'Sample Restaurant',
+    type: 'qr',
     identifier: 'SAMPLE',
     is_active: true,
   },
@@ -44,7 +45,9 @@ const sampleMenuData = {
     cuisine_type: 'Italian',
     operating_hours: null,
     services: ['Dine-in', 'Takeout', 'Delivery'],
+    social_media: null,
     primary_color: '#3B82F6',
+    secondary_color: null,
   },
   categories: [
     {
