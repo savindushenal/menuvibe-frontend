@@ -38,6 +38,8 @@ interface ClassicMenuTemplateProps {
 export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<PublicMenuItem | null>(null);
+  const [selectedVariation, setSelectedVariation] = useState<{ name: string; price: number } | null>(null);
   const [activeCategory, setActiveCategory] = useState<number>(
     menuData.categories?.[0]?.id || 0
   );
@@ -57,34 +59,73 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
   const activeCategoryData = menuData.categories?.find((cat) => cat.id === activeCategory);
 
   const addToCart = (item: PublicMenuItem) => {
-    if (!isItemAvailable(item, menuData.overrides)) return;
-    setCart((prev) => {
-      const existing = prev.find((i) => i.item.id === item.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.item.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
-        );
-      }
-      return [...prev, { item, quantity: 1, selectedVariation: null }];
-    });
+    addToCartWithVariation(item, null);
   };
 
-  const removeFromCart = (itemId: number) => {
+  const removeFromCart = (itemId: number, variation: { name: string; price: number } | null = null) => {selection
+    if (item.variations && item.variations.length > 0) {
+      setSelectedItem(item);
+      setSelectedVariation(null);
+    } else {
+      // No variations, add directly to cart
+      addToCart(item);
+    }
+  };
+
+  const addToCartWithVariation = (item: PublicMenuItem, variation: { name: string; price: number } | null) => {
+    if (!isItemAvailable(item, menuData.overrides)) return;
     setCart((prev) => {
-      const existing = prev.find((i) => i.item.id === itemId);
-      if (existing && existing.quantity > 1) {
+      const cartKey = variation ? `${item.id}-${variation.name}` : `${item.id}`;
+      const existing = prev.find((i) => 
+        i.item.id === item.id && 
+        ((!i.selectedVariation && !variation) || (i.selectedVariation?.name === variation?.name))
+      );
+      if (existing) {
         return prev.map((i) =>
-          i.item.id === itemId ? { ...i, quantity: i.quantity - 1 } : i
+          (i.item.id === item.id && 
+           ((!i.selectedVariation && !variation) || (i.selectedVariation?.name === variation?.name)))
+            ? { ...i, quantity: i.quantity + 1 }
+            : i
         );
       }
-      return prev.filter((i) => i.item.id !== itemId);
+      return [...prev, { item, quantity: 1, selectedVariation: variation }];
+    });
+    setSelectedItem(null);
+    setSelectedVariation(null);
+  };
+
+  const addToCart = (item: PublicMenuItem) => {
+    addToCartWithVariation(item, null);
+  };
+
+  const removeFromCart = (itemId: number, variation: { name: string; price: number } | null = null) => {
+    setCart((prev) => {
+      const existing = prev.find((i) => 
+        i.item.id === itemId &&
+        ((!i.selectedVariation && !variation) || (i.selectedVariation?.name === variation?.name))
+      );
+      if (existing && existing.quantity > 1) {
+        return prev.map((i) =>
+          (i.item.id === itemId &&
+           ((!i.selectedVariation && !variation) || (i.selectedVariation?.name === variation?.name)))
+            ? { ...i, quantity: i.quantity - 1 }
+            : i
+        );
+      }
+      return prev.filter((i) => 
+        !(i.item.id === itemId &&
+          ((!i.selectedVariation && !variation) || (i.selectedVariation?.name === variation?.name)))
+      );
     });
   };
 
   const getCartTotal = () => {
     return cart.reduce(
-      (sum, cartItem) =>
-        sum + getItemPrice(cartItem.item, menuData.overrides) * cartItem.quantity,
+      (sum, cartItem) => {
+        const basePrice = getItemPrice(cartItem.item, menuData.overrides);
+        const variationPrice = cartItem.selectedVariation?.price || 0;
+        return sum + (basePrice + variationPrice) * cartItem.quantity;
+      },
       0
     );
   };
@@ -317,6 +358,13 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                       </p>
                     )}
 
+                    {/* Variations indicator */}
+                    {item.variations && item.variations.length > 0 && (
+                      <div className="flex items-center gap-1 text-xs mt-1.5 sm:mt-2" style={{ color: design.accent }}>
+                        <span className="font-medium">{item.variations.length} options available</span>
+                      </div>
+                    )}
+
                     {item.preparation_time && (
                       <div className="flex items-center gap-1 text-xs opacity-40 mt-1.5 sm:mt-2" style={{ color: design.text }}>
                         <Clock className="w-3 h-3" />
@@ -341,7 +389,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                               {cartItem.quantity}
                             </span>
                             <button
-                              onClick={() => addToCart(item)}
+                              onClick={() => handleItemClick(item)}
                               className="w-7 h-7 rounded flex items-center justify-center hover:bg-neutral-100"
                               style={{ color: design.accent }}
                             >
@@ -350,12 +398,12 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                           </div>
                         ) : (
                           <button
-                            onClick={() => addToCart(item)}
+                            onClick={() => handleItemClick(item)}
                             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border hover:shadow-sm transition-shadow"
                             style={{ borderColor: design.accent, color: design.accent }}
                           >
                             <Plus className="w-4 h-4" />
-                            Add to Order
+                            {item.variations && item.variations.length > 0 ? 'Choose Options' : 'Add to Order'}
                           </button>
                         )
                       ) : (
@@ -462,20 +510,25 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                           <h3 className="font-medium truncate" style={{ color: design.text }}>
                             {cartItem.item.name}
                           </h3>
+                          {cartItem.selectedVariation && (
+                            <p className="text-xs opacity-60" style={{ color: design.text }}>
+                              {cartItem.selectedVariation.name}
+                            </p>
+                          )}
                           <p className="text-sm font-bold" style={{ color: design.accent }}>
-                            {symbol}{formatPrice(getItemPrice(cartItem.item, menuData.overrides))}
+                            {symbol}{formatPrice(getItemPrice(cartItem.item, menuData.overrides) + (cartItem.selectedVariation?.price || 0))}
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => removeFromCart(cartItem.item.id)}
+                            onClick={() => removeFromCart(cartItem.item.id, cartItem.selectedVariation)}
                             className="w-8 h-8 rounded-full flex items-center justify-center border"
                           >
                             <Minus className="w-4 h-4" />
                           </button>
                           <span className="w-8 text-center font-medium">{cartItem.quantity}</span>
                           <button
-                            onClick={() => addToCart(cartItem.item)}
+                            onClick={() => addToCartWithVariation(cartItem.item, cartItem.selectedVariation)}
                             className="w-8 h-8 rounded-full flex items-center justify-center text-white"
                             style={{ backgroundColor: design.accent }}
                           >
@@ -504,6 +557,175 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                   </button>
                 </div>
               )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Item Detail Modal with Variations & Recommendations */}
+      <AnimatePresence>
+        {selectedItem && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-50"
+              onClick={() => setSelectedItem(null)}
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 z-50 max-h-[90vh] overflow-y-auto"
+              style={{ backgroundColor: design.card }}
+            >
+              <div className="p-4 border-b flex items-center justify-between sticky top-0 z-10" style={{ backgroundColor: design.card }}>
+                <h2 className="text-xl font-bold" style={{ color: design.text }}>{selectedItem.name}</h2>
+                <button
+                  onClick={() => setSelectedItem(null)}
+                  className="p-2 rounded-full hover:bg-neutral-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-4">
+                {/* Item Image */}
+                {selectedItem.image_url && (
+                  <img
+                    src={selectedItem.image_url}
+                    alt={selectedItem.name}
+                    className="w-full h-48 object-cover rounded-lg mb-4"
+                  />
+                )}
+
+                {/* Description */}
+                {selectedItem.description && (
+                  <p className="text-sm opacity-70 mb-4" style={{ color: design.text }}>
+                    {selectedItem.description}
+                  </p>
+                )}
+
+                {/* Tags */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {selectedItem.is_featured && (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-amber-500" /> Featured
+                    </span>
+                  )}
+                  {selectedItem.is_spicy && (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 flex items-center gap-1">
+                      <Flame className="w-3 h-3" /> Spicy
+                    </span>
+                  )}
+                  {selectedItem.dietary_info?.includes('vegetarian') && (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 flex items-center gap-1">
+                      <Leaf className="w-3 h-3" /> Vegetarian
+                    </span>
+                  )}
+                  {selectedItem.preparation_time && (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> {selectedItem.preparation_time} min
+                    </span>
+                  )}
+                </div>
+
+                {/* Variations */}
+                {selectedItem.variations && selectedItem.variations.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="font-semibold mb-3" style={{ color: design.text }}>Choose Your Option</h3>
+                    <div className="space-y-2">
+                      {selectedItem.variations.map((variation, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedVariation(variation)}
+                          disabled={variation.is_available === false}
+                          className={`w-full p-3 rounded-lg border-2 transition-all ${
+                            variation.is_available === false ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                          }`}
+                          style={{
+                            borderColor: selectedVariation?.name === variation.name ? design.accent : design.bg,
+                            backgroundColor: selectedVariation?.name === variation.name ? design.accent + '10' : design.bg,
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium" style={{ color: design.text }}>{variation.name}</span>
+                            <span className="font-bold" style={{ color: design.accent }}>
+                              +{symbol}{formatPrice(variation.price)}
+                            </span>
+                          </div>
+                          {variation.is_available === false && (
+                            <span className="text-xs opacity-50" style={{ color: design.text }}>Out of stock</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recommendations */}
+                {(() => {
+                  const recommendations = getRecommendedItems(selectedItem);
+                  return recommendations.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="font-semibold mb-3" style={{ color: design.text }}>You Might Also Like</h3>
+                      <div className="grid grid-cols-3 gap-2">
+                        {recommendations.map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              setSelectedItem(item);
+                              setSelectedVariation(null);
+                            }}
+                            className="text-left p-2 rounded-lg border"
+                            style={{ backgroundColor: design.bg, borderColor: design.bg }}
+                          >
+                            {item.image_url ? (
+                              <img
+                                src={item.image_url}
+                                alt={item.name}
+                                className="w-full h-16 object-cover rounded mb-1"
+                              />
+                            ) : (
+                              <div className="w-full h-16 bg-neutral-200 rounded mb-1 flex items-center justify-center text-2xl">
+                                {item.icon || DEFAULT_ITEM_ICON}
+                              </div>
+                            )}
+                            <p className="text-xs font-medium truncate" style={{ color: design.text }}>
+                              {item.name}
+                            </p>
+                            <p className="text-xs font-bold" style={{ color: design.accent }}>
+                              {symbol}{formatPrice(getItemPrice(item, menuData.overrides))}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Add to Cart Button */}
+                <div className="sticky bottom-0 pt-4 border-t" style={{ backgroundColor: design.card }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-lg font-semibold" style={{ color: design.text }}>Total</span>
+                    <span className="text-2xl font-bold" style={{ color: design.accent }}>
+                      {symbol}{formatPrice(getItemPrice(selectedItem, menuData.overrides) + (selectedVariation?.price || 0))}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => addToCartWithVariation(selectedItem, selectedVariation)}
+                    disabled={selectedItem.variations && selectedItem.variations.length > 0 && !selectedVariation}
+                    className="w-full py-4 rounded-lg text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: design.accent }}
+                  >
+                    {selectedItem.variations && selectedItem.variations.length > 0 && !selectedVariation
+                      ? 'Please select an option'
+                      : 'Add to Cart'}
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </>
         )}
