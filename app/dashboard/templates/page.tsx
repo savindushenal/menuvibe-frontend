@@ -343,16 +343,28 @@ export default function TemplatesPage() {
             Create reusable menu templates for tables, rooms, and branches
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setFormData({ name: '', description: '', currency: 'USD', layout: 'standard', colorTheme: 'modern', template_type: 'classic' });
-            setIsCreateOpen(true);
-          }}
-          className="bg-emerald-600 hover:bg-emerald-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Template
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            asChild
+            variant="outline"
+            className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
+          >
+            <Link href="/dashboard/templates/preview">
+              <Eye className="w-4 h-4 mr-2" />
+              Browse Templates
+            </Link>
+          </Button>
+          <Button
+            onClick={() => {
+              setFormData({ name: '', description: '', currency: 'USD', layout: 'standard', colorTheme: 'modern', template_type: 'classic' });
+              setIsCreateOpen(true);
+            }}
+            className="bg-emerald-600 hover:bg-emerald-700"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Template
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
