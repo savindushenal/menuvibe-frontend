@@ -45,6 +45,10 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
   const design = getColorTheme(menuData.template.settings);
   const symbol = getCurrencySymbol(menuData.template.currency);
 
+  // Debug logging
+  console.log('ClassicMenuTemplate - Categories:', menuData.categories);
+  console.log('ClassicMenuTemplate - Active Category:', activeCategory);
+
   const activeItems = useMemo(() => {
     const category = menuData.categories?.find((cat) => cat.id === activeCategory);
     return category?.items || [];
@@ -92,6 +96,19 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
   const getCartItem = (itemId: number) => {
     return cart.find((c) => c.item.id === itemId);
   };
+
+  // If no categories, show empty state
+  if (!menuData.categories || menuData.categories.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: design.bg }}>
+        <div className="text-center p-6">
+          <UtensilsCrossed className="w-16 h-16 mx-auto mb-4 opacity-20" style={{ color: design.text }} />
+          <h2 className="text-xl font-bold mb-2" style={{ color: design.text }}>No Menu Items</h2>
+          <p className="opacity-60" style={{ color: design.text }}>This menu doesn't have any items yet.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: design.bg }}>
@@ -243,10 +260,17 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
 
           {/* Items List */}
           <div className="space-y-3 sm:space-y-4">
-            {activeItems.map((item) => {
-              const available = isItemAvailable(item, menuData.overrides);
-              const price = getItemPrice(item, menuData.overrides);
-              const cartItem = getCartItem(item.id);
+            {activeItems.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-lg opacity-50" style={{ color: design.text }}>
+                  No items available in this category
+                </p>
+              </div>
+            ) : (
+              activeItems.map((item) => {
+                const available = isItemAvailable(item, menuData.overrides);
+                const price = getItemPrice(item, menuData.overrides);
+                const cartItem = getCartItem(item.id);
 
               return (
                 <motion.div
@@ -361,7 +385,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                   )}
                 </motion.div>
               );
-            })}
+            }))}
           </div>
         </main>
       </div>
