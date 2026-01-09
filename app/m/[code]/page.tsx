@@ -4,9 +4,9 @@ import { useEffect, useState, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { X, Loader2 } from 'lucide-react';
 import { BaristaTemplate } from '@/components/templates/barista';
-import { PremiumTemplate } from '@/components/templates/premium';
-import { ClassicTemplate } from '@/components/templates/classic';
-import { MinimalTemplate } from '@/components/templates/minimal';
+import { PremiumMenuTemplate } from './templates/PremiumMenuTemplate';
+import { ClassicMenuTemplate } from './templates/ClassicMenuTemplate';
+import { MinimalMenuTemplate } from './templates/MinimalMenuTemplate';
 import type { FranchiseInfo, LocationInfo, MenuItem } from '@/components/templates/premium/types';
 
 function LoadingFallback() {
@@ -178,45 +178,32 @@ function PublicMenuContent() {
   }
 
   // Render appropriate template based on template type
-  console.log('Rendering template:', templateType, 'with', menuItems.length, 'items');
+  console.log('Rendering template:', templateType, 'isFranchise:', isFranchise, 'with', menuItems.length, 'items');
 
+  // Barista template is ONLY for franchises
+  if (isFranchise && templateType === 'barista') {
+    return (
+      <BaristaTemplate
+        franchise={franchise}
+        location={location}
+        menuItems={menuItems}
+        tableNumber={tableNumber || menuData.endpoint?.identifier}
+      />
+    );
+  }
+  
+  // All other templates (Classic, Minimal, Premium) use menuData
+  // These are for BUSINESS users only
   switch (templateType) {
-    case 'barista':
-      return (
-        <BaristaTemplate
-          franchise={franchise}
-          location={location}
-          menuItems={menuItems}
-          tableNumber={tableNumber || menuData.endpoint?.identifier}
-        />
-      );
-    
     case 'classic':
-      return (
-        <ClassicTemplate
-          franchise={franchise}
-          location={location}
-          menuItems={menuItems}
-        />
-      );
+      return <ClassicMenuTemplate menuData={menuData} />;
     
     case 'minimal':
-      return (
-        <MinimalTemplate
-          franchise={franchise}
-          location={location}
-          menuItems={menuItems}
-        />
-      );
+      return <MinimalMenuTemplate menuData={menuData} />;
     
+    case 'premium':
     default:
-      return (
-        <PremiumTemplate
-          franchise={franchise}
-          location={location}
-          menuItems={menuItems}
-        />
-      );
+      return <PremiumMenuTemplate menuData={menuData} />;
   }
 }
 

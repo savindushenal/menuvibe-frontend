@@ -81,6 +81,7 @@ const designTemplates = [
     description: 'Modern coffee shop style with hero banner and quick ordering',
     preview: '☕',
     isPremium: false,
+    isFranchiseOnly: true, // Only for franchise menus
     features: ['Hero banner', 'Category filters', 'Quick add to cart', 'Animated UI'],
     previewImage: '/templates/barista-preview.jpg'
   },
@@ -90,6 +91,7 @@ const designTemplates = [
     description: 'Traditional restaurant menu with elegant list layout',
     preview: '📜',
     isPremium: false,
+    isFranchiseOnly: false,
     features: ['List layout', 'Category navigation', 'Detailed descriptions', 'Print-friendly'],
     previewImage: '/templates/classic-preview.jpg'
   },
@@ -99,6 +101,7 @@ const designTemplates = [
     description: 'Clean and simple grid-based modern design',
     preview: '🎯',
     isPremium: false,
+    isFranchiseOnly: false,
     features: ['Grid layout', 'Large images', 'Quick view', 'Bottom sheet cart'],
     previewImage: '/templates/minimal-preview.jpg'
   },
@@ -108,6 +111,7 @@ const designTemplates = [
     description: 'Full-featured luxury template with advanced animations',
     preview: '✨',
     isPremium: true,
+    isFranchiseOnly: false,
     features: ['Top picks carousel', 'Advanced animations', 'Rating display', 'Special offers', 'Premium styling'],
     previewImage: '/templates/premium-preview.jpg',
     badge: 'Paid Plans Only'
