@@ -92,9 +92,16 @@ function PublicMenuContent() {
   const isFranchise = !!menuData.franchise;
   
   // Get template type from various possible sources
-  const templateType = isFranchise 
+  // IMPORTANT: Force business users to NOT use 'barista' template (franchise-only)
+  let templateType = isFranchise 
     ? (menuData.franchise?.template_type || 'premium')
     : (menuData.template?.settings?.template_type || menuData.template?.type || 'premium');
+  
+  // Safety check: If not a franchise but template is 'barista', force to 'classic'
+  if (!isFranchise && templateType === 'barista') {
+    console.warn('Business menu attempted to use barista template, forcing to classic');
+    templateType = 'classic';
+  }
   
   const franchise: FranchiseInfo = isFranchise ? {
     id: menuData.franchise.id,
