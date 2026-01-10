@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { ShoppingBag, Star, Plus, Coffee, MapPin, Clock, Loader2, Check } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { ShoppingBag, Star, Plus, Coffee, MapPin, Clock, Loader2, Check, Gift, Trophy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { BaristaTemplateProps } from './types';
 import Image from 'next/image';
@@ -9,6 +9,7 @@ import BaristaLogo from './BaristaLogo';
 import CartSheet from './CartSheet';
 import SuccessScreen from './SuccessScreen';
 import ToastNotification from './ToastNotification';
+import LoyaltyAuthModal from './LoyaltyAuthModal';
 
 export function BaristaTemplate({ franchise, location, menuItems }: BaristaTemplateProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -21,6 +22,23 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
   const [toastMessage, setToastMessage] = useState('');
   const [addingItemId, setAddingItemId] = useState<string | null>(null);
   const [addedItemId, setAddedItemId] = useState<string | null>(null);
+  
+  // Loyalty states
+  const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
+  const [loyaltyInfo, setLoyaltyInfo] = useState<any>(null);
+  const [savedCards, setSavedCards] = useState<any[]>([]);
+  const [sessionToken, setSessionToken] = useState('');
+
+  // Show loyalty modal on mount (only once per session)
+  useEffect(() => {
+    const hasSeenModal = sessionStorage.getItem('loyalty_prompt_shown');
+    if (!hasSeenModal) {
+      setTimeout(() => {
+        setShowLoyaltyModal(true);
+        sessionStorage.setItem('loyalty_prompt_shown', 'true');
+      }, 1000); // Show after 1 second
+    }
+  }, []);
 
   // Get unique categories
   const categories = useMemo(() => {
@@ -111,6 +129,18 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
     setIsSuccessOpen(false);
   };
 
+  const handleLoyaltyAuthenticated = (data: any) => {
+    setLoyaltyInfo(data.loyaltyInfo);
+    setSavedCards(data.savedCards);
+    setSessionToken(data.sessionToken);
+    
+    // Show success toast
+    if (data.loyaltyInfo) {
+      setToastMessage(`Welcome back, ${data.loyaltyInfo.name}! 🎉`);
+      setShowToast(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FFF8F0] to-orange-50 overflow-x-hidden">
       {/* Header */}
@@ -142,25 +172,76 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
               )}
             </div>
             
-            {/* Cart Button */}
-            <button 
-              onClick={() => setIsCartOpen(true)}
-              className="relative p-2 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
-            >
-              <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 text-[#1A1A1A]" />
-              {cartCount > 0 && (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute -top-1 -right-1 bg-[#E53935] text-white text-xs w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center font-semibold"
+            {/* Right side buttons */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Loyalty Button */}
+              {loyaltyInfo ? (
+                <button
+                  onClick={() => setShowLoyaltyModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-full hover:shadow-md transition-all"
                 >
-                  {cartCount}
-                </motion.span>
+                  <Trophy className="w-4 h-4" />
+                  <span className="text-xs font-semibold">{loyaltyInfo.points_balance} pts</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowLoyaltyModal(true)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  title="Loyalty Rewards"
+                >
+                  <Gift className="w-5 h-5 text-[#F26522]" />
+                </button>
               )}
-            </button>
+
+              {/* Cart Button */}
+              <button 
+                onClick={() => setIsCartOpen(true)}
+                className="relative p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 text-[#1A1A1A]" />
+                {cartCount > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1 -right-1 bg-[#E53935] text-white text-xs w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center font-semibold"
+                  >
+                    {cartCount}
+                  </motion.span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </motion.header>
+
+      {/* Loyalty Info Banner */}
+      {loyaltyInfo && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border-b border-amber-200 w-full"
+        >
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <Trophy className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                <span className="text-sm font-medium text-amber-900 truncate">
+                  {loyaltyInfo.name} • {loyaltyInfo.tier} Member
+                </span>
+              </div>
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <span className="text-xs text-amber-700">{loyaltyInfo.points_balance} points</span>
+                {savedCards.length > 0 && (
+                  <div className="flex items-center gap-1 text-xs text-green-700">
+                    <Check className="w-3 h-3" />
+                    <span className="hidden sm:inline">{savedCards.length} card(s)</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Hero Section */}
       <motion.section 
@@ -382,6 +463,8 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
         onConfirmOrder={handleConfirmOrder}
         locationName={location.name}
         franchiseSlug="barista"
+        loyaltyInfo={loyaltyInfo}
+        savedCards={savedCards}
       />
 
       {/* Success Screen */}
@@ -397,6 +480,14 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
         show={showToast}
         message={toastMessage}
         onClose={() => setShowToast(false)}
+      />
+
+      {/* Loyalty Auth Modal */}
+      <LoyaltyAuthModal
+        isOpen={showLoyaltyModal}
+        onClose={() => setShowLoyaltyModal(false)}
+        onAuthenticated={handleLoyaltyAuthenticated}
+        franchiseSlug={franchise.slug || 'barista'}
       />
     </div>
   );

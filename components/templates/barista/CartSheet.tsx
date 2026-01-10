@@ -23,6 +23,8 @@ interface CartSheetProps {
   onConfirmOrder: () => void;
   locationName?: string;
   franchiseSlug?: string;
+  loyaltyInfo?: any;
+  savedCards?: any[];
 }
 
 export default function CartSheet({
@@ -32,15 +34,14 @@ export default function CartSheet({
   onUpdateQuantity,
   onConfirmOrder,
   locationName = 'Table 12',
-  franchiseSlug = 'barista'
+  franchiseSlug = 'barista',
+  loyaltyInfo = null,
+  savedCards = []
 }: CartSheetProps) {
   const [isConfirming, setIsConfirming] = useState(false);
   const [sliderWidth, setSliderWidth] = useState(0);
-  const [loyaltySession, setLoyaltySession] = useState<any>(null);
-  const [showOtpVerification, setShowOtpVerification] = useState(true);
-  const [showRegistration, setShowRegistration] = useState(false);
+  // Use passed loyalty info instead of local state
   const [showAddCard, setShowAddCard] = useState(false);
-  const [pendingMobileNumber, setPendingMobileNumber] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('cash');
   const sliderRef = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
@@ -153,138 +154,13 @@ export default function CartSheet({
                 </div>
               ) : (
                 <>
-                  {/* 🔐 Required Loyalty Verification - Must complete before checkout */}
-                  {!loyaltySession && !showRegistration && franchiseSlug === 'barista' && (
-                    <div className="mb-6">
-                      <div className="bg-gradient-to-r from-orange-50 to-orange-100 border-2 border-orange-300 rounded-xl p-5 shadow-sm">
-                        <div className="flex items-start gap-3 mb-4">
-                          <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-2xl">🎁</span>
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-orange-900 text-lg">Verify Your Number</h3>
-                            <p className="text-sm text-orange-700 mt-1">
-                              Quick verification to unlock rewards & faster checkout
-                            </p>
-                          </div>
-                        </div>
-
-                        {showOtpVerification ? (
-                          <>
-                            <LoyaltyOtpVerification
-                              franchiseSlug={franchiseSlug}
-                              onVerified={(data) => {
-                                // Check if this is a new member
-                                if (!data.loyaltyInfo || data.loyaltyInfo.is_new_member) {
-                                  setPendingMobileNumber(data.mobileNumber);
-                                  setShowOtpVerification(false);
-                                  setShowRegistration(true);
-                                } else {
-                                  setLoyaltySession(data);
-                                  setShowOtpVerification(false);
-                                }
-                              }}
-                            />
-                            
-                            {/* Quick Actions */}
-                            <div className="mt-4 p-3 bg-white rounded-lg border border-orange-200">
-                              <p className="text-xs font-semibold text-orange-900 mb-2">🚀 Quick Actions:</p>
-                              <div className="flex flex-wrap gap-2">
-                                <button
-                                  onClick={() => {
-                                    // Auto-fill demo number
-                                    const mobileInput = document.querySelector('input[type="tel"]') as HTMLInputElement;
-                                    if (mobileInput) {
-                                      mobileInput.value = '0771234567';
-                                      mobileInput.dispatchEvent(new Event('input', { bubbles: true }));
-                                    }
-                                  }}
-                                  className="text-xs px-3 py-1.5 bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200 transition-colors font-medium"
-                                >
-                                  Use Demo: 0771234567
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    const mobileInput = document.querySelector('input[type="tel"]') as HTMLInputElement;
-                                    if (mobileInput) {
-                                      mobileInput.value = '0777654321';
-                                      mobileInput.dispatchEvent(new Event('input', { bubbles: true }));
-                                    }
-                                  }}
-                                  className="text-xs px-3 py-1.5 bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200 transition-colors font-medium"
-                                >
-                                  Use Demo: 0777654321
-                                </button>
-                              </div>
-                              <p className="text-xs text-orange-600 mt-2">💡 OTP will be: 123456</p>
-                            </div>
-
-                            {/* Guest Checkout Option */}
-                            <div className="mt-4">
-                              <button
-                                onClick={() => {
-                                  // Create guest session without loyalty
-                                  setLoyaltySession({
-                                    mobileNumber: 'guest',
-                                    loyaltyInfo: null,
-                                    savedCards: [],
-                                    sessionToken: 'guest_session',
-                                    isGuest: true,
-                                  });
-                                  setShowOtpVerification(false);
-                                }}
-                                className="w-full text-sm text-orange-700 hover:text-orange-900 underline font-medium"
-                              >
-                                Continue as Guest (No Rewards)
-                              </button>
-                            </div>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 📝 New Member Registration Form */}
-                  {showRegistration && (
-                    <div className="mb-6">
-                      <LoyaltyRegistration
-                        mobileNumber={pendingMobileNumber}
-                        franchiseSlug={franchiseSlug}
-                        onRegistered={(loyaltyInfo) => {
-                          // After registration, create session
-                          setLoyaltySession({
-                            mobileNumber: pendingMobileNumber,
-                            loyaltyInfo: loyaltyInfo,
-                            savedCards: [],
-                            sessionToken: 'new_member_session',
-                            isGuest: false,
-                          });
-                          setShowRegistration(false);
-                        }}
-                        onCancel={() => {
-                          setShowRegistration(false);
-                          setShowOtpVerification(true);
-                          setPendingMobileNumber('');
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {/* ✅ Show loyalty info or guest notice after verification */}
-                  {loyaltySession && loyaltySession.isGuest && (
-                    <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                      <p className="text-sm text-gray-700">
-                        👤 <strong>Guest Checkout</strong> - You won't earn loyalty points on this order.
-                      </p>
-                    </div>
-                  )}
-                  
-                  {loyaltySession && !loyaltySession.isGuest && (
+                  {/* Show loyalty info if authenticated via modal */}
+                  {loyaltyInfo && (
                     <div className="mb-6">
                       <LoyaltySessionDisplay
-                        loyaltyInfo={loyaltySession.loyaltyInfo}
-                        savedCards={loyaltySession.savedCards}
-                        mobileNumber={loyaltySession.mobileNumber}
+                        loyaltyInfo={loyaltyInfo}
+                        savedCards={savedCards}
+                        mobileNumber={loyaltyInfo.mobile}
                       />
                     </div>
                   )}
@@ -349,7 +225,7 @@ export default function CartSheet({
               )}
 
               {/* Order Details */}
-              {cartItems.length > 0 && loyaltySession && !showAddCard && (
+              {cartItems.length > 0 && !showAddCard && (
                 <div className="mt-6 lg:mt-8 space-y-3 lg:space-y-4">
                   <h3 className="font-semibold text-[#1A1A1A] lg:text-lg">Order Details</h3>
 
@@ -369,9 +245,9 @@ export default function CartSheet({
                     <label className="block text-sm font-semibold text-[#1A1A1A]">Payment Method</label>
                     
                     {/* Saved Cards (only for loyalty members with saved cards) */}
-                    {!loyaltySession.isGuest && loyaltySession.savedCards && loyaltySession.savedCards.length > 0 && (
+                    {loyaltyInfo && savedCards && savedCards.length > 0 && (
                       <div className="space-y-2">
-                        {loyaltySession.savedCards.map((card: any) => (
+                        {savedCards.map((card: any) => (
                           <button
                             key={card.id}
                             onClick={() => setSelectedPaymentMethod(`card_${card.id}`)}
@@ -401,7 +277,7 @@ export default function CartSheet({
                     )}
 
                     {/* Add New Card Button - only for loyalty members */}
-                    {!loyaltySession.isGuest && (
+                    {loyaltyInfo && (
                       <button
                         onClick={() => setShowAddCard(true)}
                         className="w-full p-3 rounded-xl border-2 border-dashed border-orange-300 bg-orange-50 hover:bg-orange-100 transition-all"
@@ -486,17 +362,14 @@ export default function CartSheet({
               )}
 
               {/* Add Payment Card Form */}
-              {showAddCard && loyaltySession && !loyaltySession.isGuest && (
+              {showAddCard && loyaltyInfo && (
                 <div className="mt-6 lg:mt-8">
                   <AddPaymentCard
                     franchiseSlug={franchiseSlug}
-                    sessionToken={loyaltySession.sessionToken}
+                    sessionToken={''}
                     onCardAdded={(newCard) => {
-                      // Add the new card to the session
-                      setLoyaltySession({
-                        ...loyaltySession,
-                        savedCards: [...(loyaltySession.savedCards || []), newCard],
-                      });
+                      // Card added successfully
+                      console.log('Card added:', newCard);
                       setShowAddCard(false);
                       setSelectedPaymentMethod(`card_${newCard.id}`);
                     }}
@@ -506,7 +379,7 @@ export default function CartSheet({
               )}
 
               {/* Summary */}
-              {cartItems.length > 0 && loyaltySession && !showAddCard && (
+              {cartItems.length > 0 && !showAddCard && (
                 <div className="mt-6 lg:mt-8 pt-4 border-t border-gray-200">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-gray-500 lg:text-lg">Subtotal</span>
@@ -523,20 +396,11 @@ export default function CartSheet({
                     </span>
                   </div>
                   
-                  {/* Payment method selection reminder for guests */}
-                  {loyaltySession.isGuest && !selectedPaymentMethod && (
-                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-800 text-center">
-                        💳 Select your payment method above to continue
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Non-guest: Require payment selection */}
-                  {!loyaltySession.isGuest && !selectedPaymentMethod && (
+                  {/* Payment method selection reminder */}
+                  {!selectedPaymentMethod && (
                     <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
                       <p className="text-sm text-orange-800 text-center">
-                        ⚠️ Please select a payment method above to continue
+                        💳 Select a payment method above to continue
                       </p>
                     </div>
                   )}
@@ -545,7 +409,7 @@ export default function CartSheet({
             </div>
 
             {/* Slide to Confirm (mobile) / Button (desktop) */}
-            {cartItems.length > 0 && loyaltySession && selectedPaymentMethod && !showAddCard && (
+            {cartItems.length > 0 && selectedPaymentMethod && !showAddCard && (
               <div className="p-4 lg:p-6 bg-white border-t border-gray-100">
                 {/* Payment Summary */}
                 <div className="mb-3 p-3 bg-orange-50 rounded-lg">
@@ -559,7 +423,7 @@ export default function CartSheet({
                     </span>
                     <span className="font-bold text-orange-900">Rs. {calculateTotal().toFixed(2)}</span>
                   </div>
-                  {!loyaltySession.isGuest && loyaltySession.loyaltyInfo && (
+                  {loyaltyInfo && (
                     <p className="text-xs text-orange-700 mt-1">
                       +{Math.floor(calculateTotal() / 10)} loyalty points will be added
                     </p>
@@ -611,7 +475,7 @@ export default function CartSheet({
                 {/* Desktop: Button */}
                 <motion.button
                   onClick={() => {
-                    console.log('Payment:', { method: selectedPaymentMethod, amount: calculateTotal(), loyalty: loyaltySession });
+                    console.log('Payment:', { method: selectedPaymentMethod, amount: calculateTotal(), loyalty: loyaltyInfo });
                     onConfirmOrder();
                   }}
                   className="hidden lg:flex w-full py-4 bg-[#F26522] hover:bg-orange-600 text-white rounded-2xl font-semibold text-lg items-center justify-center gap-2 transition-colors"
@@ -623,14 +487,7 @@ export default function CartSheet({
               </div>
             )}
 
-            {/* Warning if no loyalty session */}
-            {cartItems.length > 0 && !loyaltySession && (
-              <div className="p-4 lg:p-6 bg-orange-50 border-t-2 border-orange-300">
-                <p className="text-center text-sm text-orange-900 font-medium">
-                  ⚠️ Please verify your number above to continue
-                </p>
-              </div>
-            )}
+
           </motion.div>
         </>
       )}
