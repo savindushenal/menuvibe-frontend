@@ -114,6 +114,19 @@ export default function SubscriptionPage() {
       const response = await apiClient.changeSubscription(selectedPlan.id);
 
       if (response.success) {
+        // Check if payment is required (payment_url present)
+        if (response.payment_url) {
+          toast({
+            title: 'Redirecting to payment...',
+            description: 'You will be redirected to complete your payment',
+          });
+          
+          // Redirect to payment gateway
+          window.location.href = response.payment_url;
+          return;
+        }
+
+        // No payment required (e.g., downgrade or free plan)
         toast({
           title: `Successfully ${changeType}d!`,
           description: `You are now on the ${selectedPlan.name} plan`,
