@@ -19,31 +19,37 @@ export default function PaymentCallbackPage() {
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
-    const linkToken = searchParams.get('link_token');
+    const sessionId = searchParams.get('session_id');
     const paymentStatus = searchParams.get('status');
 
-    if (!linkToken) {
+    if (!sessionId) {
       setStatus('failed');
-      setError('Invalid payment callback - missing link token');
+      setError('Invalid payment callback - missing session ID');
       return;
     }
 
     // Process the payment callback
-    processPaymentCallback(linkToken, paymentStatus);
+    processPaymentCallback(sessionId, paymentStatus);
   }, [searchParams]);
 
-  const processPaymentCallback = async (linkToken: string, paymentStatus: string | null) => {
+  const processPaymentCallback = async (sessionId: string, paymentStatus: string | null) => {
     try {
+      // Get all query parameters
+      const orderId = searchParams.get('order_id');
+      const amount = searchParams.get('amount');
+      const currency = searchParams.get('currency');
+      
       // Call backend to verify and activate subscription
-      const response = await apiClient.get(`/subscriptions/payment-callback?link_token=${linkToken}&status=${paymentStatus || 'completed'}`);
+      const result = await apiClient.get(`/subscriptions/payment-callback?status=${paymentStatus || 'success'}&session_id=${sessionId}&order_id=${orderId}&amount=${amount}&currency=${currency}`);
+      const data = result.data;
 
-      if (response.success) {
+      if (data.success) {
         setStatus('success');
-        setPaymentDetails(response);
+        setPaymentDetails(data);
         
         toast({
           title: 'Payment Successful!',
-          description: `Your subscription to ${response.subscription?.plan} has been activated.`,
+          description: `Your subscription to ${data.subscription?.plan} has been activated.`,
         });
 
         // Redirect to subscription page after 3 seconds
@@ -52,11 +58,11 @@ export default function PaymentCallbackPage() {
         }, 3000);
       } else {
         setStatus('failed');
-        setError(response.message || 'Payment verification failed');
+        setError(data.message || 'Payment verification failed');
         
         toast({
           title: 'Payment Failed',
-          description: response.message || 'Failed to activate subscription',
+          description: data.message || 'Failed to activate subscription',
           variant: 'destructive',
         });
       }
