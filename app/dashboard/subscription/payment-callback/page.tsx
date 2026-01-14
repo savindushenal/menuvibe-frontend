@@ -41,15 +41,17 @@ export default function PaymentCallbackPage() {
       
       // Call backend to verify and activate subscription
       const result = await apiClient.get(`/subscriptions/payment-callback?status=${paymentStatus || 'success'}&session_id=${sessionId}&order_id=${orderId}&amount=${amount}&currency=${currency}`);
-      const data = result.data;
+      
+      // API response structure: { success, message, data: { ...actual response } }
+      const response = result.data as any;
 
-      if (data.success) {
+      if (response.success) {
         setStatus('success');
-        setPaymentDetails(data);
+        setPaymentDetails(response);
         
         toast({
           title: 'Payment Successful!',
-          description: `Your subscription to ${data.subscription?.plan} has been activated.`,
+          description: `Your subscription to ${response.subscription?.plan || 'the new plan'} has been activated.`,
         });
 
         // Redirect to subscription page after 3 seconds
@@ -58,11 +60,11 @@ export default function PaymentCallbackPage() {
         }, 3000);
       } else {
         setStatus('failed');
-        setError(data.message || 'Payment verification failed');
+        setError(response.message || 'Payment verification failed');
         
         toast({
           title: 'Payment Failed',
-          description: data.message || 'Failed to activate subscription',
+          description: response.message || 'Failed to activate subscription',
           variant: 'destructive',
         });
       }
