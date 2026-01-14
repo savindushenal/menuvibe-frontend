@@ -58,6 +58,21 @@ export default function SubscriptionPage() {
 
   useEffect(() => {
     fetchData();
+    
+    // Check if user returned from cancelled payment
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    
+    if (paymentStatus === 'cancelled') {
+      toast({
+        title: 'Payment Cancelled',
+        description: 'You cancelled the payment. Your subscription has not been changed.',
+        variant: 'destructive',
+      });
+      
+      // Clean up URL
+      window.history.replaceState({}, '', '/dashboard/subscription');
+    }
   }, []);
 
   const fetchData = async () => {
