@@ -19,14 +19,36 @@ interface User {
   email: string;
   email_verified_at?: string;
   google_id?: string;
+  role: 'user' | 'admin' | 'super_admin' | 'support_officer';
+  is_active: boolean;
+  is_online?: boolean;
+  last_seen_at?: string;
+  active_tickets_count?: number;
+  last_login_at?: string;
   created_at: string;
   updated_at: string;
+  // Computed property for support ticket access
+  canHandleSupportTickets?: boolean;
+}
+
+interface UserContext {
+  type: 'personal' | 'franchise';
+  id: number | null;
+  slug: string | null;
+  name: string;
+  logo_url?: string | null;
+  role: string;
+  branch?: string | null;
+  locations_count?: number;
+  redirect: string;
 }
 
 interface AuthData {
   user: User;
   token: string;
-  token_type: string;
+  token_type?: string;
+  contexts?: UserContext[];
+  default_redirect?: string;
 }
 
 class ApiClient {
@@ -41,11 +63,15 @@ class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
     
-    // Always refresh token from localStorage before making requests, but prefer instance token
+    // Always refresh token from localStorage before making requests
     if (typeof window !== 'undefined') {
       const storageToken = localStorage.getItem('auth_token');
-      // Use instance token if available, otherwise use localStorage token
-      this.token = this.token || storageToken;
+      // Always prefer the latest token from localStorage
+      if (storageToken) {
+        this.token = storageToken;
+      }
+      // Debug logging
+      console.log('[API] Request to:', endpoint, '| Token exists:', !!this.token, '| Token preview:', this.token?.substring(0, 20) + '...');
     }
     
     const headers: Record<string, string> = {
@@ -106,27 +132,31 @@ class ApiClient {
 
   // Auth endpoints
   async register(data: { name: string; email: string; password: string; password_confirmation: string }): Promise<ApiResponse<AuthData>> {
-    return this.request<AuthData>('/auth/register', {
+    return this.request<AuthData>('/register', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async login(data: { email: string; password: string }): Promise<ApiResponse<AuthData>> {
-    return this.request<AuthData>('/auth/login', {
+    return this.request<AuthData>('/login', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
   async logout(): Promise<ApiResponse> {
-    return this.request('/auth/logout', {
+    return this.request('/logout', {
       method: 'POST',
     });
   }
 
   async getProfile(): Promise<ApiResponse<{ user: User }>> {
     return this.request('/user');
+  }
+
+  async getContexts(): Promise<ApiResponse<{ contexts: any[], default_redirect: string }>> {
+    return this.request('/auth/contexts');
   }
 
   async googleAuth(accessToken: string): Promise<ApiResponse<AuthData>> {
@@ -643,7 +673,7 @@ class ApiClient {
   // Subscription API methods
   async getSubscriptionPlans(): Promise<ApiResponse> {
     try {
-      return await this.request('/subscriptions/plans');
+      return await this.request('/subscription-plans');
     } catch (error: any) {
       console.error('Error fetching subscription plans:', error);
       throw error;
@@ -652,7 +682,7 @@ class ApiClient {
 
   async getCurrentSubscription(): Promise<ApiResponse> {
     try {
-      return await this.request('/subscriptions/current');
+      return await this.request('/subscription/current');
     } catch (error: any) {
       console.error('Error fetching current subscription:', error);
       throw error;
@@ -889,9 +919,749 @@ class ApiClient {
     }
   }
 
-  // Public Menu (for QR code scans)
+  // ==================== Admin API Methods ====================
+
+  // Admin Dashboard
+  async getAdminDashboard(): Promise<ApiResponse> {
+    return this.request('/admin/dashboard');
+  }
+
+  // Admin Users
+  async getAdminUsers(params?: URLSearchParams): Promise<ApiResponse> {
+    const queryString = params ? `?${params.toString()}` : '';
+    return this.request(`/admin/users${queryString}`);
+  }
+
+  async getAdminUser(id: number): Promise<ApiResponse> {
+    return this.request(`/admin/users/${id}`);
+  }
+
+  async updateAdminUser(id: number, data: Record<string, any>): Promise<ApiResponse> {
+    return this.request(`/admin/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteAdminUser(id: number): Promise<ApiResponse> {
+    return this.request(`/admin/users/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async toggleUserStatus(id: number, data: { action: string; reason?: string }): Promise<ApiResponse> {
+    return this.request(`/admin/users/${id}/toggle-status`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async resetUserPassword(id: number, data: { password: string }): Promise<ApiResponse> {
+    return this.request(`/admin/users/${id}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async generateAndSendPassword(id: number): Promise<ApiResponse> {
+    return this.request(`/admin/users/${id}/send-password`, {
+      method: 'POST',
+    });
+  }
+
+  async createAdmin(data: { name: string; email: string; password: string; role: string }): Promise<ApiResponse> {
+    return this.request('/admin/admins', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Admin Subscriptions
+  async getAdminSubscriptions(params?: URLSearchParams): Promise<ApiResponse> {
+    const queryString = params ? `?${params.toString()}` : '';
+    return this.request(`/admin/subscriptions${queryString}`);
+  }
+
+  async getAdminSubscriptionPlans(): Promise<ApiResponse> {
+    return this.request('/admin/subscription-plans');
+  }
+
+  async getAdminSubscriptionStats(): Promise<ApiResponse> {
+    return this.request('/admin/subscriptions/statistics');
+  }
+
+  async updateSubscriptionPlan(id: number, data: Record<string, any>): Promise<ApiResponse> {
+    return this.request(`/admin/subscription-plans/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async cancelSubscription(id: number, data: { reason?: string }): Promise<ApiResponse> {
+    return this.request(`/admin/subscriptions/${id}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async changeUserSubscription(userId: number, data: { plan_id: number; reason?: string }): Promise<ApiResponse> {
+    return this.request(`/admin/users/${userId}/subscription`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Admin Tickets
+  async getAdminTickets(params?: URLSearchParams): Promise<ApiResponse> {
+    const queryString = params ? `?${params.toString()}` : '';
+    return this.request(`/admin/tickets${queryString}`);
+  }
+
+  async getAdminTicket(id: number): Promise<ApiResponse> {
+    return this.request(`/admin/tickets/${id}`);
+  }
+
+  async getAdminTicketStats(): Promise<ApiResponse> {
+    return this.request('/admin/tickets/statistics');
+  }
+
+  async updateTicketStatus(id: number, data: { status: string }): Promise<ApiResponse> {
+    return this.request(`/admin/tickets/${id}/status`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateTicketPriority(id: number, data: { priority: string }): Promise<ApiResponse> {
+    return this.request(`/admin/tickets/${id}/priority`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async addTicketMessage(id: number, data: { message: string }): Promise<ApiResponse> {
+    return this.request(`/admin/tickets/${id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async assignTicket(id: number, data: { admin_id: number; notes?: string }): Promise<ApiResponse> {
+    return this.request(`/admin/tickets/${id}/assign`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async autoAssignTicket(id: number): Promise<ApiResponse> {
+    return this.request(`/admin/tickets/${id}/auto-assign`, {
+      method: 'POST',
+    });
+  }
+
+  async selfAssignTicket(id: number): Promise<ApiResponse> {
+    return this.request(`/admin/tickets/${id}/self-assign`, {
+      method: 'POST',
+    });
+  }
+
+  async getAvailableStaff(): Promise<ApiResponse> {
+    return this.request('/admin/tickets/available-staff');
+  }
+
+  // Notifications
+  async getNotifications(params?: URLSearchParams): Promise<ApiResponse> {
+    const queryString = params ? `?${params.toString()}` : '';
+    return this.request(`/admin/notifications${queryString}`);
+  }
+
+  async getUnreadNotificationCount(): Promise<ApiResponse> {
+    return this.request('/admin/notifications/unread-count');
+  }
+
+  async markNotificationAsRead(id: number): Promise<ApiResponse> {
+    return this.request(`/admin/notifications/${id}/read`, {
+      method: 'POST',
+    });
+  }
+
+  async markAllNotificationsAsRead(): Promise<ApiResponse> {
+    return this.request('/admin/notifications/mark-all-read', {
+      method: 'POST',
+    });
+  }
+
+  async deleteNotification(id: number): Promise<ApiResponse> {
+    return this.request(`/admin/notifications/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async clearAllNotifications(): Promise<ApiResponse> {
+    return this.request('/admin/notifications', {
+      method: 'DELETE',
+    });
+  }
+
+  async sendHeartbeat(): Promise<ApiResponse> {
+    return this.request('/admin/status/heartbeat', {
+      method: 'POST',
+    });
+  }
+
+  async goOffline(): Promise<ApiResponse> {
+    return this.request('/admin/status/offline', {
+      method: 'POST',
+    });
+  }
+
+  // Admin Activity Logs
+  async getAdminActivityLogs(params?: URLSearchParams): Promise<ApiResponse> {
+    const queryString = params ? `?${params.toString()}` : '';
+    return this.request(`/admin/activity${queryString}`);
+  }
+
+  async getAdminActivityActions(): Promise<ApiResponse> {
+    return this.request('/admin/activity/actions');
+  }
+
+  async getAdminActivityAdmins(): Promise<ApiResponse> {
+    return this.request('/admin/activity/admins');
+  }
+
+  // Admin Settings
+  async getAdminSettings(): Promise<ApiResponse> {
+    return this.request('/admin/settings');
+  }
+
+  async updateAdminSetting(key: string, data: { value: any }): Promise<ApiResponse> {
+    return this.request(`/admin/settings/${key}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateAdminSettingsBulk(data: { settings: Record<string, any> }): Promise<ApiResponse> {
+    return this.request('/admin/settings/bulk', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Admin Franchises
+  async getAdminFranchises(params?: URLSearchParams): Promise<ApiResponse> {
+    const queryString = params ? `?${params.toString()}` : '';
+    return this.request(`/admin/franchises${queryString}`);
+  }
+
+  async getAdminFranchise(id: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${id}`);
+  }
+
+  async getAdminFranchiseStats(): Promise<ApiResponse> {
+    return this.request('/admin/franchises/statistics');
+  }
+
+  async updateAdminFranchise(id: number, data: Record<string, any>): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async toggleFranchiseStatus(id: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${id}/toggle-status`, {
+      method: 'POST',
+    });
+  }
+
+  async transferFranchiseOwnership(id: number, data: { new_owner_id: number }): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${id}/transfer-ownership`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteAdminFranchise(id: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Franchise Onboarding & Management APIs
+  async onboardFranchise(data: {
+    name: string;
+    description?: string;
+    owner_email: string;
+    owner_name: string;
+    owner_phone?: string;
+    pricing_type: 'fixed_yearly' | 'pay_as_you_go' | 'custom';
+    yearly_price?: number;
+    per_branch_price?: number;
+    initial_branches?: number;
+    setup_fee?: number;
+    billing_cycle?: 'monthly' | 'quarterly' | 'yearly';
+    contract_start_date?: string;
+    contract_end_date?: string;
+    custom_terms?: string;
+    send_credentials?: boolean;
+    create_owner_account?: boolean;
+  }): Promise<ApiResponse> {
+    return this.request('/admin/franchises/onboard', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getFranchiseDetails(id: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${id}/details`);
+  }
+
+  // Franchise Branches
+  async addFranchiseBranch(franchiseId: number, data: {
+    branch_name: string;
+    address?: string;
+    city?: string;
+    phone?: string;
+    location_id?: number;
+  }): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/branches`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getFranchiseBranches(franchiseId: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/branches`);
+  }
+
+  async updateFranchiseBranch(franchiseId: number, branchId: number, data: {
+    branch_name?: string;
+    address?: string;
+    city?: string;
+    phone?: string;
+    is_active?: boolean;
+    is_paid?: boolean;
+  }): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/branches/${branchId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteFranchiseBranch(franchiseId: number, branchId: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/branches/${branchId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Franchise Payments
+  async recordFranchisePayment(franchiseId: number, data: {
+    amount: number;
+    payment_type: 'setup' | 'monthly' | 'quarterly' | 'yearly' | 'branch_addition' | 'custom';
+    status: 'pending' | 'paid' | 'overdue' | 'cancelled' | 'refunded';
+    due_date: string;
+    paid_date?: string;
+    payment_method?: string;
+    transaction_reference?: string;
+    notes?: string;
+    branches_count?: number;
+    period_start?: string;
+    period_end?: string;
+  }): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/payments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getFranchisePayments(franchiseId: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/payments`);
+  }
+
+  async updateFranchisePayment(franchiseId: number, paymentId: number, data: {
+    status?: 'pending' | 'paid' | 'overdue' | 'cancelled' | 'refunded';
+    paid_date?: string;
+    payment_method?: string;
+    transaction_reference?: string;
+    notes?: string;
+  }): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/payments/${paymentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Franchise Pricing
+  async updateFranchisePricing(franchiseId: number, data: {
+    pricing_type: 'fixed_yearly' | 'pay_as_you_go' | 'custom';
+    yearly_price?: number;
+    per_branch_price?: number;
+    initial_branches?: number;
+    setup_fee?: number;
+    billing_cycle?: 'monthly' | 'quarterly' | 'yearly';
+    contract_start_date?: string;
+    contract_end_date?: string;
+    custom_terms?: string;
+  }): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/pricing`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Franchise Accounts
+  async createFranchiseAccount(franchiseId: number, data: {
+    name: string;
+    email: string;
+    phone?: string;
+    role: 'franchise_owner' | 'franchise_manager' | 'branch_manager' | 'staff';
+    branch_id?: number;
+    send_credentials?: boolean;
+    custom_password?: string;
+  }): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/accounts`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getFranchiseAccounts(franchiseId: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/accounts`);
+  }
+
+  // Franchise Invitations
+  async sendFranchiseInvitation(franchiseId: number, data: {
+    email: string;
+    name?: string;
+    role: 'franchise_owner' | 'franchise_manager' | 'branch_manager' | 'staff';
+    branch_id?: number;
+    message?: string;
+    send_credentials?: boolean;
+    expires_in_days?: number;
+  }): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/invitations`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getFranchiseInvitations(franchiseId: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/invitations`);
+  }
+
+  async resendFranchiseInvitation(franchiseId: number, invitationId: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/invitations/${invitationId}/resend`, {
+      method: 'POST',
+    });
+  }
+
+  async cancelFranchiseInvitation(franchiseId: number, invitationId: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/invitations/${invitationId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ============================================
+  // TEMPLATE MENU SYSTEM APIs
+  // ============================================
+
+  // Menu Templates
+  async getMenuTemplates(locationId?: number): Promise<ApiResponse> {
+    const params = locationId ? `?location_id=${locationId}` : '';
+    return this.request(`/menu-templates${params}`);
+  }
+
+  async createMenuTemplate(data: {
+    name: string;
+    description?: string;
+    currency?: string;
+    location_id?: number;
+    settings?: any;
+  }): Promise<ApiResponse> {
+    return this.request('/menu-templates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getMenuTemplate(templateId: number): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}`);
+  }
+
+  async updateMenuTemplate(templateId: number, data: any): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteMenuTemplate(templateId: number): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async duplicateMenuTemplate(templateId: number, data: { name: string }): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/duplicate`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Template Categories
+  async createTemplateCategory(templateId: number, data: {
+    name: string;
+    description?: string;
+    icon?: string;
+  }): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/categories`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateTemplateCategory(templateId: number, categoryId: number, data: any): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/categories/${categoryId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTemplateCategory(templateId: number, categoryId: number): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/categories/${categoryId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async reorderTemplateCategories(templateId: number, data: { categories: { id: number; sort_order: number }[] }): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/categories/reorder`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Template Items
+  async createTemplateItem(templateId: number, categoryId: number, data: {
+    name: string;
+    description?: string;
+    price: number;
+    image_url?: string;
+    icon?: string;
+  }): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/categories/${categoryId}/items`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateTemplateItem(templateId: number, itemId: number, data: any): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/items/${itemId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTemplateItem(templateId: number, itemId: number): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/items/${itemId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async bulkCreateTemplateItems(templateId: number, data: { items: any[] }): Promise<ApiResponse> {
+    return this.request(`/menu-templates/${templateId}/items/bulk`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Menu Endpoints (Tables, Rooms, Branches)
+  async getMenuEndpoints(params?: {
+    location_id?: number;
+    template_id?: number;
+    type?: string;
+  }): Promise<ApiResponse> {
+    const queryParams = new URLSearchParams();
+    if (params?.location_id) queryParams.append('location_id', params.location_id.toString());
+    if (params?.template_id) queryParams.append('template_id', params.template_id.toString());
+    if (params?.type) queryParams.append('type', params.type);
+    const query = queryParams.toString();
+    return this.request(`/menu-endpoints${query ? `?${query}` : ''}`);
+  }
+
+  async createMenuEndpoint(data: {
+    template_id: number;
+    type: 'table' | 'room' | 'area' | 'branch' | 'kiosk' | 'takeaway' | 'event' | 'delivery';
+    name: string;
+    identifier?: string;
+    description?: string;
+    location_id?: number;
+    settings?: any;
+  }): Promise<ApiResponse> {
+    return this.request('/menu-endpoints', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getMenuEndpoint(endpointId: number): Promise<ApiResponse> {
+    return this.request(`/menu-endpoints/${endpointId}`);
+  }
+
+  async updateMenuEndpoint(endpointId: number, data: any): Promise<ApiResponse> {
+    return this.request(`/menu-endpoints/${endpointId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteMenuEndpoint(endpointId: number): Promise<ApiResponse> {
+    return this.request(`/menu-endpoints/${endpointId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async bulkCreateMenuEndpoints(data: {
+    template_id: number;
+    type: string;
+    prefix: string;
+    start_number: number;
+    count: number;
+    location_id?: number;
+  }): Promise<ApiResponse> {
+    return this.request('/menu-endpoints/bulk', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getEndpointQRCode(endpointId: number, params?: {
+    size?: number;
+    format?: 'png' | 'svg';
+    color?: string;
+    background?: string;
+  }): Promise<ApiResponse> {
+    const queryParams = new URLSearchParams();
+    if (params?.size) queryParams.append('size', params.size.toString());
+    if (params?.format) queryParams.append('format', params.format);
+    if (params?.color) queryParams.append('color', params.color);
+    if (params?.background) queryParams.append('background', params.background);
+    const query = queryParams.toString();
+    return this.request(`/menu-endpoints/${endpointId}/qr${query ? `?${query}` : ''}`);
+  }
+
+  async regenerateEndpointQR(endpointId: number): Promise<ApiResponse> {
+    return this.request(`/menu-endpoints/${endpointId}/regenerate-qr`, {
+      method: 'POST',
+    });
+  }
+
+  // Endpoint Overrides
+  async getEndpointOverrides(endpointId: number): Promise<ApiResponse> {
+    return this.request(`/menu-endpoints/${endpointId}/overrides`);
+  }
+
+  async createEndpointOverride(endpointId: number, data: {
+    item_id: number;
+    price_override?: number;
+    is_available?: boolean;
+    is_hidden?: boolean;
+  }): Promise<ApiResponse> {
+    return this.request(`/menu-endpoints/${endpointId}/overrides`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteEndpointOverride(endpointId: number, itemId: number): Promise<ApiResponse> {
+    return this.request(`/menu-endpoints/${endpointId}/overrides/${itemId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async bulkUpdateEndpointOverrides(endpointId: number, data: { overrides: any[] }): Promise<ApiResponse> {
+    return this.request(`/menu-endpoints/${endpointId}/overrides/bulk`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getEndpointAnalytics(endpointId: number, params?: { days?: number }): Promise<ApiResponse> {
+    const query = params?.days ? `?days=${params.days}` : '';
+    return this.request(`/menu-endpoints/${endpointId}/analytics${query}`);
+  }
+
+  // Menu Offers
+  async getMenuOffers(params?: {
+    template_id?: number;
+    location_id?: number;
+    type?: string;
+    active_only?: boolean;
+  }): Promise<ApiResponse> {
+    const queryParams = new URLSearchParams();
+    if (params?.template_id) queryParams.append('template_id', params.template_id.toString());
+    if (params?.location_id) queryParams.append('location_id', params.location_id.toString());
+    if (params?.type) queryParams.append('type', params.type);
+    if (params?.active_only) queryParams.append('active_only', 'true');
+    const query = queryParams.toString();
+    return this.request(`/menu-offers${query ? `?${query}` : ''}`);
+  }
+
+  async createMenuOffer(data: {
+    template_id: number;
+    name: string;
+    type: 'special' | 'instant' | 'seasonal' | 'combo' | 'happy_hour';
+    discount_type?: 'percentage' | 'fixed' | 'bogo';
+    discount_value?: number;
+    description?: string;
+    starts_at?: string;
+    ends_at?: string;
+    item_ids?: number[];
+    category_ids?: number[];
+  }): Promise<ApiResponse> {
+    return this.request('/menu-offers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateMenuOffer(offerId: number, data: any): Promise<ApiResponse> {
+    return this.request(`/menu-offers/${offerId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteMenuOffer(offerId: number): Promise<ApiResponse> {
+    return this.request(`/menu-offers/${offerId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async toggleMenuOffer(offerId: number): Promise<ApiResponse> {
+    return this.request(`/menu-offers/${offerId}/toggle`, {
+      method: 'POST',
+    });
+  }
+
+  async duplicateMenuOffer(offerId: number, data: { name: string }): Promise<ApiResponse> {
+    return this.request(`/menu-offers/${offerId}/duplicate`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Public Menu APIs (for fetching menu by short code)
   async getPublicMenu(shortCode: string): Promise<ApiResponse> {
-    return this.request(`/menu/${shortCode}`);
+    return this.request(`/public/menu/endpoint/${shortCode}`);
+  }
+
+  async getPublicMenuData(shortCode: string): Promise<ApiResponse> {
+    return this.request(`/menu/${shortCode}/data`);
+  }
+
+  async getPublicMenuOffers(shortCode: string): Promise<ApiResponse> {
+    return this.request(`/menu/${shortCode}/offers`);
   }
 
   async recordMenuScan(shortCode: string): Promise<ApiResponse> {
@@ -899,7 +1669,36 @@ class ApiClient {
       method: 'POST',
     });
   }
+
+  // Generic HTTP methods for direct API access
+  async get<T = any>(endpoint: string): Promise<{ data: ApiResponse<T> }> {
+    const response = await this.request<T>(endpoint, { method: 'GET' });
+    return { data: response };
+  }
+
+  async post<T = any>(endpoint: string, data?: any): Promise<{ data: ApiResponse<T> }> {
+    const response = await this.request<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+    return { data: response };
+  }
+
+  async put<T = any>(endpoint: string, data?: any): Promise<{ data: ApiResponse<T> }> {
+    const response = await this.request<T>(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+    return { data: response };
+  }
+
+  async delete<T = any>(endpoint: string): Promise<{ data: ApiResponse<T> }> {
+    const response = await this.request<T>(endpoint, { method: 'DELETE' });
+    return { data: response };
+  }
 }
 
 export const apiClient = new ApiClient();
-export type { User, AuthData, ApiResponse };
+// Alias for simpler import: import { api } from '@/lib/api'
+export const api = apiClient;
+export type { User, AuthData, ApiResponse, UserContext };

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
 import { Location } from '@/lib/types';
 import { apiClient } from '@/lib/api';
 import { useAuth } from './auth-context';
@@ -221,7 +221,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
     }
   };
 
-  const value: LocationContextType = {
+  // OPTIMIZED: Memoize context value to prevent unnecessary re-renders
+  const value = useMemo<LocationContextType>(() => ({
     locations,
     currentLocation,
     defaultLocation,
@@ -236,7 +237,16 @@ export function LocationProvider({ children }: LocationProviderProps) {
     canAddLocation,
     remainingQuota,
     maxLocations,
-  };
+  }), [
+    locations,
+    currentLocation,
+    defaultLocation,
+    isLoading,
+    error,
+    canAddLocation,
+    remainingQuota,
+    maxLocations,
+  ]);
 
   return (
     <LocationContext.Provider value={value}>

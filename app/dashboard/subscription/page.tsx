@@ -58,6 +58,21 @@ export default function SubscriptionPage() {
 
   useEffect(() => {
     fetchData();
+    
+    // Check if user returned from cancelled payment
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    
+    if (paymentStatus === 'cancelled') {
+      toast({
+        title: 'Payment Cancelled',
+        description: 'You cancelled the payment. Your subscription has not been changed.',
+        variant: 'destructive',
+      });
+      
+      // Clean up URL
+      window.history.replaceState({}, '', '/dashboard/subscription');
+    }
   }, []);
 
   const fetchData = async () => {
@@ -114,6 +129,19 @@ export default function SubscriptionPage() {
       const response = await apiClient.changeSubscription(selectedPlan.id);
 
       if (response.success) {
+        // Check if payment is required (payment_url present)
+        if (response.payment_url) {
+          toast({
+            title: 'Redirecting to payment...',
+            description: 'You will be redirected to complete your payment',
+          });
+          
+          // Redirect to payment gateway
+          window.location.href = response.payment_url;
+          return;
+        }
+
+        // No payment required (e.g., downgrade or free plan)
         toast({
           title: `Successfully ${changeType}d!`,
           description: `You are now on the ${selectedPlan.name} plan`,

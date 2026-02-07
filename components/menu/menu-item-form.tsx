@@ -35,6 +35,15 @@ import {
 import { Plus, X, Upload, Flame } from 'lucide-react';
 import { MenuItem, MenuCategory } from '@/lib/types';
 import { InlineFeatureBlock } from '@/components/subscription/inline-feature-block';
+import { ItemVariantsForm, ItemVariant } from './item-variants-form';
+
+const variantSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  price: z.number(),
+  compare_at_price: z.number().optional(),
+  is_default: z.boolean().optional(),
+});
 
 const menuItemSchema = z.object({
   name: z.string().min(1, 'Item name is required'),
@@ -50,6 +59,7 @@ const menuItemSchema = z.object({
   preparation_time: z.number().min(0).optional(),
   allergens: z.array(z.string()).default([]),
   dietary_info: z.array(z.string()).default([]),
+  variations: z.array(variantSchema).default([]),
   sort_order: z.number().default(0),
 });
 
@@ -88,6 +98,7 @@ export function MenuItemForm({
   const [imagePreview, setImagePreview] = useState<string>(item?.image_url || '');
   const [selectedAllergens, setSelectedAllergens] = useState<string[]>(item?.allergens || []);
   const [selectedDietary, setSelectedDietary] = useState<string[]>(item?.dietary_info || []);
+  const [variants, setVariants] = useState<ItemVariant[]>((item?.variations as ItemVariant[]) || []);
 
   const form = useForm<MenuItemFormData>({
     resolver: zodResolver(menuItemSchema),
@@ -105,6 +116,7 @@ export function MenuItemForm({
       preparation_time: item?.preparation_time || 0,
       allergens: item?.allergens || [],
       dietary_info: item?.dietary_info || [],
+      variations: (item?.variations as ItemVariant[]) || [],
       sort_order: item?.sort_order || 0,
     },
   });
@@ -143,14 +155,25 @@ export function MenuItemForm({
     form.setValue('dietary_info', updated);
   };
 
+  const handleVariantsChange = (newVariants: ItemVariant[]) => {
+    setVariants(newVariants);
+    form.setValue('variations', newVariants);
+  };
+
   const handleFormSubmit = async (data: MenuItemFormData) => {
     try {
-      await onSubmit(data, selectedImage || undefined);
+      // Include variants in submission
+      const submitData = {
+        ...data,
+        variations: variants,
+      };
+      await onSubmit(submitData, selectedImage || undefined);
       form.reset();
       setSelectedImage(null);
       setImagePreview('');
       setSelectedAllergens([]);
       setSelectedDietary([]);
+      setVariants([]);
       onClose();
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -158,6 +181,8 @@ export function MenuItemForm({
   };
 
   const isSpicy = form.watch('is_spicy');
+  const currentPrice = form.watch('price');
+  const currentCurrency = form.watch('currency');
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -382,6 +407,14 @@ export function MenuItemForm({
                 />
               </div>
             </div>
+
+            {/* Size Variants */}
+            <ItemVariantsForm
+              variants={variants}
+              onChange={handleVariantsChange}
+              currency={currentCurrency}
+              basePrice={currentPrice}
+            />
 
             {/* Spice Level */}
             <div className="space-y-4">

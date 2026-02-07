@@ -49,6 +49,15 @@ const config: Config = {
           dark: '#2D2D2D',
           warmGray: '#F5F5F5',
         },
+        // Franchise dynamic brand colors (CSS variables)
+        franchise: {
+          primary: 'var(--franchise-primary)',
+          secondary: 'var(--franchise-secondary)',
+          background: 'var(--franchise-background)',
+          dark: 'var(--franchise-dark)',
+          neutral: 'var(--franchise-neutral)',
+          accent: 'var(--franchise-accent)',
+        },
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {

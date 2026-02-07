@@ -1,14 +1,16 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient, User } from '@/lib/api';
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   needsOnboarding: boolean;
+  setNeedsOnboarding: (value: boolean) => void;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, passwordConfirmation: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -21,6 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const router = useRouter();
@@ -32,17 +35,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const checkAuthStatus = async () => {
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
+    const storedToken = localStorage.getItem('auth_token');
+    if (!storedToken) {
       setIsLoading(false);
       return;
     }
 
     try {
-      apiClient.setToken(token);
+      apiClient.setToken(storedToken);
+      setToken(storedToken);
       const response = await apiClient.getProfile();
       if (response.success && response.data?.user) {
-        setUser(response.data.user);
+        // Add computed property for support ticket access
+        const userData = {
+          ...response.data.user,
+          canHandleSupportTickets: ['admin', 'super_admin', 'support_officer'].includes(response.data.user.role),
+        };
+        setUser(userData);
         
         // Check onboarding status - will be handled separately
         await checkOnboardingStatus();
@@ -50,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Invalid response, clear auth
         localStorage.removeItem('auth_token');
         apiClient.setToken(null);
+        setToken(null);
       }
     } catch (error: any) {
       // Only log non-401 errors (401 is expected for expired/invalid tokens)
@@ -59,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear invalid token
       localStorage.removeItem('auth_token');
       apiClient.setToken(null);
+      setToken(null);
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -69,15 +80,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await apiClient.getBusinessProfile();
       
-      // If no business profile exists or onboarding not completed
-      if (!response.success || !response.data || !response.data.onboarding_completed) {
+      // Handle the response structure from Laravel API
+      // Laravel returns: { data: { business_profile: {...}, needs_onboarding: bool } }
+      // or for Next.js API: { data: { onboarding_completed: bool } }
+      
+      if (!response.success || !response.data) {
         setNeedsOnboarding(true);
         return true;
       }
       
-      // Business profile exists and is complete
-      setNeedsOnboarding(false);
-      return false;
+      // Check for Laravel API response format
+      if (response.data.needs_onboarding !== undefined) {
+        const needsIt = response.data.needs_onboarding;
+        setNeedsOnboarding(needsIt);
+        return needsIt;
+      }
+      
+      // Check for business_profile object (Laravel nested format)
+      if (response.data.business_profile) {
+        const isComplete = response.data.business_profile.onboarding_completed;
+        setNeedsOnboarding(!isComplete);
+        return !isComplete;
+      }
+      
+      // Check for direct onboarding_completed field (Next.js API format)
+      if (response.data.onboarding_completed !== undefined) {
+        const isComplete = response.data.onboarding_completed;
+        setNeedsOnboarding(!isComplete);
+        return !isComplete;
+      }
+      
+      // Default: assume onboarding is needed
+      setNeedsOnboarding(true);
+      return true;
     } catch (error: any) {
       // Only log unexpected errors (not 404s which are expected for new users)
       if (!error.message?.includes('404') && !error.message?.includes('Business profile not found')) {
@@ -94,18 +129,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await apiClient.login({ email, password });
       
       if (response.success && response.data) {
-        const { user, token } = response.data;
+        const { user, token: authToken, contexts, default_redirect } = response.data;
         
-        // Set token first
-        apiClient.setToken(token);
-        setUser(user);
+        console.log('[AUTH] Login successful, token received:', authToken?.substring(0, 20) + '...');
         
-        // Check if user needs onboarding
-        const needsOnboarding = await checkOnboardingStatus();
-        if (needsOnboarding) {
-          router.push('/onboarding');
+        // Set token first and ensure it's saved to localStorage
+        apiClient.setToken(authToken);
+        setToken(authToken);
+        
+        // Double-check token is saved
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('auth_token', authToken);
+          console.log('[AUTH] Token saved to localStorage, verified:', localStorage.getItem('auth_token')?.substring(0, 20) + '...');
+        }
+        
+        // Add computed property for support ticket access
+        const userData = {
+          ...user,
+          canHandleSupportTickets: ['admin', 'super_admin', 'support_officer'].includes(user.role),
+        };
+        setUser(userData);
+        
+        // Redirect based on user role and contexts
+        if (user.role === 'super_admin' || user.role === 'admin' || user.role === 'support_officer') {
+          router.push('/admin');
+        } else if (contexts && contexts.length > 0) {
+          // Store contexts in sessionStorage for the select-context page
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('user_contexts', JSON.stringify(contexts));
+            console.log('[AUTH] Contexts saved to sessionStorage:', contexts.length, 'contexts');
+          }
+          
+          // If contexts are returned, use the default redirect
+          // This handles single context (direct) or multiple contexts (selector)
+          if (default_redirect) {
+            router.push(default_redirect);
+          } else if (contexts.length === 1) {
+            router.push(contexts[0].redirect);
+          } else {
+            router.push('/auth/select-context');
+          }
         } else {
-          router.push('/dashboard');
+          // Fallback: Check if user needs onboarding
+          const needsOnboarding = await checkOnboardingStatus();
+          if (needsOnboarding) {
+            router.push('/onboarding');
+          } else {
+            router.push('/dashboard');
+          }
         }
       } else {
         throw new Error(response.message || 'Login failed');
@@ -149,6 +220,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Logout error:', error);
     } finally {
       apiClient.setToken(null);
+      setToken(null);
       setUser(null);
       router.push('/auth/login');
     }
@@ -159,9 +231,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await apiClient.googleAuth(accessToken);
       
       if (response.success && response.data) {
-        const { user, token } = response.data;
-        apiClient.setToken(token);
-        setUser(user);
+        const { user, token: authToken } = response.data;
+        apiClient.setToken(authToken);
+        setToken(authToken);
+        
+        // Add computed property for support ticket access
+        const userData = {
+          ...user,
+          canHandleSupportTickets: ['admin', 'super_admin', 'support_officer'].includes(user.role),
+        };
+        setUser(userData);
         
         // Check if user needs onboarding
         const needsOnboarding = await checkOnboardingStatus();
@@ -183,18 +262,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await checkAuthStatus();
   };
 
-  const value = {
+  // OPTIMIZED: Memoize context value to prevent unnecessary re-renders
+  const value = useMemo(() => ({
     user,
+    token,
     isAuthenticated,
     isLoading,
     needsOnboarding,
+    setNeedsOnboarding,
     login,
     register,
     logout,
     googleAuth,
     checkOnboardingStatus,
     refreshAuth,
-  };
+  }), [
+    user,
+    token,
+    isAuthenticated,
+    isLoading,
+    needsOnboarding,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
