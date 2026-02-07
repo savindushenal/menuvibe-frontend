@@ -25,6 +25,7 @@ export interface Location {
   latitude?: number;
   longitude?: number;
   is_default: boolean;
+  franchise_id?: number | null;
   created_at: string;
   updated_at: string;
   menus?: Menu[];

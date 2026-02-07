@@ -187,9 +187,16 @@ function EndpointsPageContent() {
   const loadData = async () => {
     try {
       setLoading(true);
+      
+      // For business locations (no franchise_id), don't pass location_id 
+      // so we get ALL business endpoints across all business locations
+      // For franchise locations, pass location_id to filter by that franchise location
+      const isBusinessLocation = !currentLocation?.franchise_id;
+      const locationIdParam = isBusinessLocation ? undefined : (currentLocation?.id ? parseInt(currentLocation.id) : undefined);
+      
       const [endpointsRes, templatesRes] = await Promise.all([
         apiClient.getMenuEndpoints({
-          location_id: currentLocation?.id ? parseInt(currentLocation.id) : undefined,
+          location_id: locationIdParam,
           template_id: selectedTemplateId || undefined,
           type: selectedType !== 'all' ? selectedType : undefined,
         }),
