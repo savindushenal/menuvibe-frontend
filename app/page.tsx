@@ -31,7 +31,7 @@ export default function Home() {
         >
           <UtensilsCrossed className="w-12 h-12 text-white" />
         </motion.div>
-        <h1 className="text-4xl font-bold text-neutral-900 mb-2">MenuVibe</h1>
+        <h1 className="text-4xl font-bold text-neutral-900 mb-2">MenuVire</h1>
         <p className="text-neutral-600">Loading your restaurant platform...</p>
         <motion.div
           className="w-48 h-1 bg-neutral-200 rounded-full mx-auto mt-6 overflow-hidden"

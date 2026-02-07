@@ -154,7 +154,7 @@ export default function LoginPage() {
           transition={{ delay: 0.5 }}
           className="text-center text-neutral-500 text-sm mt-6"
         >
-          Secure authentication powered by MenuVibe
+          Secure authentication powered by MenuVire
         </motion.p>
       </motion.div>
     </div>

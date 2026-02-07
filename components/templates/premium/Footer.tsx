@@ -57,7 +57,7 @@ export default function Footer({ franchise }: FooterProps) {
         <div className="mt-8 pt-6 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-400">
           <p>© {new Date().getFullYear()} {franchise.name}. All rights reserved.</p>
           <p className="flex items-center gap-1">
-            Powered by <a href="https://menuvibe.com" className="text-franchise-primary hover:underline">MenuVibe</a>
+            Powered by <a href="https://MenuVire.com" className="text-franchise-primary hover:underline">MenuVire</a>
           </p>
         </div>
       </div>

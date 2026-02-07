@@ -102,7 +102,7 @@ export default function CustomTemplate({
       </main>
 
       <footer className="bg-gray-100 p-6 text-center text-sm text-gray-500">
-        <p>Custom Template - Powered by MenuVibe</p>
+        <p>Custom Template - Powered by MenuVire</p>
       </footer>
     </div>
   );

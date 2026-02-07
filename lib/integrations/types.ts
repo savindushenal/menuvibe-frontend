@@ -1,7 +1,7 @@
 /**
  * Integration Types
  * 
- * Base types for the MenuVibe integrations system.
+ * Base types for the MenuVire integrations system.
  */
 
 export type IntegrationType = 

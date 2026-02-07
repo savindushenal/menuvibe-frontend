@@ -41,7 +41,7 @@ export default function SignupPage() {
       await register(formData.name, formData.email, formData.password, formData.confirmPassword);
       toast({
         title: 'Account created',
-        description: 'Welcome to MenuVibe! Setting up your dashboard...',
+        description: 'Welcome to MenuVire! Setting up your dashboard...',
       });
     } catch (error: any) {
       toast({

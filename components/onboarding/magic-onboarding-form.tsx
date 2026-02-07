@@ -578,7 +578,7 @@ export function MagicOnboardingForm({ onComplete, isSubmitting }: MagicOnboardin
               <h3 className="font-semibold text-green-800">Almost Done!</h3>
             </div>
             <p className="text-green-700 mb-4">
-              You're all set! Click "Complete Setup" to finish your onboarding and start using MenuVibe. 
+              You're all set! Click "Complete Setup" to finish your onboarding and start using MenuVire. 
               We'll automatically create your first location based on the information you provided.
             </p>
             {!isFormValid() && (

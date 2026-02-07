@@ -247,7 +247,7 @@ export default function BlockedFeaturesDemo() {
                 title="White-Label Solution"
                 description="Complete branding customization"
                 benefits={[
-                  "Remove MenuVibe branding",
+                  "Remove MenuVire branding",
                   "Custom colors and fonts",
                   "Your logo everywhere",
                   "Custom domain"

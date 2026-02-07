@@ -133,7 +133,7 @@ export default function Footer() {
             <span>•</span>
             <a href="#" className="hover:text-white transition-colors">Terms</a>
           </div>
-          {/* Powered by MenuVibe */}
+          {/* Powered by MenuVire */}
           <motion.div 
             className="flex items-center gap-1.5 text-gray-500 text-xs"
             initial={{ opacity: 0 }}
@@ -141,7 +141,7 @@ export default function Footer() {
             transition={{ delay: 1 }}
           >
             <span>Powered by</span>
-            <span className="font-semibold text-pizzahut-red">MenuVibe</span>
+            <span className="font-semibold text-pizzahut-red">MenuVire</span>
           </motion.div>
         </div>
       </div>

@@ -4,9 +4,9 @@ import mysql from 'mysql2/promise';
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'uniform.de.hostns.io',
   port: parseInt(process.env.DB_PORT || '3306'),
-  database: process.env.DB_DATABASE || 'menuVibe_staging',
-  user: process.env.DB_USERNAME || 'menuVibe_user',
-  password: process.env.DB_PASSWORD || 'menuVibe@2025',
+  database: process.env.DB_DATABASE || 'MenuVire_staging',
+  user: process.env.DB_USERNAME || 'MenuVire_user',
+  password: process.env.DB_PASSWORD || 'MenuVire@2025',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,

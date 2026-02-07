@@ -107,7 +107,7 @@ export default function SuccessScreen({
             transition={{ delay: 1 }}
             className="mt-8 text-xs text-gray-400"
           >
-            Powered by MenuVibe
+            Powered by MenuVire
           </motion.p>
         </motion.div>
       )}

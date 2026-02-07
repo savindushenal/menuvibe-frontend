@@ -315,7 +315,7 @@ export function CustomBrandingBlock({ children, className, type = 'overlay' }: {
       title="Custom Branding Locked"
       description="Full white-label solution for your brand"
       benefits={[
-        "Remove MenuVibe branding",
+        "Remove MenuVire branding",
         "Custom colors & logos",
         "Custom domain",
         "White-label solution"

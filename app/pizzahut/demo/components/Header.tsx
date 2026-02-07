@@ -193,7 +193,7 @@ export default function Header({ cartCount, onCartClick, tableInfo, locationName
               {/* Bottom Section */}
               <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 bg-gray-50">
                 <p className="text-xs text-gray-400 text-center">
-                  Powered by MenuVibe
+                  Powered by MenuVire
                 </p>
               </div>
             </motion.div>

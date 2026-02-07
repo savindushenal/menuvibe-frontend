@@ -234,7 +234,7 @@ export function FranchiseProvider({ children, franchiseSlug }: FranchiseProvider
     const host = window.location.hostname;
     
     // Skip main domains and staging/app subdomains
-    const mainDomains = ['menuvibe.com', 'www.menuvibe.com', 'localhost', '127.0.0.1', 'app.menuvibe.com', 'app.menuvire.com'];
+    const mainDomains = ['MenuVire.com', 'www.MenuVire.com', 'localhost', '127.0.0.1', 'app.MenuVire.com', 'app.menuvire.com'];
     if (mainDomains.includes(host)) return null;
     
     // Skip staging and preview domains
@@ -242,8 +242,8 @@ export function FranchiseProvider({ children, franchiseSlug }: FranchiseProvider
       return null;
     }
     
-    // Check for subdomain (e.g., subway.menuvibe.com)
-    const baseDomains = ['menuvibe.com', 'menuvire.com', 'menuvibe.local'];
+    // Check for subdomain (e.g., subway.MenuVire.com)
+    const baseDomains = ['MenuVire.com', 'menuvire.com', 'MenuVire.local'];
     for (const baseDomain of baseDomains) {
       if (host.endsWith(`.${baseDomain}`)) {
         const subdomain = host.replace(`.${baseDomain}`, '');
@@ -261,7 +261,7 @@ export function FranchiseProvider({ children, franchiseSlug }: FranchiseProvider
     
     // If not a subdomain, it might be a custom domain
     // Return the full host as identifier (only for actual custom domains)
-    if (!host.includes('menuvibe') && !host.includes('menuvire') && !host.includes('localhost') && !host.includes('vercel')) {
+    if (!host.includes('MenuVire') && !host.includes('menuvire') && !host.includes('localhost') && !host.includes('vercel')) {
       return host;
     }
     

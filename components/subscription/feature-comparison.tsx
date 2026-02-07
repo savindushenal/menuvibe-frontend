@@ -125,7 +125,7 @@ const features: Feature[] = [
   },
   {
     name: 'White Label Branding',
-    description: 'Remove MenuVibe branding',
+    description: 'Remove MenuVire branding',
     free: false,
     pro: false,
     enterprise: false,

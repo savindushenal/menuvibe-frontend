@@ -47,7 +47,7 @@ function GoogleCallbackContent() {
           
           toast({
             title: 'Login Successful',
-            description: `Welcome to MenuVibe!`,
+            description: `Welcome to MenuVire!`,
           });
           
           // Force reload to trigger auth context refresh

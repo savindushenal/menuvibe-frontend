@@ -73,7 +73,7 @@ function AuthCallbackContent() {
                   await refreshAuth();
                   toast({
                     title: 'Login Successful',
-                    description: 'Welcome to MenuVibe!',
+                    description: 'Welcome to MenuVire!',
                   });
                   router.replace(contextsResponse.data.default_redirect);
                   return;
@@ -81,7 +81,7 @@ function AuthCallbackContent() {
                   await refreshAuth();
                   toast({
                     title: 'Login Successful',
-                    description: 'Welcome to MenuVibe!',
+                    description: 'Welcome to MenuVire!',
                   });
                   router.replace(contexts[0].redirect);
                   return;
@@ -89,7 +89,7 @@ function AuthCallbackContent() {
                   await refreshAuth();
                   toast({
                     title: 'Login Successful',
-                    description: 'Welcome to MenuVibe!',
+                    description: 'Welcome to MenuVire!',
                   });
                   router.replace('/auth/select-context');
                   return;
@@ -138,7 +138,7 @@ function AuthCallbackContent() {
           
           toast({
             title: 'Login Successful',
-            description: 'Welcome to MenuVibe!',
+            description: 'Welcome to MenuVire!',
           });
           
           // Redirect based on onboarding status

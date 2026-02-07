@@ -67,7 +67,7 @@ export function Sidebar() {
                 <UtensilsCrossed className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="font-bold text-neutral-900">MenuVibe</h2>
+                <h2 className="font-bold text-neutral-900">MenuVire</h2>
                 <p className="text-xs text-neutral-500">Restaurant Platform</p>
               </div>
             </motion.div>

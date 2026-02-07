@@ -275,7 +275,7 @@ export default function ClassicTemplate({
           FOOTER - Customize this section
           ============================================ */}
       <footer className="border-t py-6 text-center text-sm text-gray-500">
-        <p>Powered by MenuVibe</p>
+        <p>Powered by MenuVire</p>
       </footer>
     </div>
   );

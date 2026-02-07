@@ -111,7 +111,7 @@ export function UpgradePrompt({ feature, currentPlan, onClose }: UpgradePromptPr
     try {
       if (planId === 'custom-enterprise') {
         // For custom plans, redirect to contact form or sales
-        window.open('mailto:sales@menuvibe.com?subject=Custom Enterprise Plan Inquiry', '_blank');
+        window.open('mailto:sales@MenuVire.com?subject=Custom Enterprise Plan Inquiry', '_blank');
       } else {
         // Handle standard plan upgrade
         console.log('Upgrading to plan:', planId);

@@ -9,7 +9,7 @@ import { ConsoleCleanup } from '@/components/console-cleanup';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'MenuVibe - Restaurant Menu Management Platform',
+  title: 'MenuVire - Restaurant Menu Management Platform',
   description: 'Manage your restaurant menu with QR codes, analytics, and more',
 };
 

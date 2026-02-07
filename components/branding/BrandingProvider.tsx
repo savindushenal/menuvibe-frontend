@@ -112,7 +112,7 @@ function applyDesignTokens(tokens: DesignTokens) {
 }
 
 /**
- * Reset branding to default MenuVibe styles
+ * Reset branding to default MenuVire styles
  */
 function resetBrandingToDefaults() {
   if (typeof document === 'undefined') return;
@@ -172,7 +172,7 @@ function applyCustomCSS(css: string) {
  */
 export function BrandedLogo({ 
   className = '', 
-  fallback = 'MenuVibe' 
+  fallback = 'MenuVire' 
 }: { 
   className?: string;
   fallback?: string;
@@ -189,7 +189,7 @@ export function BrandedLogo({
     );
   }
 
-  // Default MenuVibe logo/text
+  // Default MenuVire logo/text
   return (
     <span className={`font-bold text-xl ${className}`}>
       {branding?.name || fallback}
@@ -200,7 +200,7 @@ export function BrandedLogo({
 /**
  * Brand name text component
  */
-export function BrandName({ fallback = 'MenuVibe' }: { fallback?: string }) {
+export function BrandName({ fallback = 'MenuVire' }: { fallback?: string }) {
   const { branding, isWhiteLabeled } = useFranchise();
   return <>{isWhiteLabeled && branding?.name ? branding.name : fallback}</>;
 }
@@ -230,7 +230,7 @@ export function WhiteLabelOnly({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Component that only renders when NOT white-labeled (default MenuVibe branding)
+ * Component that only renders when NOT white-labeled (default MenuVire branding)
  */
 export function DefaultBrandingOnly({ children }: { children: React.ReactNode }) {
   const { isWhiteLabeled } = useFranchise();
