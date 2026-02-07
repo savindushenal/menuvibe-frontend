@@ -194,15 +194,6 @@ function EndpointsPageContent() {
       const hasFranchise = currentLocation?.franchise_id !== null && currentLocation?.franchise_id !== undefined;
       const locationIdParam = hasFranchise ? (currentLocation?.id ? parseInt(currentLocation.id) : undefined) : undefined;
       
-      console.log('🔍 Endpoint Load Debug:', {
-        currentLocationName: currentLocation?.name,
-        currentLocationId: currentLocation?.id,
-        franchise_id: currentLocation?.franchise_id,
-        hasFranchise,
-        locationIdParam,
-        willFilterByLocation: locationIdParam !== undefined
-      });
-      
       const [endpointsRes, templatesRes] = await Promise.all([
         apiClient.getMenuEndpoints({
           location_id: locationIdParam,
