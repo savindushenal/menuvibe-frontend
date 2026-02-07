@@ -28,6 +28,16 @@ const config: Config = {
           dark: '#1A1A1A',
           warmGray: '#F5F5F5',
         },
+        // Isso brand colors
+        isso: {
+          teal: '#6DBDB6',
+          coral: '#F26522',
+          orange: '#ED5C3C',
+          yellow: '#E8F34E',
+          cream: '#FFF8F0',
+          dark: '#1A1A1A',
+          warmGray: '#F5F5F5',
+        },
         // Pizza Hut brand colors
         pizzahut: {
           red: '#EE3124',
