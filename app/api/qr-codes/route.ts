@@ -177,9 +177,8 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
     let qrUrl = `${baseUrl}/menu/${menuWithSlug.slug}`;
     
-    if (table_number) {
-      qrUrl += `?table=${table_number}`;
-    }
+    // Note: table_number stored in DB but not appended to URL
+    // The menu endpoint system handles table identification via short_code
 
     // Generate QR code as data URL
     const qrDataUrl = await QRCode.toDataURL(qrUrl, {
