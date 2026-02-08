@@ -48,6 +48,9 @@ import {
   Eye,
   Palette,
   Menu as MenuIcon,
+  Copy,
+  Check,
+  ExternalLink,
 } from 'lucide-react';
 
 interface Template {
@@ -93,6 +96,30 @@ interface MenuItem {
   category_id: number;
 }
 
+interface Endpoint {
+  id: number;
+  name: string;
+  short_code: string;
+  table_number: string | null;
+  is_active: boolean;
+  location: {
+    id: number;
+    name: string;
+  };
+  menu_template?: {
+    id: number;
+    name: string;
+  };
+  created_at: string;
+}
+
+interface Location {
+  id: number;
+  name: string;
+  address?: string;
+  city?: string;
+}
+
 export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -100,12 +127,17 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<MenuItem[]>([]);
+  const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
+  const [branches, setBranches] = useState<Location[]>([]);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
   
   // Dialogs
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [showCreateItem, setShowCreateItem] = useState(false);
   const [showDesignTokens, setShowDesignTokens] = useState(false);
+  const [showCreateEndpoint, setShowCreateEndpoint] = useState(false);
+  const [showBulkEndpoints, setShowBulkEndpoints] = useState(false);
 
   // Form states
   const [templateForm, setTemplateForm] = useState({
@@ -135,16 +167,94 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
     is_featured: false,
   });
 
+  const [endpointForm, setEndpointForm] = useState({
+    location_id: 0,
+    name: '',
+    table_number: '',
+  });
+
+  const [bulkEndpointForm, setBulkEndpointForm] = useState({
+    location_id: 0,
+    table_prefix: 'T',
+    table_start: 1,
+    table_end: 10,
+  });
+
   useEffect(() => {
-    loadTemplates();
+    let isMounted = true;
+    const load = async () => {
+      try {
+        setLoading(true);
+        const [templatesRes, branchesRes] = await Promise.all([
+          apiClient.getFranchiseMenus(franchiseId),
+          apiClient.getFranchiseBranches(franchiseId)
+        ]);
+        if (isMounted && templatesRes.success && templatesRes.data) {
+          setTemplates(templatesRes.data);
+          if (templatesRes.data.length > 0 && !selectedTemplate) {
+            setSelectedTemplate(templatesRes.data[0]);
+          }
+        }
+        if (isMounted && branchesRes.success && branchesRes.data) {
+          setBranches(branchesRes.data);
+        }
+      } catch (error) {
+        if (isMounted) {
+          toast({
+            title: 'Error',
+            description: 'Failed to load templates',
+            variant: 'destructive',
+          });
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+    load();
+    return () => { isMounted = false; };
   }, [franchiseId]);
 
   useEffect(() => {
-    if (selectedTemplate) {
-      loadCategories(selectedTemplate.id);
-      loadItems(selectedTemplate.id);
-    }
-  }, [selectedTemplate]);
+    let isMounted = true;
+    const loadData = async () => {
+      if (selectedTemplate) {
+        try {
+          const [categoriesRes, itemsRes, endpointsRes] = await Promise.all([
+            apiClient.getFranchiseCategories(franchiseId, selectedTemplate.id),
+            apiClient.getFranchiseItems(franchiseId, selectedTemplate.id),
+            apiClient.getFranchiseEndpoints(franchiseId)
+          ]);
+          if (isMounted) {
+            if (categoriesRes.success && categoriesRes.data) {
+              setCategories(categoriesRes.data);
+            }
+            if (itemsRes.success && itemsRes.data) {
+              setItems(itemsRes.data);
+            }
+            if (endpointsRes.success && endpointsRes.data) {
+              // Filter endpoints by selected template
+              const templateEndpoints = endpointsRes.data.filter(
+                (ep: Endpoint) => ep.menu_template?.id === selectedTemplate.id
+              );
+              setEndpoints(templateEndpoints);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load template data:', error);
+        }
+      } else {
+        if (isMounted) {
+          setCategories([]);
+          setItems([]);
+          setEndpoints([]);
+        }
+      }
+    };
+    loadData();
+    return () => { isMounted = false; };
+  }, [selectedTemplate?.id, franchiseId]);
 
   const loadTemplates = async () => {
     try {
@@ -172,9 +282,12 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
       const response = await apiClient.getFranchiseCategories(franchiseId, templateId);
       if (response.success && response.data) {
         setCategories(response.data);
+      } else {
+        setCategories([]);
       }
     } catch (error) {
       console.error('Failed to load categories:', error);
+      setCategories([]);
     }
   };
 
@@ -183,9 +296,12 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
       const response = await apiClient.getFranchiseItems(franchiseId, templateId);
       if (response.success && response.data) {
         setItems(response.data);
+      } else {
+        setItems([]);
       }
     } catch (error) {
       console.error('Failed to load items:', error);
+      setItems([]);
     }
   };
 
@@ -397,6 +513,138 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
     }
   };
 
+  const handleCreateEndpoint = async () => {
+    if (!selectedTemplate || !endpointForm.location_id || !endpointForm.name) {
+      toast({
+        title: 'Validation Error',
+        description: 'Location and endpoint name are required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const response = await apiClient.createFranchiseEndpoint(franchiseId, {
+        location_id: endpointForm.location_id,
+        menu_template_id: selectedTemplate.id,
+        name: endpointForm.name,
+        table_number: endpointForm.table_number || undefined,
+      });
+
+      if (response.success) {
+        toast({
+          title: 'Success',
+          description: 'QR endpoint created successfully',
+        });
+        setShowCreateEndpoint(false);
+        setEndpointForm({ location_id: 0, name: '', table_number: '' });
+        loadEndpoints();
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create endpoint',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleBulkCreateEndpoints = async () => {
+    if (!selectedTemplate || !bulkEndpointForm.location_id) {
+      toast({
+        title: 'Validation Error',
+        description: 'Location is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (bulkEndpointForm.table_end <= bulkEndpointForm.table_start) {
+      toast({
+        title: 'Validation Error',
+        description: 'End table number must be greater than start',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const response = await apiClient.createBulkFranchiseEndpoints(franchiseId, {
+        menu_template_id: selectedTemplate.id,
+        location_id: bulkEndpointForm.location_id,
+        table_prefix: bulkEndpointForm.table_prefix,
+        table_start: bulkEndpointForm.table_start,
+        table_end: bulkEndpointForm.table_end,
+      });
+
+      if (response.success) {
+        const count = bulkEndpointForm.table_end - bulkEndpointForm.table_start + 1;
+        toast({
+          title: 'Success',
+          description: `${count} QR endpoints created successfully`,
+        });
+        setShowBulkEndpoints(false);
+        setBulkEndpointForm({ location_id: 0, table_prefix: 'T', table_start: 1, table_end: 10 });
+        loadEndpoints();
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create endpoints',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteEndpoint = async (endpointId: number) => {
+    if (!confirm('Delete this QR endpoint?')) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.deleteFranchiseEndpoint(franchiseId, endpointId);
+      if (response.success) {
+        toast({
+          title: 'Success',
+          description: 'Endpoint deleted successfully',
+        });
+        loadEndpoints();
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete endpoint',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const loadEndpoints = async () => {
+    if (!selectedTemplate) return;
+    try {
+      const response = await apiClient.getFranchiseEndpoints(franchiseId);
+      if (response.success && response.data) {
+        const templateEndpoints = response.data.filter(
+          (ep: Endpoint) => ep.menu_template?.id === selectedTemplate.id
+        );
+        setEndpoints(templateEndpoints);
+      }
+    } catch (error) {
+      console.error('Failed to load endpoints:', error);
+    }
+  };
+
+  const copyQRUrl = (shortCode: string) => {
+    const url = `${window.location.origin}/menu/${shortCode}`;
+    navigator.clipboard.writeText(url);
+    setCopiedCode(shortCode);
+    toast({
+      title: 'Copied!',
+      description: 'QR code URL copied to clipboard',
+    });
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -605,6 +853,97 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* QR Endpoints Section */}
+      {selectedTemplate && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">QR Code Endpoints</CardTitle>
+              <CardDescription>
+                Generate QR codes for different locations and tables
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowBulkEndpoints(true)}
+              >
+                <QrCode className="h-4 w-4 mr-2" />
+                Bulk Create
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setShowCreateEndpoint(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Endpoint
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {endpoints.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                No endpoints created yet. Create endpoints to generate QR codes for your locations.
+              </p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {endpoints.map((endpoint) => (
+                  <Card key={endpoint.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <p className="font-medium">{endpoint.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {endpoint.location.name}
+                          </p>
+                          {endpoint.table_number && (
+                            <p className="text-xs text-muted-foreground">
+                              Table: {endpoint.table_number}
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteEndpoint(endpoint.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-2 p-2 bg-muted rounded text-xs font-mono">
+                        <code className="flex-1 truncate">/menu/{endpoint.short_code}</code>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6"
+                          onClick={() => copyQRUrl(endpoint.short_code)}
+                        >
+                          {copiedCode === endpoint.short_code ? (
+                            <Check className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full mt-2"
+                        onClick={() => window.open(`/menu/${endpoint.short_code}`, '_blank')}
+                      >
+                        <ExternalLink className="h-3 w-3 mr-2" />
+                        Preview
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Create Template Dialog */}
@@ -829,6 +1168,155 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
               Cancel
             </Button>
             <Button onClick={handleCreateItem}>Add Item</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Endpoint Dialog */}
+      <Dialog open={showCreateEndpoint} onOpenChange={setShowCreateEndpoint}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create QR Endpoint</DialogTitle>
+            <DialogDescription>
+              Create a QR code endpoint for a specific location
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="endpoint-location">Location *</Label>
+              <Select
+                value={endpointForm.location_id.toString()}
+                onValueChange={(value) =>
+                  setEndpointForm({ ...endpointForm, location_id: parseInt(value) })
+                }
+              >
+                <SelectTrigger id="endpoint-location">
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id.toString()}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="endpoint-name">Endpoint Name *</Label>
+              <Input
+                id="endpoint-name"
+                value={endpointForm.name}
+                onChange={(e) =>
+                  setEndpointForm({ ...endpointForm, name: e.target.value })
+                }
+                placeholder="e.g., Table 1, Main Counter"
+              />
+            </div>
+            <div>
+              <Label htmlFor="endpoint-table">Table Number (Optional)</Label>
+              <Input
+                id="endpoint-table"
+                value={endpointForm.table_number}
+                onChange={(e) =>
+                  setEndpointForm({ ...endpointForm, table_number: e.target.value })
+                }
+                placeholder="e.g., T01, A1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateEndpoint(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateEndpoint}>Create Endpoint</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Create Endpoints Dialog */}
+      <Dialog open={showBulkEndpoints} onOpenChange={setShowBulkEndpoints}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk Create QR Endpoints</DialogTitle>
+            <DialogDescription>
+              Create multiple numbered endpoints at once (e.g., Table 1-20)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="bulk-location">Location *</Label>
+              <Select
+                value={bulkEndpointForm.location_id.toString()}
+                onValueChange={(value) =>
+                  setBulkEndpointForm({ ...bulkEndpointForm, location_id: parseInt(value) })
+                }
+              >
+                <SelectTrigger id="bulk-location">
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id.toString()}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="bulk-prefix">Table Prefix *</Label>
+              <Input
+                id="bulk-prefix"
+                value={bulkEndpointForm.table_prefix}
+                onChange={(e) =>
+                  setBulkEndpointForm({ ...bulkEndpointForm, table_prefix: e.target.value })
+                }
+                placeholder="e.g., T, Table"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="bulk-start">Start Number *</Label>
+                <Input
+                  id="bulk-start"
+                  type="number"
+                  min="1"
+                  value={bulkEndpointForm.table_start}
+                  onChange={(e) =>
+                    setBulkEndpointForm({ ...bulkEndpointForm, table_start: parseInt(e.target.value) })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="bulk-end">End Number *</Label>
+                <Input
+                  id="bulk-end"
+                  type="number"
+                  min="1"
+                  value={bulkEndpointForm.table_end}
+                  onChange={(e) =>
+                    setBulkEndpointForm({ ...bulkEndpointForm, table_end: parseInt(e.target.value) })
+                  }
+                />
+              </div>
+            </div>
+            <div className="p-3 bg-muted rounded text-sm">
+              <p className="font-medium mb-1">Preview:</p>
+              <p className="text-muted-foreground">
+                Will create {Math.max(0, bulkEndpointForm.table_end - bulkEndpointForm.table_start + 1)} endpoints: 
+                <br />
+                {bulkEndpointForm.table_prefix}{bulkEndpointForm.table_start} to {bulkEndpointForm.table_prefix}{bulkEndpointForm.table_end}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBulkEndpoints(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleBulkCreateEndpoints}>
+              Create {Math.max(0, bulkEndpointForm.table_end - bulkEndpointForm.table_start + 1)} Endpoints
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1502,7 +1502,10 @@ class ApiClient {
 
   async createBulkFranchiseEndpoints(franchiseId: number, data: {
     menu_template_id: number;
-    location_ids: number[];
+    location_id: number;
+    table_prefix: string;
+    table_start: number;
+    table_end: number;
   }): Promise<ApiResponse> {
     return this.request(`/admin/franchises/${franchiseId}/endpoints/bulk`, {
       method: 'POST',
