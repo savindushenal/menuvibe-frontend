@@ -836,7 +836,7 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {selectedTemplate.settings?.currency_symbol || item.currency}{' '}
-                          {item.price.toFixed(2)}
+                          {parseFloat(item.price.toString()).toFixed(2)}
                         </p>
                       </div>
                       <Button

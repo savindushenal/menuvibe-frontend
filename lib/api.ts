@@ -1479,6 +1479,7 @@ class ApiClient {
     location_id?: number;
     short_code?: string;
     name?: string;
+    table_number?: string;
     is_active?: boolean;
   }): Promise<ApiResponse> {
     return this.request(`/admin/franchises/${franchiseId}/endpoints`, {
