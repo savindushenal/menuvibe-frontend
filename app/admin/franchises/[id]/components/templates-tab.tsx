@@ -106,7 +106,7 @@ interface Endpoint {
     id: number;
     name: string;
   };
-  menu_template?: {
+  template?: {
     id: number;
     name: string;
   };
@@ -236,7 +236,7 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
             if (endpointsRes.success && endpointsRes.data) {
               // Filter endpoints by selected template
               const templateEndpoints = endpointsRes.data.filter(
-                (ep: Endpoint) => ep.menu_template?.id === selectedTemplate.id
+                (ep: Endpoint) => ep.template?.id === selectedTemplate.id
               );
               setEndpoints(templateEndpoints);
             }
@@ -625,7 +625,7 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
       const response = await apiClient.getFranchiseEndpoints(franchiseId);
       if (response.success && response.data) {
         const templateEndpoints = response.data.filter(
-          (ep: Endpoint) => ep.menu_template?.id === selectedTemplate.id
+          (ep: Endpoint) => ep.template?.id === selectedTemplate.id
         );
         setEndpoints(templateEndpoints);
       }
