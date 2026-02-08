@@ -1363,6 +1363,154 @@ class ApiClient {
   }
 
   // ============================================
+  // ADMIN FRANCHISE TEMPLATE MANAGEMENT APIs
+  // ============================================
+
+  // Franchise Menu Templates
+  async getFranchiseMenus(franchiseId: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/menus`);
+  }
+
+  async createFranchiseMenu(franchiseId: number, data: {
+    name: string;
+    description?: string;
+    currency?: string;
+    slug?: string;
+    settings?: {
+      template_type?: string;
+      show_prices?: boolean;
+      show_images?: boolean;
+      currency_symbol?: string;
+    };
+  }): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/menus`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateFranchiseMenu(franchiseId: number, templateId: number, data: any): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/menus/${templateId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteFranchiseMenu(franchiseId: number, templateId: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/menus/${templateId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Franchise Menu Categories
+  async getFranchiseCategories(franchiseId: number, templateId: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/menus/${templateId}/categories`);
+  }
+
+  async createFranchiseCategory(franchiseId: number, templateId: number, data: {
+    name: string;
+    description?: string;
+    icon?: string;
+    sort_order?: number;
+  }): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/menus/${templateId}/categories`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateFranchiseCategory(franchiseId: number, templateId: number, categoryId: number, data: any): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/menus/${templateId}/categories/${categoryId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteFranchiseCategory(franchiseId: number, templateId: number, categoryId: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/menus/${templateId}/categories/${categoryId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Franchise Menu Items
+  async getFranchiseItems(franchiseId: number, templateId: number, categoryId?: number): Promise<ApiResponse> {
+    const params = categoryId ? `?category_id=${categoryId}` : '';
+    return this.request(`/admin/franchises/${franchiseId}/menus/${templateId}/items${params}`);
+  }
+
+  async createFranchiseItem(franchiseId: number, templateId: number, data: {
+    category_id: number;
+    name: string;
+    description?: string;
+    price: number;
+    currency?: string;
+    image_url?: string;
+    icon?: string;
+    is_available?: boolean;
+    is_featured?: boolean;
+    sort_order?: number;
+  }): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/menus/${templateId}/items`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateFranchiseItem(franchiseId: number, templateId: number, itemId: number, data: any): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/menus/${templateId}/items/${itemId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteFranchiseItem(franchiseId: number, templateId: number, itemId: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/menus/${templateId}/items/${itemId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Franchise QR Endpoints
+  async getFranchiseEndpoints(franchiseId: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/endpoints`);
+  }
+
+  async createFranchiseEndpoint(franchiseId: number, data: {
+    menu_template_id: number;
+    location_id?: number;
+    short_code?: string;
+    name?: string;
+    is_active?: boolean;
+  }): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/endpoints`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateFranchiseEndpoint(franchiseId: number, endpointId: number, data: any): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/endpoints/${endpointId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteFranchiseEndpoint(franchiseId: number, endpointId: number): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/endpoints/${endpointId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async createBulkFranchiseEndpoints(franchiseId: number, data: {
+    menu_template_id: number;
+    location_ids: number[];
+  }): Promise<ApiResponse> {
+    return this.request(`/admin/franchises/${franchiseId}/endpoints/bulk`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // ============================================
   // TEMPLATE MENU SYSTEM APIs
   // ============================================
 

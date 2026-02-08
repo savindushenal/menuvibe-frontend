@@ -36,6 +36,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { TemplatesTab } from './components/templates-tab';
 import {
   ArrowLeft,
   Building2,
@@ -48,6 +49,7 @@ import {
   Loader2,
   Check,
   X,
+  Menu as MenuIcon,
   Clock,
   AlertTriangle,
   MoreHorizontal,
@@ -738,6 +740,10 @@ export default function FranchiseDetailPage() {
               <MapPin className="h-4 w-4 mr-2" />
               Branches ({stats.total_branches})
             </TabsTrigger>
+            <TabsTrigger value="templates">
+              <MenuIcon className="h-4 w-4 mr-2" />
+              Templates
+            </TabsTrigger>
             <TabsTrigger value="payments">
               <DollarSign className="h-4 w-4 mr-2" />
               Payments
@@ -822,6 +828,11 @@ export default function FranchiseDetailPage() {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Templates Tab */}
+          <TabsContent value="templates">
+            <TemplatesTab franchiseId={franchiseId} />
           </TabsContent>
 
           {/* Payments Tab */}
