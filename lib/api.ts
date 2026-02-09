@@ -189,13 +189,15 @@ class ApiClient {
       // Backend now returns 200 with business_profile: null for new users
       // Ensure we always have the expected structure
       if (response.success && response.data) {
+        const data = response.data as { business_profile?: any; needs_onboarding?: boolean };
         return {
           success: true,
+          message: response.message || 'Business profile loaded successfully',
           data: {
-            business_profile: response.data.business_profile || null,
-            needs_onboarding: response.data.needs_onboarding !== undefined 
-              ? response.data.needs_onboarding 
-              : !response.data.business_profile
+            business_profile: data.business_profile || null,
+            needs_onboarding: data.needs_onboarding !== undefined 
+              ? data.needs_onboarding 
+              : !data.business_profile
           }
         };
       }
