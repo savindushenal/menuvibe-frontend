@@ -19,6 +19,7 @@ import {
   Building,
   Menu,
   X,
+  KeyRound,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,6 +39,12 @@ const adminNavItems = [
     title: 'Dashboard',
     href: '/admin',
     icon: LayoutDashboard,
+    roles: ['admin', 'super_admin', 'support_officer'],
+  },
+  {
+    title: 'Quick Access',
+    href: '/admin/access',
+    icon: KeyRound,
     roles: ['admin', 'super_admin', 'support_officer'],
   },
   {
