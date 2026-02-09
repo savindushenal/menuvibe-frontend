@@ -84,18 +84,17 @@ export default function SettingsPage() {
       const response = await apiClient.getSettings();
       
       if (response.success && response.data) {
-        // Map API response to SettingsData structure
-        const apiSettings = response.data.settings || {};
-        
+        // Backend returns: { success: true, data: { account: {...}, notifications: {...}, etc } }
+        // NOT data.settings - the categories are directly in data
         setSettings({
-          account: {
+          account: response.data.account || {
             name: user.name || '',
             email: user.email || '',
             phone: ''
           },
-          notifications: {
-            email_notifications: apiSettings.email_notifications || false,
-            push_notifications: apiSettings.notifications_enabled || false,
+          notifications: response.data.notifications || {
+            email_notifications: false,
+            push_notifications: false,
             sms_notifications: false,
             marketing_emails: false,
             order_updates: true,
@@ -106,28 +105,28 @@ export default function SettingsPage() {
             weekly_reports: false,
             monthly_reports: false
           },
-          security: {
+          security: response.data.security || {
             two_factor_enabled: false,
             session_timeout: 30,
             login_alerts: true,
             password_expiry_days: null
           },
-          privacy: {
+          privacy: response.data.privacy || {
             profile_visibility: 'private',
             show_online_status: false,
             allow_search_engines: false,
             data_collection: true,
             analytics_tracking: true
           },
-          display: {
-            theme: apiSettings.theme || 'light',
-            language: apiSettings.language || 'en',
+          display: response.data.display || {
+            theme: 'light',
+            language: 'en',
             timezone: 'UTC',
             date_format: 'MM/DD/YYYY',
             time_format: '12h',
             items_per_page: 20
           },
-          business: {
+          business: response.data.business || {
             business_hours_display: true,
             auto_accept_orders: false,
             order_confirmation_required: true,

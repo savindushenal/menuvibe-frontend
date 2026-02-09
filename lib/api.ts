@@ -184,18 +184,25 @@ class ApiClient {
 
   async getBusinessProfile(): Promise<ApiResponse> {
     try {
-      return await this.request('/business-profile');
-    } catch (error: any) {
-      // 404 means no business profile exists - this is expected for new users
-      if (error.message?.includes('404') || error.message?.includes('Not Found') || error.message?.includes('Business profile not found')) {
-        // Don't log this as an error since it's expected for new users
+      const response = await this.request('/business-profile');
+      
+      // Backend now returns 200 with business_profile: null for new users
+      // Ensure we always have the expected structure
+      if (response.success && response.data) {
         return {
-          success: false,
-          message: 'Business profile not found',
-          data: { needs_onboarding: true }
+          success: true,
+          data: {
+            business_profile: response.data.business_profile || null,
+            needs_onboarding: response.data.needs_onboarding !== undefined 
+              ? response.data.needs_onboarding 
+              : !response.data.business_profile
+          }
         };
       }
-      // Only log unexpected errors
+      
+      return response;
+    } catch (error: any) {
+      // Log unexpected errors
       console.error('Unexpected error in getBusinessProfile:', error);
       throw error;
     }
