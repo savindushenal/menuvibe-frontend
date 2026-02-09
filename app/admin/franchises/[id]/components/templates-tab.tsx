@@ -635,7 +635,7 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
   };
 
   const copyQRUrl = (shortCode: string) => {
-    const url = `${window.location.origin}/menu/${shortCode}`;
+    const url = `${window.location.origin}/m/${shortCode}`;
     navigator.clipboard.writeText(url);
     setCopiedCode(shortCode);
     toast({
@@ -914,7 +914,7 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
                         </Button>
                       </div>
                       <div className="flex items-center gap-2 p-2 bg-muted rounded text-xs font-mono">
-                        <code className="flex-1 truncate">/menu/{endpoint.short_code}</code>
+                        <code className="flex-1 truncate">/m/{endpoint.short_code}</code>
                         <Button
                           size="icon"
                           variant="ghost"
@@ -932,7 +932,7 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
                         size="sm"
                         variant="outline"
                         className="w-full mt-2"
-                        onClick={() => window.open(`/menu/${endpoint.short_code}`, '_blank')}
+                        onClick={() => window.open(`/m/${endpoint.short_code}`, '_blank')}
                       >
                         <ExternalLink className="h-3 w-3 mr-2" />
                         Preview
