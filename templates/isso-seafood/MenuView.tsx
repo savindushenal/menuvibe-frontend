@@ -1,16 +1,15 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Fish, Search, ShoppingCart, Plus, Minus, X, ChevronLeft, 
-  MapPin, Star, Clock, TrendingUp, Heart, Award, Flame,
-  ChevronRight
+  ShoppingBag, X, MapPin, Star, ChevronRight,
+  Fish, UtensilsCrossed, Salad, Sparkles, Plus, Minus
 } from 'lucide-react';
-import { useParams } from 'next/navigation';
 import Image from 'next/image';
 
-// Shrimp SVG Icon Component
+// Shrimp SVG Icon
 const ShrimpIcon = ({ className = "w-16 h-16" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M42 18C42 18 45 15 48 15C51 15 54 17 54 20C54 23 52 25 49 26L42 28" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -27,7 +26,15 @@ const ShrimpIcon = ({ className = "w-16 h-16" }: { className?: string }) => (
   </svg>
 );
 
-interface MenuItem {
+// Isso Logo Component
+const IssoLogo = ({ className = "" }: { className?: string }) => (
+  <div className={`flex items-center gap-2 ${className}`}>
+    <ShrimpIcon className="w-8 h-8 md:w-10 md:h-10 text-[#F26522]" />
+    <span className="text-2xl md:text-3xl font-bold text-[#1A1A1A]">Isso</span>
+  </div>
+);
+
+export interface MenuItem {
   id: number;
   name: string;
   description: string;
@@ -36,26 +43,16 @@ interface MenuItem {
   category_id: number;
   is_available: boolean;
   is_featured?: boolean;
-  variations?: any[];
 }
 
 interface Category {
   id: number;
   name: string;
-  description?: string;
   items: MenuItem[];
 }
 
-interface Offer {
-  id: number;
-  title: string;
-  description: string;
-  discount_percentage?: number;
-  code?: string;
-  image_url?: string;
-}
-
-interface CartItem extends MenuItem {
+interface CartItem {
+  item: MenuItem;
   quantity: number;
 }
 
@@ -65,15 +62,12 @@ export default function IssoMenuView() {
   
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-  const [showCart, setShowCart] = useState(false);
-  const [showProduct, setShowProduct] = useState(false);
-  const [currentOfferIndex, setCurrentOfferIndex] = useState(0);
-  
-  // Fetch menu data
+  const [isProductSheetOpen, setIsProductSheetOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+
   useEffect(() => {
     const fetchMenu = async () => {
       try {
@@ -82,6 +76,9 @@ export default function IssoMenuView() {
         
         if (result.success) {
           setData(result.data);
+          if (result.data.menu?.categories?.length > 0) {
+            setActiveCategory(result.data.menu.categories[0].id);
+          }
         }
       } catch (error) {
         console.error('Error fetching menu:', error);
@@ -95,16 +92,6 @@ export default function IssoMenuView() {
     }
   }, [code]);
 
-  // Auto-rotate offers
-  useEffect(() => {
-    if (data?.offers && data.offers.length > 1) {
-      const interval = setInterval(() => {
-        setCurrentOfferIndex((prev) => (prev + 1) % data.offers.length);
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [data?.offers]);
-
   const formatPrice = (price: number | string): string => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
     return numPrice.toFixed(2);
@@ -117,37 +104,45 @@ export default function IssoMenuView() {
     return 'Good Evening! 🌊';
   };
 
-  const addToCart = (item: MenuItem) => {
-    setCart(prev => {
-      const existing = prev.find(i => i.id === item.id);
-      if (existing) {
-        return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+  const handleItemClick = (item: MenuItem) => {
+    setSelectedItem(item);
+    setIsProductSheetOpen(true);
+  };
+
+  const handleAddToCart = (item: MenuItem, quantity: number) => {
+    setCartItems(prev => {
+      const existingIndex = prev.findIndex(ci => ci.item.id === item.id);
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex].quantity += quantity;
+        return updated;
       }
-      return [...prev, { ...item, quantity: 1 }];
+      return [...prev, { item, quantity }];
     });
+    setIsProductSheetOpen(false);
   };
 
-  const updateQuantity = (itemId: number, delta: number) => {
-    setCart(prev => {
-      const updated = prev.map(item => 
-        item.id === itemId ? { ...item, quantity: Math.max(0, item.quantity + delta) } : item
+  const handleUpdateQuantity = (itemId: number, delta: number) => {
+    setCartItems(prev => {
+      const updated = prev.map(ci => 
+        ci.item.id === itemId ? { ...ci, quantity: Math.max(0, ci.quantity + delta) } : ci
       );
-      return updated.filter(item => item.quantity > 0);
+      return updated.filter(ci => ci.quantity > 0);
     });
   };
 
-  const cartTotal = cart.reduce((sum, item) => {
-    const price = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
-    return sum + (price * item.quantity);
+  const cartTotal = cartItems.reduce((sum, ci) => {
+    const price = typeof ci.item.price === 'string' ? parseFloat(ci.item.price) : ci.item.price;
+    return sum + (price * ci.quantity);
   }, 0);
 
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const cartCount = cartItems.reduce((sum, ci) => sum + ci.quantity, 0);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#FFF8F0] flex items-center justify-center">
         <div className="text-center">
-          <ShrimpIcon className="w-16 h-16 text-[#FF6B35] mx-auto mb-4 animate-pulse" />
+          <ShrimpIcon className="w-16 h-16 text-[#F26522] mx-auto mb-4 animate-pulse" />
           <p className="text-gray-600 text-lg">Loading menu...</p>
         </div>
       </div>
@@ -156,7 +151,7 @@ export default function IssoMenuView() {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#FFF8F0] flex items-center justify-center">
         <div className="text-center">
           <ShrimpIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600 text-lg">Menu not found</p>
@@ -166,351 +161,309 @@ export default function IssoMenuView() {
   }
 
   const categories: Category[] = data.menu?.categories || [];
-  const offers: Offer[] = data.offers || [];
-  const colors = data.template?.config?.design?.colors || {
-    primary: '#FF6B35',
-    secondary: '#004E89',
-    accent: '#F77F00'
-  };
-
-  const brandName = data.franchise?.design_tokens?.brand?.name || data.franchise?.name || 'Isso';
-  const brandTagline = data.franchise?.design_tokens?.brand?.tagline || 'Fresh from the ocean';
+  const brandName = data.franchise?.design_tokens?.brand?.name || 'Isso';
   const brandGreeting = data.franchise?.design_tokens?.brand?.greeting || getGreeting();
   const locationName = data.location?.name || 'Main Location';
 
-  // Get all available items
   const allItems = categories.flatMap(cat => cat.items.filter(item => item.is_available));
-  
-  // Filter items by search and category
-  const activeItems = selectedCategory 
-    ? allItems.filter(item => item.category_id === selectedCategory)
+  const activeItems = activeCategory
+    ? allItems.filter(item => item.category_id === activeCategory)
     : allItems;
+  const featuredItems = allItems.filter(item => item.is_featured).slice(0, 3);
 
-  const filteredItems = searchQuery
-    ? activeItems.filter(item =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : activeItems;
-
-  // Get featured items
-  const featuredItems = allItems.filter(item => item.is_featured).slice(0, 6);
+  const categoryIcons: Record<string, any> = {
+    'Appetizers': Fish,
+    'Mains': UtensilsCrossed,
+    'Salads': Salad,
+    'default': Fish
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50">
-      {/* Header with Location */}
-      <div className="bg-white shadow-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FF6B35] to-[#F77F00] flex items-center justify-center">
-              <Fish className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">{brandName}</h1>
-              <div className="flex items-center text-sm text-gray-600">
-                <MapPin className="w-3 h-3 mr-1" />
-                {locationName}
-              </div>
-            </div>
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <motion.header 
+        className="sticky top-0 z-50 bg-white border-b border-gray-100"
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="bg-[#1A1A1A] text-white px-4 sm:px-6 lg:px-12 py-1.5">
+          <div className="flex items-center justify-center gap-2 max-w-7xl mx-auto">
+            <MapPin className="w-3.5 h-3.5 text-[#F26522]" />
+            <span className="text-xs font-medium">{locationName}</span>
           </div>
-          
-          <button
-            onClick={() => setShowCart(true)}
-            className="relative p-3 bg-gradient-to-r from-[#FF6B35] to-[#F77F00] rounded-full shadow-lg hover:shadow-xl transition-all"
-          >
-            <ShoppingCart className="w-6 h-6 text-white" />
-            {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-[#004E89] text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center animate-pulse">
-                {cartCount}
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#004E89] via-[#0077B6] to-[#00B4D8] text-white">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-10 left-10 w-72 h-72 bg-white rounded-full blur-3xl"></div>
-          <div className="absolute bottom-10 right-10 w-96 h-96 bg-[#FF6B35] rounded-full blur-3xl"></div>
         </div>
         
-        <div className="relative max-w-7xl mx-auto px-4 py-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-8"
-          >
-            <h2 className="text-4xl md:text-5xl font-bold mb-3">{brandGreeting}</h2>
-            <p className="text-xl text-blue-100">{brandTagline}</p>
-          </motion.div>
-
-          <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto">
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center border border-white/20">
-              <Star className="w-8 h-8 text-[#F77F00] mx-auto mb-2" />
-              <div className="text-2xl font-bold">4.8</div>
-              <div className="text-sm text-blue-100">Rating</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center border border-white/20">
-              <Fish className="w-8 h-8 text-[#F77F00] mx-auto mb-2" />
-              <div className="text-2xl font-bold">{allItems.length}</div>
-              <div className="text-sm text-blue-100">Items</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-center border border-white/20">
-              <Clock className="w-8 h-8 text-[#F77F00] mx-auto mb-2" />
-              <div className="text-2xl font-bold">Fresh</div>
-              <div className="text-sm text-blue-100">Daily</div>
-            </div>
+        <div className="px-4 sm:px-6 lg:px-12 py-3 md:py-4">
+          <div className="flex items-center justify-between max-w-7xl mx-auto">
+            <div className="w-10"></div>
+            <IssoLogo className="lg:absolute lg:left-1/2 lg:-translate-x-1/2" />
+            
+            <button 
+              onClick={() => setIsCartOpen(true)}
+              className="relative p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <ShoppingBag className="w-6 h-6 text-[#1A1A1A]" />
+              {cartCount > 0 && (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-1 -right-1 bg-[#F26522] text-white text-xs w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center font-semibold"
+                >
+                  {cartCount}
+                </motion.span>
+              )}
+            </button>
           </div>
         </div>
-      </div>
+      </motion.header>
 
-      {/* Search Bar */}
-      <div className="max-w-7xl mx-auto px-4 -mt-6 mb-8 relative z-10">
-        <div className="bg-white rounded-2xl shadow-xl p-2 border-2 border-gray-100">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search seafood dishes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 text-lg rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B35]"
-            />
+      {/* Hero Section */}
+      <motion.section 
+        className="relative px-4 sm:px-6 lg:px-12 py-8 md:py-12 bg-[#F26522] overflow-hidden"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="absolute top-10 left-10 w-64 h-64 bg-[#E8F34E] rounded-full blur-3xl opacity-20"></div>
+        <div className="absolute bottom-10 right-10 w-80 h-80 bg-[#6DBDB6] rounded-full blur-3xl opacity-20"></div>
+        
+        <div className="relative max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-8">
+            <motion.div 
+              className="text-white"
+              initial={{ x: -30, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.1 }}
+            >
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-3">
+                {brandGreeting}
+              </h1>
+              <p className="text-lg md:text-xl text-white/90 mb-6">
+                Fresh from the ocean, served with love
+              </p>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium">Open Now</span>
+              </div>
+            </motion.div>
+
+            <motion.div
+              className="hidden lg:flex items-end justify-end"
+              initial={{ x: 30, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl px-8 py-6 border border-white/20">
+                <div className="grid grid-cols-3 gap-6 text-white text-center">
+                  <div>
+                    <div className="text-3xl font-bold">{allItems.length}+</div>
+                    <div className="text-sm text-white/80">Items</div>
+                  </div>
+                  <div>
+                    <div className="text-3xl font-bold flex items-center justify-center gap-1">
+                      4.9 <Star className="w-5 h-5 fill-[#E8F34E] text-[#E8F34E]" />
+                    </div>
+                    <div className="text-sm text-white/80">Rating</div>
+                  </div>
+                  <div>
+                    <div className="text-3xl font-bold">~5min</div>
+                    <div className="text-sm text-white/80">Wait</div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div 
+              className="lg:hidden flex items-center justify-between text-white text-center"
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              <div>
+                <div className="text-2xl font-bold">{allItems.length}+</div>
+                <div className="text-xs text-white/80">Items</div>
+              </div>
+              <div className="w-px h-10 bg-white/20"></div>
+              <div>
+                <div className="text-2xl font-bold flex items-center justify-center gap-1">
+                  4.9 <Star className="w-4 h-4 fill-[#E8F34E] text-[#E8F34E]" />
+                </div>
+                <div className="text-xs text-white/80">Rating</div>
+              </div>
+              <div className="w-px h-10 bg-white/20"></div>
+              <div>
+                <div className="text-2xl font-bold">~5min</div>
+                <div className="text-xs text-white/80">Wait</div>
+              </div>
+            </motion.div>
           </div>
         </div>
-      </div>
+      </motion.section>
 
-      {/* Special Offers */}
-      {offers.length > 0 && (
-        <div className="max-w-7xl mx-auto px-4 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-2xl font-bold text-gray-900 flex items-center">
-              <Flame className="w-6 h-6 text-[#FF6B35] mr-2" />
-              Special Offers
-            </h3>
-          </div>
-          
-          <div className="relative">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentOfferIndex}
-                initial={{ opacity: 0, x: 100 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -100 }}
-                className="bg-gradient-to-r from-[#FF6B35] to-[#F77F00] rounded-2xl overflow-hidden shadow-xl"
-              >
-                <div className="flex items-center p-6">
-                  {offers[currentOfferIndex].image_url && (
-                    <div className="relative w-24 h-24 rounded-xl overflow-hidden mr-6 flex-shrink-0">
+      {/* Top Picks */}
+      {featuredItems.length > 0 && (
+        <section className="px-4 sm:px-6 lg:px-12 py-10 bg-[#FFF8F0]">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold text-[#1A1A1A] flex items-center gap-2">
+                <Sparkles className="w-6 h-6 text-[#E8F34E]" />
+                Top Picks for You
+              </h2>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              {featuredItems.map((item, index) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ scale: 1.02, y: -4 }}
+                  onClick={() => handleItemClick(item)}
+                  className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all cursor-pointer"
+                >
+                  {item.image_url && (
+                    <div className="relative h-48 bg-gradient-to-br from-[#6DBDB6]/10 to-[#F26522]/10">
                       <Image
-                        src={offers[currentOfferIndex].image_url}
-                        alt={offers[currentOfferIndex].title}
+                        src={item.image_url}
+                        alt={item.name}
                         fill
                         className="object-cover"
                       />
                     </div>
                   )}
-                  <div className="flex-1 text-white">
-                    <h4 className="text-2xl font-bold mb-2">{offers[currentOfferIndex].title}</h4>
-                    <p className="text-blue-50 mb-3">{offers[currentOfferIndex].description}</p>
-                    {offers[currentOfferIndex].code && (
-                      <div className="inline-block bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/30">
-                        <span className="text-sm font-semibold">Code: {offers[currentOfferIndex].code}</span>
+                  <div className="p-4">
+                    <h3 className="font-bold text-lg text-[#1A1A1A] mb-2 line-clamp-1">
+                      {item.name}
+                    </h3>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
+                        <Star className="w-4 h-4 fill-[#E8F34E] text-[#E8F34E]" />
+                        <span className="font-medium">4.8</span>
                       </div>
-                    )}
-                  </div>
-                  {offers[currentOfferIndex].discount_percentage && (
-                    <div className="ml-6 bg-white text-[#FF6B35] rounded-2xl px-6 py-4 text-center flex-shrink-0">
-                      <div className="text-4xl font-bold">{offers[currentOfferIndex].discount_percentage}%</div>
-                      <div className="text-sm font-semibold">OFF</div>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            </AnimatePresence>
-            
-            {offers.length > 1 && (
-              <div className="flex justify-center mt-4 space-x-2">
-                {offers.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentOfferIndex(index)}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      index === currentOfferIndex ? 'bg-[#FF6B35] w-8' : 'bg-gray-300'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Featured Items */}
-      {featuredItems.length > 0 && !searchQuery && (
-        <div className="max-w-7xl mx-auto px-4 mb-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
-            <Award className="w-6 h-6 text-[#F77F00] mr-2" />
-            Top Picks
-          </h3>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {featuredItems.map((item) => (
-              <motion.div
-                key={item.id}
-                whileHover={{ y: -5 }}
-                onClick={() => {
-                  setSelectedItem(item);
-                  setShowProduct(true);
-                }}
-                className="bg-white rounded-2xl overflow-hidden shadow-lg cursor-pointer border-2 border-transparent hover:border-[#FF6B35] transition-all"
-              >
-                {item.image_url && (
-                  <div className="relative h-32 bg-gray-100">
-                    <Image
-                      src={item.image_url}
-                      alt={item.name}
-                      fill
-                      className="object-cover"
-                    />
-                    <div className="absolute top-2 right-2 bg-[#F77F00] text-white px-2 py-1 rounded-full text-xs font-bold">
-                      <Heart className="w-3 h-3 inline" />
+                      <span className="text-xl font-bold text-[#F26522]">
+                        ${formatPrice(item.price)}
+                      </span>
                     </div>
                   </div>
-                )}
-                <div className="p-3">
-                  <h4 className="font-bold text-sm mb-1 line-clamp-1">{item.name}</h4>
-                  <div className="text-[#FF6B35] font-bold text-lg">
-                    ${formatPrice(item.price)}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
       )}
 
       {/* Category Navigation */}
-      <div className="sticky top-[73px] z-30 bg-white/95 backdrop-blur-sm shadow-md mb-6">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex space-x-2 overflow-x-auto scrollbar-hide">
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className={`px-6 py-2 rounded-full whitespace-nowrap font-semibold transition-all ${
-                selectedCategory === null
-                  ? 'bg-gradient-to-r from-[#FF6B35] to-[#F77F00] text-white shadow-lg'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              All Items
-            </button>
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`px-6 py-2 rounded-full whitespace-nowrap font-semibold transition-all ${
-                  selectedCategory === category.id
-                    ? 'bg-gradient-to-r from-[#FF6B35] to-[#F77F00] text-white shadow-lg'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {category.name}
-              </button>
-            ))}
+      <div className="sticky top-[73px] md:top-[82px] z-40 bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-12 py-4">
+        <div className="max-w-7xl mx-auto overflow-x-auto scrollbar-hide">
+          <div className="flex gap-3 min-w-max">
+            {categories.map((category) => {
+              const IconComponent = categoryIcons[category.name] || categoryIcons.default;
+              return (
+                <motion.button
+                  key={category.id}
+                  onClick={() => setActiveCategory(category.id)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all ${
+                    activeCategory === category.id
+                      ? 'bg-[#F26522] text-white shadow-lg'
+                      : 'bg-[#F5F5F5] text-[#1A1A1A] hover:bg-gray-200'
+                  }`}
+                >
+                  <IconComponent className="w-5 h-5" />
+                  <span>{category.name}</span>
+                </motion.button>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Menu Items Grid */}
-      <div className="max-w-7xl mx-auto px-4 pb-8">
-        {filteredItems.length === 0 ? (
-          <div className="text-center py-16">
-            <Fish className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg">No items found</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredItems.map((item) => (
+      {/* Menu List */}
+      <section className="px-4 sm:px-6 lg:px-12 py-10">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {activeItems.map((item, index) => (
               <motion.div
                 key={item.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                whileHover={{ y: -5 }}
-                className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer border-2 border-transparent hover:border-[#FF6B35]"
-                onClick={() => {
-                  setSelectedItem(item);
-                  setShowProduct(true);
-                }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 + index * 0.05 }}
+                whileHover={{ y: -2 }}
+                onClick={() => handleItemClick(item)}
+                className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden group"
               >
-                {item.image_url && (
-                  <div className="relative h-48 bg-gradient-to-br from-blue-100 to-orange-50">
-                    <Image
-                      src={item.image_url}
-                      alt={item.name}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                )}
-                <div className="p-5">
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">{item.name}</h3>
-                  {item.description && (
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">{item.description}</p>
+                <div className="flex gap-4 p-4">
+                  {item.image_url && (
+                    <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                      <Image
+                        src={item.image_url}
+                        alt={item.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
                   )}
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-[#FF6B35]">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h3 className="font-bold text-[#1A1A1A] line-clamp-1 flex-1">
+                        {item.name}
+                      </h3>
+                      <ChevronRight className="hidden md:block w-5 h-5 text-gray-400 flex-shrink-0 group-hover:text-[#F26522] transition-colors" />
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-gray-600 mb-2">
+                      <Star className="w-3 h-3 fill-[#E8F34E] text-[#E8F34E]" />
+                      <span>4.7</span>
+                    </div>
+                    {item.description && (
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                        {item.description}
+                      </p>
+                    )}
+                    <div className="text-lg md:text-xl font-bold text-[#F26522]">
                       ${formatPrice(item.price)}
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        addToCart(item);
-                      }}
-                      className="bg-gradient-to-r from-[#FF6B35] to-[#F77F00] text-white px-6 py-2 rounded-full font-semibold hover:shadow-lg transition-all flex items-center space-x-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Add</span>
-                    </button>
+                    </div>
                   </div>
                 </div>
               </motion.div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      </section>
 
-      {/* Product Detail Sheet */}
+      {/* Product Sheet */}
       <AnimatePresence>
-        {showProduct && selectedItem && (
+        {isProductSheetOpen && selectedItem && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-              onClick={() => setShowProduct(false)}
+              onClick={() => setIsProductSheetOpen(false)}
             />
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30 }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-50 max-h-[85vh] overflow-y-auto"
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-50 max-h-[90vh] overflow-y-auto"
             >
               <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <h3 className="text-2xl font-bold text-gray-900">Item Details</h3>
+                <h3 className="text-xl font-bold text-[#1A1A1A]">Item Details</h3>
                 <button
-                  onClick={() => setShowProduct(false)}
+                  onClick={() => setIsProductSheetOpen(false)}
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                 >
-                  <X className="w-6 h-6 text-gray-600" />
+                  <X className="w-6 h-6" />
                 </button>
               </div>
 
               <div className="p-6">
                 {selectedItem.image_url && (
-                  <div className="relative h-64 rounded-2xl overflow-hidden mb-6 bg-gradient-to-br from-blue-100 to-orange-50">
+                  <div className="relative h-64 rounded-2xl overflow-hidden mb-6 bg-gradient-to-br from-[#6DBDB6]/10 to-[#F26522]/10">
                     <Image
                       src={selectedItem.image_url}
                       alt={selectedItem.name}
@@ -520,27 +473,32 @@ export default function IssoMenuView() {
                   </div>
                 )}
 
-                <h2 className="text-3xl font-bold text-gray-900 mb-3">{selectedItem.name}</h2>
+                <h2 className="text-3xl font-bold text-[#1A1A1A] mb-2">{selectedItem.name}</h2>
                 
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="flex items-center gap-1 text-sm">
+                    <Star className="w-4 h-4 fill-[#E8F34E] text-[#E8F34E]" />
+                    <span className="font-medium">4.8</span>
+                    <span className="text-gray-500">(95 reviews)</span>
+                  </div>
+                </div>
+
                 {selectedItem.description && (
                   <p className="text-gray-600 text-lg mb-6">{selectedItem.description}</p>
                 )}
 
                 <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-200">
-                  <span className="text-4xl font-bold text-[#FF6B35]">
+                  <span className="text-4xl font-bold text-[#F26522]">
                     ${formatPrice(selectedItem.price)}
                   </span>
                 </div>
 
                 <button
-                  onClick={() => {
-                    addToCart(selectedItem);
-                    setShowProduct(false);
-                  }}
-                  className="w-full bg-gradient-to-r from-[#FF6B35] to-[#F77F00] text-white py-4 rounded-2xl font-bold text-lg hover:shadow-xl transition-all flex items-center justify-center space-x-2"
+                  onClick={() => handleAddToCart(selectedItem, 1)}
+                  className="w-full bg-[#F26522] hover:bg-[#ED5C3C] text-white py-4 rounded-2xl font-bold text-lg transition-colors flex items-center justify-center gap-2"
                 >
-                  <ShoppingCart className="w-5 h-5" />
-                  <span>Add to Cart</span>
+                  <ShoppingBag className="w-5 h-5" />
+                  Add to Cart
                 </button>
               </div>
             </motion.div>
@@ -550,14 +508,14 @@ export default function IssoMenuView() {
 
       {/* Cart Sheet */}
       <AnimatePresence>
-        {showCart && (
+        {isCartOpen && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-              onClick={() => setShowCart(false)}
+              onClick={() => setIsCartOpen(false)}
             />
             <motion.div
               initial={{ x: '100%' }}
@@ -566,13 +524,13 @@ export default function IssoMenuView() {
               transition={{ type: 'spring', damping: 30 }}
               className="fixed top-0 right-0 bottom-0 w-full md:w-96 bg-white shadow-2xl z-50 flex flex-col"
             >
-              <div className="bg-gradient-to-r from-[#FF6B35] to-[#F77F00] text-white px-6 py-5 flex items-center justify-between">
+              <div className="bg-[#F26522] text-white px-6 py-5 flex items-center justify-between">
                 <div>
                   <h3 className="text-2xl font-bold">Your Cart</h3>
-                  <p className="text-blue-50">{cartCount} items</p>
+                  <p className="text-white/90">{cartCount} items</p>
                 </div>
                 <button
-                  onClick={() => setShowCart(false)}
+                  onClick={() => setIsCartOpen(false)}
                   className="p-2 hover:bg-white/20 rounded-full transition-colors"
                 >
                   <X className="w-6 h-6" />
@@ -580,47 +538,47 @@ export default function IssoMenuView() {
               </div>
 
               <div className="flex-1 overflow-y-auto p-6">
-                {cart.length === 0 ? (
+                {cartItems.length === 0 ? (
                   <div className="text-center py-16">
-                    <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                     <p className="text-gray-500 text-lg">Your cart is empty</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {cart.map((item) => (
+                    {cartItems.map((ci) => (
                       <div
-                        key={item.id}
-                        className="bg-gray-50 rounded-2xl p-4 flex items-center space-x-4"
+                        key={ci.item.id}
+                        className="bg-[#FFF8F0] rounded-xl p-4 flex items-center gap-4"
                       >
-                        {item.image_url && (
-                          <div className="relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0">
+                        {ci.item.image_url && (
+                          <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
                             <Image
-                              src={item.image_url}
-                              alt={item.name}
+                              src={ci.item.image_url}
+                              alt={ci.item.name}
                               fill
                               className="object-cover"
                             />
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-gray-900 mb-1">{item.name}</h4>
-                          <p className="text-[#FF6B35] font-bold text-lg">
-                            ${formatPrice(item.price)}
+                          <h4 className="font-bold text-[#1A1A1A] mb-1">{ci.item.name}</h4>
+                          <p className="text-[#F26522] font-bold text-lg">
+                            ${formatPrice(ci.item.price)}
                           </p>
                         </div>
-                        <div className="flex items-center space-x-2 flex-shrink-0">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                           <button
-                            onClick={() => updateQuantity(item.id, -1)}
+                            onClick={() => handleUpdateQuantity(ci.item.id, -1)}
                             className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
                           >
-                            <Minus className="w-4 h-4 text-gray-700" />
+                            <Minus className="w-4 h-4" />
                           </button>
-                          <span className="w-8 text-center font-bold text-gray-900">
-                            {item.quantity}
+                          <span className="w-8 text-center font-bold">
+                            {ci.quantity}
                           </span>
                           <button
-                            onClick={() => updateQuantity(item.id, 1)}
-                            className="w-8 h-8 bg-[#FF6B35] rounded-full flex items-center justify-center hover:bg-[#F77F00] transition-colors"
+                            onClick={() => handleUpdateQuantity(ci.item.id, 1)}
+                            className="w-8 h-8 bg-[#F26522] rounded-full flex items-center justify-center hover:bg-[#ED5C3C] transition-colors"
                           >
                             <Plus className="w-4 h-4 text-white" />
                           </button>
@@ -631,15 +589,15 @@ export default function IssoMenuView() {
                 )}
               </div>
 
-              {cart.length > 0 && (
-                <div className="border-t border-gray-200 p-6 bg-gray-50">
+              {cartItems.length > 0 && (
+                <div className="border-t border-gray-200 p-6 bg-[#FFF8F0]">
                   <div className="flex items-center justify-between mb-6">
-                    <span className="text-xl font-bold text-gray-900">Total</span>
-                    <span className="text-3xl font-bold text-[#FF6B35]">
+                    <span className="text-xl font-bold text-[#1A1A1A]">Total</span>
+                    <span className="text-3xl font-bold text-[#F26522]">
                       ${cartTotal.toFixed(2)}
                     </span>
                   </div>
-                  <button className="w-full bg-gradient-to-r from-[#FF6B35] to-[#F77F00] text-white py-4 rounded-2xl font-bold text-lg hover:shadow-xl transition-all">
+                  <button className="w-full bg-[#F26522] hover:bg-[#ED5C3C] text-white py-4 rounded-xl font-bold text-lg transition-colors">
                     Checkout
                   </button>
                 </div>
@@ -650,16 +608,16 @@ export default function IssoMenuView() {
       </AnimatePresence>
 
       {/* Footer */}
-      <div className="bg-gradient-to-br from-[#004E89] to-[#003459] text-white py-8 mt-12">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <Fish className="w-12 h-12 mx-auto mb-4 text-[#F77F00]" />
+      <footer className="bg-[#1A1A1A] text-white py-12 px-4 sm:px-6 lg:px-12 mt-16">
+        <div className="max-w-7xl mx-auto text-center">
+          <ShrimpIcon className="w-12 h-12 mx-auto mb-4 text-[#F26522]" />
           <h3 className="text-2xl font-bold mb-2">{brandName}</h3>
-          <p className="text-blue-200 mb-4">{brandTagline}</p>
-          <p className="text-sm text-blue-300">
+          <p className="text-white/70 mb-4">Fresh from the ocean, served with love</p>
+          <p className="text-sm text-white/50">
             Powered by MenuVibe • Fresh seafood delivered daily
           </p>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }
