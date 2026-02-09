@@ -10,6 +10,23 @@ import {
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 
+// Shrimp SVG Icon Component
+const ShrimpIcon = ({ className = "w-16 h-16" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M42 18C42 18 45 15 48 15C51 15 54 17 54 20C54 23 52 25 49 26L42 28" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <path d="M38 22C38 22 40 19 43 19C45 19 47 20 47 22C47 24 46 25 44 26L38 28" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <ellipse cx="32" cy="32" rx="18" ry="12" fill="currentColor" opacity="0.2"/>
+    <path d="M50 32C50 38 42 44 32 44C22 44 14 38 14 32C14 26 22 20 32 20C42 20 50 26 50 32Z" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+    <path d="M32 44C32 44 28 48 25 50C23 52 20 52 18 50C16 48 16 45 18 43C20 41 24 38 24 38" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="38" cy="28" r="2" fill="currentColor"/>
+    <circle cx="26" cy="28" r="2" fill="currentColor"/>
+    <path d="M20 32C20 32 22 34 24 34" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M20 36C20 36 22 38 24 38" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M44 32C44 32 42 34 40 34" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M44 36C44 36 42 38 40 38" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+);
+
 interface MenuItem {
   id: number;
   name: string;
@@ -130,7 +147,7 @@ export default function IssoMenuView() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 flex items-center justify-center">
         <div className="text-center">
-          <Fish className="w-16 h-16 text-[#FF6B35] mx-auto mb-4 animate-pulse" />
+          <ShrimpIcon className="w-16 h-16 text-[#FF6B35] mx-auto mb-4 animate-pulse" />
           <p className="text-gray-600 text-lg">Loading menu...</p>
         </div>
       </div>
@@ -141,7 +158,7 @@ export default function IssoMenuView() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 flex items-center justify-center">
         <div className="text-center">
-          <Fish className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <ShrimpIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600 text-lg">Menu not found</p>
         </div>
       </div>
