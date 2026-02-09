@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShoppingBag, X, MapPin, Star, ChevronRight,
-  Fish, UtensilsCrossed, Salad, Sparkles, Plus, Minus
+  Fish, UtensilsCrossed, Salad, Sparkles, Plus, Minus, Gift
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -28,9 +28,8 @@ const ShrimpIcon = ({ className = "w-16 h-16" }: { className?: string }) => (
 
 // Isso Logo Component
 const IssoLogo = ({ className = "" }: { className?: string }) => (
-  <div className={`flex items-center gap-2 ${className}`}>
-    <ShrimpIcon className="w-8 h-8 md:w-10 md:h-10 text-[#F26522]" />
-    <span className="text-2xl md:text-3xl font-bold text-[#1A1A1A]">Isso</span>
+  <div className={`flex items-center ${className}`}>
+    <Image src="/isso-logo.png" alt="Isso" width={120} height={40} className="h-8 md:h-10 w-auto" />
   </div>
 );
 
@@ -169,7 +168,6 @@ export default function IssoMenuView() {
   const activeItems = activeCategory
     ? allItems.filter(item => item.category_id === activeCategory)
     : allItems;
-  const featuredItems = allItems.filter(item => item.is_featured).slice(0, 3);
 
   const categoryIcons: Record<string, any> = {
     'Appetizers': Fish,
@@ -301,57 +299,68 @@ export default function IssoMenuView() {
         </div>
       </motion.section>
 
-      {/* Top Picks */}
-      {featuredItems.length > 0 && (
-        <section className="px-4 sm:px-6 lg:px-12 py-10 bg-[#FFF8F0]">
+      {/* Special Offer */}
+      {data.offers && data.offers.length > 0 && (
+        <motion.section 
+          className="px-4 sm:px-6 lg:px-12 py-3"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl md:text-3xl font-bold text-[#1A1A1A] flex items-center gap-2">
-                <Sparkles className="w-6 h-6 text-[#E8F34E]" />
-                Top Picks for You
-              </h2>
-            </div>
+            <motion.div
+              className="relative overflow-hidden rounded-2xl cursor-pointer group"
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-[#F26522] via-[#ED5C3C] to-[#F26522]" />
+              
+              <div className="relative z-10 flex items-center gap-4 p-4">
+                {data.offers[0].image_url && (
+                  <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-xl overflow-hidden shadow-lg border-2 border-white/20 flex-shrink-0">
+                    <Image
+                      src={data.offers[0].image_url}
+                      alt={data.offers[0].title}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {featuredItems.map((item, index) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  whileHover={{ scale: 1.02, y: -4 }}
-                  onClick={() => handleItemClick(item)}
-                  className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all cursor-pointer"
-                >
-                  {item.image_url && (
-                    <div className="relative h-48 bg-gradient-to-br from-[#6DBDB6]/10 to-[#F26522]/10">
-                      <Image
-                        src={item.image_url}
-                        alt={item.name}
-                        fill
-                        className="object-cover"
-                      />
+                <div className="flex-1 min-w-0">
+                  <div className="inline-flex items-center gap-1.5 bg-white/20 px-2 py-0.5 rounded-full mb-1.5">
+                    <Sparkles className="w-3 h-3 text-[#E8F34E]" />
+                    <span className="text-[10px] font-semibold text-white uppercase">Special Offer 🦐</span>
+                  </div>
+                  
+                  <h3 className="text-base md:text-lg font-bold text-white leading-tight">
+                    {data.offers[0].title}
+                  </h3>
+                  <p className="text-xs text-white/80 mt-1 line-clamp-1">
+                    {data.offers[0].description}
+                  </p>
+                  
+                  {data.offers[0].discount_percentage && (
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="bg-[#E8F34E] text-[#1A1A1A] text-xs font-bold px-2 py-0.5 rounded-full">
+                        -{data.offers[0].discount_percentage}% OFF
+                      </span>
+                      {data.offers[0].code && (
+                        <span className="text-xs text-white/70">Code: {data.offers[0].code}</span>
+                      )}
                     </div>
                   )}
-                  <div className="p-4">
-                    <h3 className="font-bold text-lg text-[#1A1A1A] mb-2 line-clamp-1">
-                      {item.name}
-                    </h3>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <Star className="w-4 h-4 fill-[#E8F34E] text-[#E8F34E]" />
-                        <span className="font-medium">4.8</span>
-                      </div>
-                      <span className="text-xl font-bold text-[#F26522]">
-                        ${formatPrice(item.price)}
-                      </span>
-                    </div>
+                </div>
+
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                    <ChevronRight className="w-4 h-4 text-white" />
                   </div>
-                </motion.div>
-              ))}
-            </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
-        </section>
+        </motion.section>
       )}
 
       {/* Category Navigation */}
