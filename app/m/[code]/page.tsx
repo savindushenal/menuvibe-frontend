@@ -7,6 +7,7 @@ import { BaristaTemplate } from '@/components/templates/barista';
 import { PremiumMenuTemplate } from './templates/PremiumMenuTemplate';
 import { ClassicMenuTemplate } from './templates/ClassicMenuTemplate';
 import { MinimalMenuTemplate } from './templates/MinimalMenuTemplate';
+import { getTemplate } from '@/lib/template-router';
 import type { FranchiseInfo, LocationInfo, MenuItem } from '@/components/templates/premium/types';
 
 function LoadingFallback() {
@@ -187,16 +188,10 @@ function PublicMenuContent() {
   // Render appropriate template based on template type
   console.log('Rendering template:', templateType, 'isFranchise:', isFranchise, 'with', menuItems.length, 'items');
 
-  // Barista template is ONLY for franchises
-  if (isFranchise && templateType === 'barista') {
-    return (
-      <BaristaTemplate
-        franchise={franchise}
-        location={location}
-        menuItems={menuItems}
-        tableNumber={tableNumber || menuData.endpoint?.identifier}
-      />
-    );
+  // Franchise templates with custom components
+  if (isFranchise && (templateType === 'barista' || templateType === 'isso')) {
+    const TemplateComponent = getTemplate(templateType === 'barista' ? 'barista-style' : 'isso-seafood');
+    return <TemplateComponent code={shortCode} />;
   }
   
   // All other templates (Classic, Minimal, Premium) use menuData

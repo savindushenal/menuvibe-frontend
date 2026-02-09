@@ -15,6 +15,7 @@ import { ComponentType } from 'react';
 import DefaultTemplate from '@/components/menu/ApiDrivenMenu';
 import PremiumRestaurantTemplate from '@/templates/premium-restaurant/MenuView';
 import BaristaStyleTemplate from '@/templates/barista-style/MenuView';
+import IssoSeafoodTemplate from '@/templates/isso-seafood/MenuView';
 
 // Template component interface
 export interface MenuTemplateProps {
@@ -66,6 +67,16 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateInfo> = {
     isPremium: true,
     previewImage: '/templates/barista-style-preview.jpg',
     component: BaristaStyleTemplate,
+  },
+  
+  'isso-seafood': {
+    key: 'isso-seafood',
+    name: 'Isso Seafood Style',
+    description: 'Premium seafood restaurant template with ocean theme, coral colors, and category navigation',
+    developer: 'MenuVire Team',
+    isPremium: true,
+    previewImage: '/templates/isso-seafood-preview.jpg',
+    component: IssoSeafoodTemplate,
   },
   
   // Example: Add your custom templates
