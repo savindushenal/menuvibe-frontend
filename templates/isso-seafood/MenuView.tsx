@@ -140,7 +140,7 @@ export default function IssoSeafoodTemplate({ code }: { code: string }) {
     }).filter(ci => ci.quantity > 0));
   };
 
-  const cartTotal = cart.reduce((sum, ci) => sum + (ci.item.price * ci.quantity), 0);
+  const cartTotal = cart.reduce((sum, ci) => sum + (Number(ci.item.price) * ci.quantity), 0);
   const cartCount = cart.reduce((sum, ci) => sum + ci.quantity, 0);
 
   const activeItems = categories
@@ -315,7 +315,7 @@ export default function IssoSeafoodTemplate({ code }: { code: string }) {
                   )}
                   <div className="flex items-center justify-between">
                     <span className="text-xl font-bold" style={{ color: colors.primary }}>
-                      LKR {item.price.toFixed(2)}
+                      LKR {Number(item.price).toFixed(2)}
                     </span>
                     <button
                       onClick={(e) => {
@@ -389,7 +389,7 @@ export default function IssoSeafoodTemplate({ code }: { code: string }) {
                   </p>
                 )}
                 <p className="text-3xl font-bold mb-6" style={{ color: colors.primary }}>
-                  LKR {selectedItem.price.toFixed(2)}
+                  LKR {Number(selectedItem.price).toFixed(2)}
                 </p>
 
                 <button
@@ -463,7 +463,7 @@ export default function IssoSeafoodTemplate({ code }: { code: string }) {
                             {cartItem.item.name}
                           </h3>
                           <p className="text-sm" style={{ color: colors.primary }}>
-                            LKR {cartItem.item.price.toFixed(2)}
+                            LKR {Number(cartItem.item.price).toFixed(2)}
                           </p>
                           <div className="flex items-center gap-3 mt-2">
                             <button
