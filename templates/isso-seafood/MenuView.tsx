@@ -164,10 +164,13 @@ export default function IssoMenuView() {
   const brandGreeting = data.franchise?.design_tokens?.brand?.greeting || getGreeting();
   const locationName = data.location?.name || 'Main Location';
 
-  // Get items filtered by active category or all items
+  // Get all available items
+  const allItems = categories.flatMap(cat => cat.items.filter(item => item.is_available));
+  
+  // Get items filtered by active category
   const activeItems = activeCategory
     ? (categories.find(cat => cat.id === activeCategory)?.items.filter(item => item.is_available) || [])
-    : categories.flatMap(cat => cat.items.filter(item => item.is_available));
+    : allItems;
 
   const categoryIcons: Record<string, any> = {
     'Appetizers': Fish,
