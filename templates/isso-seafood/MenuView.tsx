@@ -58,12 +58,13 @@ export default function IssoSeafoodTemplate({ code }: { code: string }) {
   const fetchMenuData = async () => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-      const response = await fetch(`${apiUrl}/menu/${code}`);
+      const response = await fetch(`${apiUrl}/public/menu/endpoint/${code}`);
       const result = await response.json();
       
       if (result.success) {
         setData(result.data);
-        if (result.data.menu.categories?.length > 0) {
+        // Set first category as active
+        if (result.data.menu?.categories?.length > 0) {
           setActiveCategory(result.data.menu.categories[0].id);
         }
       }
@@ -98,9 +99,6 @@ export default function IssoSeafoodTemplate({ code }: { code: string }) {
   }
 
   const franchise = data.franchise || {};
-  const menu = data.menu || {};
-  const location = data.location || {};
-  const categories: Category[] = menu.categories || [];
   const designTokens = franchise.design_tokens || {};
   const colors = designTokens.colors || {
     primary: '#FF6B35',
@@ -112,7 +110,12 @@ export default function IssoSeafoodTemplate({ code }: { code: string }) {
   };
   const brand = designTokens.brand || {};
   const contact = designTokens.contact || {};
+  const location = data.location || {};
+  const currency = 'LKR';
 
+  // Access menu structure same as barista template
+  const categories: Category[] = data.menu?.categories || [];
+  
   const addToCart = (item: MenuItem) => {
     const existingItem = cart.find(ci => ci.item.id === item.id);
     if (existingItem) {
@@ -140,7 +143,11 @@ export default function IssoSeafoodTemplate({ code }: { code: string }) {
     }).filter(ci => ci.quantity > 0));
   };
 
-  const cartTotal = cart.reduce((sum, ci) => sum + (Number(ci.item.price) * ci.quantity), 0);
+  // Ensure price is a number
+  const cartTotal = cart.reduce((sum, ci) => {
+    const price = typeof ci.item.price === 'number' ? ci.item.price : parseFloat(ci.item.price) || 0;
+    return sum + (price * ci.quantity);
+  }, 0);
   const cartCount = cart.reduce((sum, ci) => sum + ci.quantity, 0);
 
   const activeItems = categories
@@ -152,6 +159,12 @@ export default function IssoSeafoodTemplate({ code }: { code: string }) {
         item.description?.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : activeItems;
+
+  // Helper function to safely format price
+  const formatPrice = (price: any): string => {
+    const numPrice = typeof price === 'number' ? price : parseFloat(price) || 0;
+    return numPrice.toFixed(2);
+  };
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: colors.background }}>
@@ -315,7 +328,7 @@ export default function IssoSeafoodTemplate({ code }: { code: string }) {
                   )}
                   <div className="flex items-center justify-between">
                     <span className="text-xl font-bold" style={{ color: colors.primary }}>
-                      LKR {Number(item.price).toFixed(2)}
+                      {currency} {formatPrice(item.price)}
                     </span>
                     <button
                       onClick={(e) => {
@@ -389,7 +402,7 @@ export default function IssoSeafoodTemplate({ code }: { code: string }) {
                   </p>
                 )}
                 <p className="text-3xl font-bold mb-6" style={{ color: colors.primary }}>
-                  LKR {Number(selectedItem.price).toFixed(2)}
+                  {currency} {formatPrice(selectedItem.price)}
                 </p>
 
                 <button
@@ -463,7 +476,7 @@ export default function IssoSeafoodTemplate({ code }: { code: string }) {
                             {cartItem.item.name}
                           </h3>
                           <p className="text-sm" style={{ color: colors.primary }}>
-                            LKR {Number(cartItem.item.price).toFixed(2)}
+                            {currency} {formatPrice(cartItem.item.price)}
                           </p>
                           <div className="flex items-center gap-3 mt-2">
                             <button
@@ -499,7 +512,7 @@ export default function IssoSeafoodTemplate({ code }: { code: string }) {
                       <div className="flex justify-between text-xl font-bold mb-4">
                         <span style={{ color: colors.text }}>Total:</span>
                         <span style={{ color: colors.primary }}>
-                          LKR {cartTotal.toFixed(2)}
+                          {currency} {formatPrice(cartTotal)}
                         </span>
                       </div>
                       <button
