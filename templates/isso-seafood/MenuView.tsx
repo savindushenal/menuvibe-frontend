@@ -86,9 +86,7 @@ export default function IssoMenuView() {
         
         if (result.success) {
           setData(result.data);
-          if (result.data.menu?.categories?.length > 0) {
-            setActiveCategory(result.data.menu.categories[0].id);
-          }
+          // Default to showing all items (activeCategory = null)
         }
       } catch (error) {
         console.error('Error fetching menu:', error);
@@ -453,6 +451,28 @@ export default function IssoMenuView() {
       <div className="sticky top-[73px] md:top-[82px] z-40 bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-12 py-4">
         <div className="max-w-7xl mx-auto overflow-x-auto scrollbar-hide">
           <div className="flex gap-3 min-w-max">
+            {/* All Items Button */}
+            <motion.button
+              onClick={() => {
+                setActiveCategory(null);
+                setSearchQuery(''); // Clear search when selecting All
+              }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all ${
+                activeCategory === null
+                  ? 'text-white shadow-lg'
+                  : 'bg-[#F5F5F5] hover:bg-gray-200'
+              }`}
+              style={{
+                backgroundColor: activeCategory === null ? colors.primary : undefined,
+                color: activeCategory === null ? 'white' : colors.text
+              }}
+            >
+              <Sparkles className="w-5 h-5" />
+              <span>All Items</span>
+            </motion.button>
+            
             {categories.map((category) => {
               const IconComponent = categoryIcons[category.name] || categoryIcons.default;
               return (
