@@ -99,7 +99,27 @@ const CURRENCIES = [
   { value: 'JPY', label: 'JPY (¥)' },
 ];
 
-const TEMPLATE_OPTIONS = [
+// Franchise-specific custom templates
+const CUSTOM_TEMPLATES: Record<string, { value: string; label: string; description: string; icon: string }[]> = {
+  'isso': [
+    { 
+      value: 'isso', 
+      label: 'Isso Seafood', 
+      description: 'Custom branded template with seafood theme',
+      icon: '🦐'
+    },
+  ],
+  'barista': [
+    { 
+      value: 'barista', 
+      label: 'Barista Style', 
+      description: 'Coffee shop template with hero banner and quick ordering',
+      icon: '☕'
+    },
+  ],
+};
+
+const BASE_TEMPLATE_OPTIONS = [
   { 
     value: 'premium', 
     label: 'Premium', 
@@ -117,12 +137,6 @@ const TEMPLATE_OPTIONS = [
     label: 'Minimal', 
     description: 'Modern card-based design with quick add',
     icon: '🎯'
-  },
-  { 
-    value: 'custom', 
-    label: 'Custom', 
-    description: 'For special requirements (contact dev team)',
-    icon: '🛠️'
   },
 ];
 
@@ -143,6 +157,12 @@ export default function FranchiseSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
+  
+  // Get template options for this franchise (custom template + base templates)
+  const TEMPLATE_OPTIONS = [
+    ...(CUSTOM_TEMPLATES[franchiseSlug] || []),
+    ...BASE_TEMPLATE_OPTIONS,
+  ];
   
   const [formData, setFormData] = useState({
     name: '',
@@ -193,7 +213,7 @@ export default function FranchiseSettingsPage() {
             currency: settings.currency || data.currency || 'USD',
             primary_color: data.primary_color || '#10b981',
             secondary_color: data.secondary_color || '#059669',
-            template_type: data.template_type || 'premium',
+            template_type: data.template_type || CUSTOM_TEMPLATES[franchiseSlug]?.[0]?.value || 'premium',
             allow_branch_customization: settings.allow_branch_customization ?? true,
             require_menu_approval: settings.require_menu_approval ?? false,
             auto_sync_pricing: settings.auto_sync_pricing ?? true,
