@@ -10,26 +10,36 @@ import {
 import Image from 'next/image';
 
 // Shrimp SVG Icon
-const ShrimpIcon = ({ className = "w-16 h-16" }: { className?: string }) => (
+const ShrimpIcon = ({className = "w-16 h-16", color}: { className?: string; color?: string }) => (
   <svg className={className} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M42 18C42 18 45 15 48 15C51 15 54 17 54 20C54 23 52 25 49 26L42 28" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M38 22C38 22 40 19 43 19C45 19 47 20 47 22C47 24 46 25 44 26L38 28" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    <ellipse cx="32" cy="32" rx="18" ry="12" fill="currentColor" opacity="0.2"/>
-    <path d="M50 32C50 38 42 44 32 44C22 44 14 38 14 32C14 26 22 20 32 20C42 20 50 26 50 32Z" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
-    <path d="M32 44C32 44 28 48 25 50C23 52 20 52 18 50C16 48 16 45 18 43C20 41 24 38 24 38" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    <circle cx="38" cy="28" r="2" fill="currentColor"/>
-    <circle cx="26" cy="28" r="2" fill="currentColor"/>
-    <path d="M20 32C20 32 22 34 24 34" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M20 36C20 36 22 38 24 38" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M44 32C44 32 42 34 40 34" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M44 36C44 36 42 38 40 38" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M42 18C42 18 45 15 48 15C51 15 54 17 54 20C54 23 52 25 49 26L42 28" stroke={color || "currentColor"} strokeWidth="2" strokeLinecap="round"/>
+    <path d="M38 22C38 22 40 19 43 19C45 19 47 20 47 22C47 24 46 25 44 26L38 28" stroke={color || "currentColor"} strokeWidth="2" strokeLinecap="round"/>
+    <ellipse cx="32" cy="32" rx="18" ry="12" fill={color || "currentColor"} opacity="0.2"/>
+    <path d="M50 32C50 38 42 44 32 44C22 44 14 38 14 32C14 26 22 20 32 20C42 20 50 26 50 32Z" stroke={color || "currentColor"} strokeWidth="2.5" strokeLinecap="round"/>
+    <path d="M32 44C32 44 28 48 25 50C23 52 20 52 18 50C16 48 16 45 18 43C20 41 24 38 24 38" stroke={color || "currentColor"} strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="38" cy="28" r="2" fill={color || "currentColor"}/>
+    <circle cx="26" cy="28" r="2" fill={color || "currentColor"}/>
+    <path d="M20 32C20 32 22 34 24 34" stroke={color || "currentColor"} strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M20 36C20 36 22 38 24 38" stroke={color || "currentColor"} strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M44 32C44 32 42 34 40 34" stroke={color || "currentColor"} strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M44 36C44 36 42 38 40 38" stroke={color || "currentColor"} strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
 );
 
-// Isso Logo Component
-const IssoLogo = ({ className = "" }: { className?: string }) => (
+// Isso Logo Component (Dynamic)
+const IssoLogo = ({ logoUrl, brandName, className = "" }: { logoUrl?: string; brandName?: string; className?: string }) => (
   <div className={`flex items-center ${className}`}>
-    <Image src="/isso-logo.png" alt="Isso" width={120} height={40} className="h-8 md:h-10 w-auto" />
+    {logoUrl ? (
+      <Image 
+        src={logoUrl} 
+        alt={brandName || "Isso"} 
+        width={120} 
+        height={40} 
+        className="h-8 md:h-10 w-auto" 
+      />
+    ) : (
+      <span className="text-xl md:text-2xl font-bold">{brandName || "ISSO"}</span>
+    )}
   </div>
 );
 
@@ -66,6 +76,7 @@ export default function IssoMenuView() {
   const [isProductSheetOpen, setIsProductSheetOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -162,15 +173,34 @@ export default function IssoMenuView() {
   const categories: Category[] = data.menu?.categories || [];
   const brandName = data.franchise?.design_tokens?.brand?.name || 'Isso';
   const brandGreeting = data.franchise?.design_tokens?.brand?.greeting || getGreeting();
+  const brandLogo = data.franchise?.design_tokens?.brand?.logo || data.franchise?.logo_url;
   const locationName = data.location?.name || 'Main Location';
+  
+  // Get design tokens colors or use defaults
+  const colors = data.franchise?.design_tokens?.colors || {
+    primary: '#F26522',
+    secondary: '#6DBDB6',
+    accent: '#E8F34E',
+    background: '#FFF8F0',
+    text: '#1A1A1A',
+    textLight: '#666666'
+  };
 
   // Get all available items
   const allItems = categories.flatMap(cat => cat.items.filter(item => item.is_available));
   
-  // Get items filtered by active category
-  const activeItems = activeCategory
-    ? (categories.find(cat => cat.id === activeCategory)?.items.filter(item => item.is_available) || [])
+  // Filter items by search query
+  const searchFilteredItems = searchQuery.trim() 
+    ? allItems.filter(item => 
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
     : allItems;
+  
+  // Get items filtered by active category and search
+  const activeItems = activeCategory && !searchQuery
+    ? (categories.find(cat => cat.id === activeCategory)?.items.filter(item => item.is_available) || [])
+    : searchFilteredItems;
 
   const categoryIcons: Record<string, any> = {
     'Appetizers': Fish,
@@ -190,7 +220,7 @@ export default function IssoMenuView() {
       >
         <div className="bg-[#1A1A1A] text-white px-4 sm:px-6 lg:px-12 py-1.5">
           <div className="flex items-center justify-center gap-2 max-w-7xl mx-auto">
-            <MapPin className="w-3.5 h-3.5 text-[#F26522]" />
+            <MapPin className="w-3.5 h-3.5" style={{ color: colors.primary }} />
             <span className="text-xs font-medium">{locationName}</span>
           </div>
         </div>
@@ -198,7 +228,11 @@ export default function IssoMenuView() {
         <div className="px-4 sm:px-6 lg:px-12 py-3 md:py-4">
           <div className="flex items-center justify-between max-w-7xl mx-auto">
             <div className="w-10"></div>
-            <IssoLogo className="lg:absolute lg:left-1/2 lg:-translate-x-1/2" />
+            <IssoLogo 
+              logoUrl={brandLogo} 
+              brandName={brandName}
+              className="lg:absolute lg:left-1/2 lg:-translate-x-1/2" 
+            />
             
             <button 
               onClick={() => setIsCartOpen(true)}
@@ -209,7 +243,8 @@ export default function IssoMenuView() {
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute -top-1 -right-1 bg-[#F26522] text-white text-xs w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center font-semibold"
+                  className="absolute -top-1 -right-1 text-white text-xs w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center font-semibold"
+                  style={{ backgroundColor: colors.primary }}
                 >
                   {cartCount}
                 </motion.span>
@@ -221,13 +256,14 @@ export default function IssoMenuView() {
 
       {/* Hero Section */}
       <motion.section 
-        className="relative px-4 sm:px-6 lg:px-12 py-8 md:py-12 bg-[#F26522] overflow-hidden"
+        className="relative px-4 sm:px-6 lg:px-12 py-8 md:py-12 overflow-hidden"
+        style={{ backgroundColor: colors.primary }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="absolute top-10 left-10 w-64 h-64 bg-[#E8F34E] rounded-full blur-3xl opacity-20"></div>
-        <div className="absolute bottom-10 right-10 w-80 h-80 bg-[#6DBDB6] rounded-full blur-3xl opacity-20"></div>
+        <div className="absolute top-10 left-10 w-64 h-64 rounded-full blur-3xl opacity-20" style={{ backgroundColor: colors.accent }}></div>
+        <div className="absolute bottom-10 right-10 w-80 h-80 rounded-full blur-3xl opacity-20" style={{ backgroundColor: colors.secondary }}></div>
         
         <div className="relative max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8">
@@ -263,7 +299,7 @@ export default function IssoMenuView() {
                   </div>
                   <div>
                     <div className="text-3xl font-bold flex items-center justify-center gap-1">
-                      4.9 <Star className="w-5 h-5 fill-[#E8F34E] text-[#E8F34E]" />
+                      4.9 <Star className="w-5 h-5" style={{ fill: colors.accent, color: colors.accent }} />
                     </div>
                     <div className="text-sm text-white/80">Rating</div>
                   </div>
@@ -288,7 +324,7 @@ export default function IssoMenuView() {
               <div className="w-px h-10 bg-white/20"></div>
               <div>
                 <div className="text-2xl font-bold flex items-center justify-center gap-1">
-                  4.9 <Star className="w-4 h-4 fill-[#E8F34E] text-[#E8F34E]" />
+                  4.9 <Star className="w-4 h-4" style={{ fill: colors.accent, color: colors.accent }} />
                 </div>
                 <div className="text-xs text-white/80">Rating</div>
               </div>
@@ -316,7 +352,9 @@ export default function IssoMenuView() {
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-[#F26522] via-[#ED5C3C] to-[#F26522]" />
+              <div className="absolute inset-0 bg-gradient-to-r" style={{ 
+                backgroundImage: `linear-gradient(to right, ${colors.primary}, ${colors.primary}dd, ${colors.primary})` 
+              }} />
               
               <div className="relative z-10 flex items-center gap-4 p-4">
                 {data.offers[0].image_url && (
@@ -332,7 +370,7 @@ export default function IssoMenuView() {
 
                 <div className="flex-1 min-w-0">
                   <div className="inline-flex items-center gap-1.5 bg-white/20 px-2 py-0.5 rounded-full mb-1.5">
-                    <Sparkles className="w-3 h-3 text-[#E8F34E]" />
+                    <Sparkles className="w-3 h-3" style={{ color: colors.accent }} />
                     <span className="text-[10px] font-semibold text-white uppercase">Special Offer 🦐</span>
                   </div>
                   
@@ -345,7 +383,7 @@ export default function IssoMenuView() {
                   
                   {data.offers[0].discount_percentage && (
                     <div className="flex items-center gap-2 mt-1.5">
-                      <span className="bg-[#E8F34E] text-[#1A1A1A] text-xs font-bold px-2 py-0.5 rounded-full">
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: colors.accent, color: colors.text }}>
                         -{data.offers[0].discount_percentage}% OFF
                       </span>
                       {data.offers[0].code && (
@@ -366,6 +404,51 @@ export default function IssoMenuView() {
         </motion.section>
       )}
 
+      {/* Search Bar */}
+      {data.menu?.settings?.allow_search && (
+        <motion.section 
+          className="px-4 sm:px-6 lg:px-12 py-4 bg-white border-b border-gray-100"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="max-w-7xl mx-auto">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search menu items..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (e.target.value) setActiveCategory(null);
+                }}
+                className="w-full px-4 py-3 pl-12 rounded-xl border-2 focus:outline-none transition-all"
+                style={{ 
+                  borderColor: searchQuery ? colors.primary : '#E5E5E5',
+                  backgroundColor: '#FAFAFA'
+                }}
+              />
+              <div className="absolute left-4 top-1/2 -translate-y-1/2">
+                <ShrimpIcon className="w-5 h-5" color={colors.primary} />
+              </div>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-200 transition-colors"
+                >
+                  <X className="w-4 h-4" style={{ color: colors.text }} />
+                </button>
+              )}
+            </div>
+            {searchQuery && (
+              <p className="mt-2 text-sm" style={{ color: colors.textLight }}>
+                Found {activeItems.length} item{activeItems.length !== 1 ? 's' : ''} matching "{searchQuery}"
+              </p>
+            )}
+          </div>
+        </motion.section>
+      )}
+
       {/* Category Navigation */}
       <div className="sticky top-[73px] md:top-[82px] z-40 bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-12 py-4">
         <div className="max-w-7xl mx-auto overflow-x-auto scrollbar-hide">
@@ -375,14 +458,21 @@ export default function IssoMenuView() {
               return (
                 <motion.button
                   key={category.id}
-                  onClick={() => setActiveCategory(category.id)}
+                  onClick={() => {
+                    setActiveCategory(category.id);
+                    setSearchQuery(''); // Clear search when selecting category
+                  }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all ${
                     activeCategory === category.id
-                      ? 'bg-[#F26522] text-white shadow-lg'
-                      : 'bg-[#F5F5F5] text-[#1A1A1A] hover:bg-gray-200'
+                      ? 'text-white shadow-lg'
+                      : 'bg-[#F5F5F5] hover:bg-gray-200'
                   }`}
+                  style={{
+                    backgroundColor: activeCategory === category.id ? colors.primary : undefined,
+                    color: activeCategory === category.id ? 'white' : colors.text
+                  }}
                 >
                   <IconComponent className="w-5 h-5" />
                   <span>{category.name}</span>
@@ -423,10 +513,12 @@ export default function IssoMenuView() {
                       <h3 className="font-bold text-[#1A1A1A] line-clamp-1 flex-1">
                         {item.name}
                       </h3>
-                      <ChevronRight className="hidden md:block w-5 h-5 text-gray-400 flex-shrink-0 group-hover:text-[#F26522] transition-colors" />
+                      <ChevronRight className="hidden md:block w-5 h-5 text-gray-400 flex-shrink-0 transition-colors" style={{ 
+                        color: 'inherit' 
+                      }} />
                     </div>
                     <div className="flex items-center gap-1 text-xs text-gray-600 mb-2">
-                      <Star className="w-3 h-3 fill-[#E8F34E] text-[#E8F34E]" />
+                      <Star className="w-3 h-3" style={{ fill: colors.accent, color: colors.accent }} />
                       <span>4.7</span>
                     </div>
                     {item.description && (
@@ -434,8 +526,8 @@ export default function IssoMenuView() {
                         {item.description}
                       </p>
                     )}
-                    <div className="text-lg md:text-xl font-bold text-[#F26522]">
-                      ${formatPrice(item.price)}
+                    <div className="text-lg md:text-xl font-bold" style={{ color: colors.primary }}>
+                      {data.menu?.currency || 'LKR'} {formatPrice(item.price)}
                     </div>
                   </div>
                 </div>
@@ -475,7 +567,9 @@ export default function IssoMenuView() {
 
               <div className="p-6">
                 {selectedItem.image_url && (
-                  <div className="relative h-64 rounded-2xl overflow-hidden mb-6 bg-gradient-to-br from-[#6DBDB6]/10 to-[#F26522]/10">
+                  <div className="relative h-64 rounded-2xl overflow-hidden mb-6" style={{
+                    background: `linear-gradient(to bottom right, ${colors.secondary}1A, ${colors.primary}1A)`
+                  }}>
                     <Image
                       src={selectedItem.image_url}
                       alt={selectedItem.name}
@@ -489,7 +583,7 @@ export default function IssoMenuView() {
                 
                 <div className="flex items-center gap-2 mb-4">
                   <div className="flex items-center gap-1 text-sm">
-                    <Star className="w-4 h-4 fill-[#E8F34E] text-[#E8F34E]" />
+                    <Star className="w-4 h-4" style={{ fill: colors.accent, color: colors.accent }} />
                     <span className="font-medium">4.8</span>
                     <span className="text-gray-500">(95 reviews)</span>
                   </div>
@@ -500,14 +594,15 @@ export default function IssoMenuView() {
                 )}
 
                 <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-200">
-                  <span className="text-4xl font-bold text-[#F26522]">
-                    ${formatPrice(selectedItem.price)}
+                  <span className="text-4xl font-bold" style={{ color: colors.primary }}>
+                    {data.menu?.currency || 'LKR'} {formatPrice(selectedItem.price)}
                   </span>
                 </div>
 
                 <button
                   onClick={() => handleAddToCart(selectedItem, 1)}
-                  className="w-full bg-[#F26522] hover:bg-[#ED5C3C] text-white py-4 rounded-2xl font-bold text-lg transition-colors flex items-center justify-center gap-2"
+                  className="w-full text-white py-4 rounded-2xl font-bold text-lg transition-colors flex items-center justify-center gap-2"
+                  style={{ backgroundColor: colors.primary }}
                 >
                   <ShoppingBag className="w-5 h-5" />
                   Add to Cart
@@ -536,7 +631,7 @@ export default function IssoMenuView() {
               transition={{ type: 'spring', damping: 30 }}
               className="fixed top-0 right-0 bottom-0 w-full md:w-96 bg-white shadow-2xl z-50 flex flex-col"
             >
-              <div className="bg-[#F26522] text-white px-6 py-5 flex items-center justify-between">
+              <div className="text-white px-6 py-5 flex items-center justify-between" style={{ backgroundColor: colors.primary }}>
                 <div>
                   <h3 className="text-2xl font-bold">Your Cart</h3>
                   <p className="text-white/90">{cartCount} items</p>
@@ -573,9 +668,9 @@ export default function IssoMenuView() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-[#1A1A1A] mb-1">{ci.item.name}</h4>
-                          <p className="text-[#F26522] font-bold text-lg">
-                            ${formatPrice(ci.item.price)}
+                          <h4 className="font-bold mb-1" style={{ color: colors.text }}>{ci.item.name}</h4>
+                          <p className="font-bold text-lg" style={{ color: colors.primary }}>
+                            {data.menu?.currency || 'LKR'} {formatPrice(ci.item.price)}
                           </p>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
@@ -590,7 +685,8 @@ export default function IssoMenuView() {
                           </span>
                           <button
                             onClick={() => handleUpdateQuantity(ci.item.id, 1)}
-                            className="w-8 h-8 bg-[#F26522] rounded-full flex items-center justify-center hover:bg-[#ED5C3C] transition-colors"
+                            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                            style={{ backgroundColor: colors.primary }}
                           >
                             <Plus className="w-4 h-4 text-white" />
                           </button>
@@ -602,14 +698,14 @@ export default function IssoMenuView() {
               </div>
 
               {cartItems.length > 0 && (
-                <div className="border-t border-gray-200 p-6 bg-[#FFF8F0]">
+                <div className="border-t border-gray-200 p-6" style={{ backgroundColor: `${colors.background}dd` || '#FFF8F0' }}>
                   <div className="flex items-center justify-between mb-6">
-                    <span className="text-xl font-bold text-[#1A1A1A]">Total</span>
-                    <span className="text-3xl font-bold text-[#F26522]">
-                      ${cartTotal.toFixed(2)}
+                    <span className="text-xl font-bold" style={{ color: colors.text }}>Total</span>
+                    <span className="text-3xl font-bold" style={{ color: colors.primary }}>
+                      {data.menu?.currency || 'LKR'} {cartTotal.toFixed(2)}
                     </span>
                   </div>
-                  <button className="w-full bg-[#F26522] hover:bg-[#ED5C3C] text-white py-4 rounded-xl font-bold text-lg transition-colors">
+                  <button className="w-full text-white py-4 rounded-xl font-bold text-lg transition-colors" style={{ backgroundColor: colors.primary }}>
                     Checkout
                   </button>
                 </div>
@@ -622,7 +718,7 @@ export default function IssoMenuView() {
       {/* Footer */}
       <footer className="bg-[#1A1A1A] text-white py-12 px-4 sm:px-6 lg:px-12 mt-16">
         <div className="max-w-7xl mx-auto text-center">
-          <ShrimpIcon className="w-12 h-12 mx-auto mb-4 text-[#F26522]" />
+          <ShrimpIcon className="w-12 h-12 mx-auto mb-4" color={colors.primary} />
           <h3 className="text-2xl font-bold mb-2">{brandName}</h3>
           <p className="text-white/70 mb-4">Fresh from the ocean, served with love</p>
           <p className="text-sm text-white/50">
