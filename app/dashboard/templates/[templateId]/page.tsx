@@ -14,6 +14,7 @@ import {
   X,
   ImageIcon,
   DollarSign,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -318,6 +319,17 @@ function TemplateEditorContent() {
     variations: [] as { name: string; price: string }[],
   });
 
+  // Settings dialog
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [menuSettings, setMenuSettings] = useState({
+    allow_search: true,
+    show_prices: true,
+    show_images: true,
+    show_descriptions: true,
+    show_categories: true,
+    theme: 'premium',
+  });
+
   // Drag and drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -350,6 +362,17 @@ function TemplateEditorContent() {
           items: cat.items || []
         }));
         setTemplate(templateData);
+        // Load settings if available
+        if (templateData.settings) {
+          setMenuSettings({
+            allow_search: templateData.settings.allow_search ?? true,
+            show_prices: templateData.settings.show_prices ?? true,
+            show_images: templateData.settings.show_images ?? true,
+            show_descriptions: templateData.settings.show_descriptions ?? true,
+            show_categories: templateData.settings.show_categories ?? true,
+            theme: templateData.settings.theme || 'premium',
+          });
+        }
         // Expand first category by default
         if (templateData.categories.length > 0) {
           setExpandedCategories(new Set([templateData.categories[0].id]));
@@ -605,6 +628,14 @@ function TemplateEditorContent() {
             {template.description || 'Edit categories and items'}
           </p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsSettingsOpen(true)}
+        >
+          <Settings className="w-4 h-4 mr-2" />
+          Settings
+        </Button>
         <Badge
           variant={template.is_active ? 'default' : 'secondary'}
           className={template.is_active ? 'bg-emerald-100 text-emerald-700' : ''}
@@ -980,6 +1011,117 @@ function TemplateEditorContent() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteItem}>
               Delete Item
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Menu Settings Dialog */}
+      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Menu Display Settings</DialogTitle>
+            <DialogDescription>
+              Configure how your menu appears to customers
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Enable Search</Label>
+                <p className="text-sm text-neutral-500">
+                  Show search bar for customers to find items
+                </p>
+              </div>
+              <Switch
+                checked={menuSettings.allow_search}
+                onCheckedChange={(checked) =>
+                  setMenuSettings({ ...menuSettings, allow_search: checked })
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Show Prices</Label>
+                <p className="text-sm text-neutral-500">
+                  Display item prices on the menu
+                </p>
+              </div>
+              <Switch
+                checked={menuSettings.show_prices}
+                onCheckedChange={(checked) =>
+                  setMenuSettings({ ...menuSettings, show_prices: checked })
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Show Images</Label>
+                <p className="text-sm text-neutral-500">
+                  Display item images if available
+                </p>
+              </div>
+              <Switch
+                checked={menuSettings.show_images}
+                onCheckedChange={(checked) =>
+                  setMenuSettings({ ...menuSettings, show_images: checked })
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Show Descriptions</Label>
+                <p className="text-sm text-neutral-500">
+                  Display item descriptions
+                </p>
+              </div>
+              <Switch
+                checked={menuSettings.show_descriptions}
+                onCheckedChange={(checked) =>
+                  setMenuSettings({ ...menuSettings, show_descriptions: checked })
+                }
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Show Categories</Label>
+                <p className="text-sm text-neutral-500">
+                  Display category navigation
+                </p>
+              </div>
+              <Switch
+                checked={menuSettings.show_categories}
+                onCheckedChange={(checked) =>
+                  setMenuSettings({ ...menuSettings, show_categories: checked })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  await apiClient.updateMenuTemplate(templateId, { settings: menuSettings });
+                  toast({
+                    title: 'Settings saved',
+                    description: 'Menu display settings updated successfully',
+                  });
+                  setIsSettingsOpen(false);
+                  loadTemplate(); // Reload to get updated settings
+                } catch (error: any) {
+                  toast({
+                    title: 'Error',
+                    description: error.message || 'Failed to save settings',
+                    variant: 'destructive',
+                  });
+                }
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              Save Settings
             </Button>
           </DialogFooter>
         </DialogContent>

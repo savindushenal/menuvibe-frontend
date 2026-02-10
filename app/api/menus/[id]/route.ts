@@ -63,6 +63,8 @@ export async function PUT(
     const is_featured = formData.get('is_featured') === '1';
     const sortOrderValue = formData.get('sort_order') as string;
     const sort_order = sortOrderValue ? parseInt(sortOrderValue) : undefined;
+    const settingsValue = formData.get('settings') as string;
+    const settings = settingsValue ? JSON.parse(settingsValue) : undefined;
 
     // Verify menu belongs to user
     const menu = await queryOne<any>(
@@ -110,6 +112,10 @@ export async function PUT(
     if (sort_order !== undefined) {
       updates.push('sort_order = ?');
       values.push(sort_order);
+    }
+    if (settings !== undefined) {
+      updates.push('settings = ?');
+      values.push(JSON.stringify(settings));
     }
 
     updates.push('updated_at = NOW()');
