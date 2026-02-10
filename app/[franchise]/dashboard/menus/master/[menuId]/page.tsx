@@ -31,7 +31,8 @@ import {
   Zap,
   Calendar,
   Save,
-  Eye
+  Eye,
+  Settings2
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -346,6 +347,10 @@ export default function MasterMenuEditorPage() {
           <TabsTrigger value="offers" className="gap-2">
             <Tag className="h-4 w-4" />
             Offers
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="gap-2">
+            <Settings2 className="h-4 w-4" />
+            Settings
           </TabsTrigger>
         </TabsList>
 
@@ -729,6 +734,80 @@ export default function MasterMenuEditorPage() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* Settings Tab */}
+        <TabsContent value="settings" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Menu Settings</CardTitle>
+              <CardDescription>Configure master menu properties</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Menu Name</label>
+                  <p className="text-sm text-neutral-600 mt-1">{menu.name}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Description</label>
+                  <p className="text-sm text-neutral-600 mt-1">{menu.description || 'No description'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Currency</label>
+                  <p className="text-sm text-neutral-600 mt-1">{menu.currency}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium">Status:</label>
+                  <Badge variant={menu.is_active ? 'default' : 'secondary'}>
+                    {menu.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium">Default Menu:</label>
+                  <Badge variant={menu.is_default ? 'default' : 'outline'}>
+                    {menu.is_default ? 'Yes' : 'No'}
+                  </Badge>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Last Synced</label>
+                  <p className="text-sm text-neutral-600 mt-1">
+                    {menu.last_synced_at ? new Date(menu.last_synced_at).toLocaleString() : 'Never'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t">
+                <h3 className="font-medium mb-2">Statistics</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-neutral-600">Categories</p>
+                    <p className="text-2xl font-bold">{menu.categories?.length || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-600">Total Items</p>
+                    <p className="text-2xl font-bold">
+                      {menu.categories?.reduce((sum, cat) => sum + (cat.items?.length || 0), 0) || 0}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-600">Active Offers</p>
+                    <p className="text-2xl font-bold">
+                      {menu.offers?.filter(o => o.is_active).length || 0}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-neutral-600">Featured Items</p>
+                    <p className="text-2xl font-bold">
+                      {menu.categories?.reduce((sum, cat) => 
+                        sum + (cat.items?.filter(i => i.is_featured).length || 0), 0
+                      ) || 0}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
