@@ -197,6 +197,8 @@ export default function FranchiseSettingsPage() {
         if (response.data.success && response.data.data) {
           const data = response.data.data;
           const settings = data.settings || {};
+          const designTokens = data.design_tokens || {};
+          const brandColors = designTokens.colors || {};
           
           setFormData({
             name: data.name || '',
@@ -211,8 +213,9 @@ export default function FranchiseSettingsPage() {
             postal_code: settings.postal_code || data.postal_code || '',
             timezone: settings.timezone || data.timezone || 'UTC',
             currency: settings.currency || data.currency || 'USD',
-            primary_color: data.primary_color || '#10b981',
-            secondary_color: data.secondary_color || '#059669',
+            // Use design_tokens colors (from onboarding) if available, otherwise fallback to column values
+            primary_color: brandColors.primary || data.primary_color || '#10b981',
+            secondary_color: brandColors.secondary || data.secondary_color || '#059669',
             template_type: data.template_type || CUSTOM_TEMPLATES[franchiseSlug]?.[0]?.value || 'premium',
             allow_branch_customization: settings.allow_branch_customization ?? true,
             require_menu_approval: settings.require_menu_approval ?? false,
