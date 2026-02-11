@@ -270,6 +270,38 @@ export default function FranchiseSettingsPage() {
       
       if (response.data.success) {
         toast.success('Settings saved successfully');
+        
+        // Reload settings to show updated data
+        const refreshResponse = await api.get(`/franchise/${franchiseSlug}/settings`);
+        if (refreshResponse.data.success && refreshResponse.data.data) {
+          const data = refreshResponse.data.data;
+          const settings = data.settings || {};
+          const designTokens = data.design_tokens || {};
+          const brandColors = designTokens.colors || {};
+          
+          setFormData({
+            name: data.name || '',
+            description: data.description || '',
+            website: data.website || '',
+            email: data.email || '',
+            phone: data.phone || '',
+            address: settings.address || data.address || '',
+            city: settings.city || data.city || '',
+            state: settings.state || data.state || '',
+            country: settings.country || data.country || '',
+            postal_code: settings.postal_code || data.postal_code || '',
+            timezone: settings.timezone || data.timezone || 'UTC',
+            currency: settings.currency || data.currency || 'USD',
+            primary_color: brandColors.primary || data.primary_color || '#10b981',
+            secondary_color: brandColors.secondary || data.secondary_color || '#059669',
+            template_type: data.template_type || CUSTOM_TEMPLATES[franchiseSlug]?.[0]?.value || 'premium',
+            allow_branch_customization: settings.allow_branch_customization ?? true,
+            require_menu_approval: settings.require_menu_approval ?? false,
+            auto_sync_pricing: settings.auto_sync_pricing ?? true,
+            notification_email: settings.notification_email || '',
+            business_hours: settings.business_hours || DEFAULT_BUSINESS_HOURS,
+          });
+        }
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to save settings');
