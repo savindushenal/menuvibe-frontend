@@ -7,9 +7,11 @@ interface BaristaLogoProps {
   className?: string;
   variant?: 'dark' | 'white';
   size?: 'sm' | 'md' | 'lg';
+  logoUrl?: string;
+  brandName?: string;
 }
 
-export default function BaristaLogo({ className = '', variant = 'dark', size = 'md' }: BaristaLogoProps) {
+export default function BaristaLogo({ className = '', variant = 'dark', size = 'md', logoUrl, brandName = 'Barista Coffee' }: BaristaLogoProps) {
   // Size configurations
   const sizeConfig = {
     sm: { width: 80, height: 24 },
@@ -27,8 +29,8 @@ export default function BaristaLogo({ className = '', variant = 'dark', size = '
       transition={{ duration: 0.5 }}
     >
       <Image
-        src="/barista-logo.png"
-        alt="Barista Coffee"
+        src={logoUrl || '/barista-logo.png'}
+        alt={brandName}
         width={width}
         height={height}
         className={variant === 'white' ? 'brightness-0 invert' : ''}

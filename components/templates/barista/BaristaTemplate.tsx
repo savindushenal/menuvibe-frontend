@@ -163,7 +163,7 @@ export function BaristaTemplate({ franchise, location, menuItems }: BaristaTempl
             {/* Logo */}
             <div className="flex items-center gap-2 min-w-0 flex-1">
               {franchise.logoUrl ? (
-                <BaristaLogo size="md" variant="dark" />
+                <BaristaLogo size="md" variant="dark" logoUrl={franchise.logoUrl} brandName={franchise.name} />
               ) : (
                 <div className="flex items-center gap-2 min-w-0">
                   <Coffee className="w-6 h-6 sm:w-8 sm:h-8 text-[#F26522] flex-shrink-0" />
