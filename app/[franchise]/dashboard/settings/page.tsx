@@ -157,6 +157,8 @@ export default function FranchiseSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   
   // Get template options for this franchise (custom template + base templates)
   const TEMPLATE_OPTIONS = [
@@ -167,6 +169,7 @@ export default function FranchiseSettingsPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    logo_url: '',
     website: '',
     email: '',
     phone: '',
@@ -203,6 +206,7 @@ export default function FranchiseSettingsPage() {
           setFormData({
             name: data.name || '',
             description: data.description || '',
+            logo_url: data.logo_url || '',
             website: data.website || '',
             email: data.email || '',
             phone: data.phone || '',
@@ -223,6 +227,11 @@ export default function FranchiseSettingsPage() {
             notification_email: settings.notification_email || '',
             business_hours: settings.business_hours || DEFAULT_BUSINESS_HOURS,
           });
+          
+          // Set logo preview if exists
+          if (data.logo_url) {
+            setLogoPreview(data.logo_url);
+          }
         }
       } catch (err: any) {
         console.error('Failed to fetch settings:', err);
@@ -241,32 +250,68 @@ export default function FranchiseSettingsPage() {
     try {
       setSaving(true);
       
-      const payload = {
-        name: formData.name,
-        description: formData.description,
-        website: formData.website,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        country: formData.country,
-        postal_code: formData.postal_code,
-        timezone: formData.timezone,
-        currency: formData.currency,
-        primary_color: formData.primary_color,
-        secondary_color: formData.secondary_color,
-        template_type: formData.template_type,
-        settings: {
+      // Use FormData if there's a logo, otherwise use JSON
+      let response;
+      
+      if (logoFile) {
+        const formDataToSend = new FormData();
+        formDataToSend.append('name', formData.name);
+        formDataToSend.append('description', formData.description);
+        formDataToSend.append('website', formData.website);
+        formDataToSend.append('email', formData.email);
+        formDataToSend.append('phone', formData.phone);
+        formDataToSend.append('address', formData.address);
+        formDataToSend.append('city', formData.city);
+        formDataToSend.append('state', formData.state);
+        formDataToSend.append('country', formData.country);
+        formDataToSend.append('postal_code', formData.postal_code);
+        formDataToSend.append('timezone', formData.timezone);
+        formDataToSend.append('currency', formData.currency);
+        formDataToSend.append('primary_color', formData.primary_color);
+        formDataToSend.append('secondary_color', formData.secondary_color);
+        formDataToSend.append('template_type', formData.template_type);
+        formDataToSend.append('settings', JSON.stringify({
           allow_branch_customization: formData.allow_branch_customization,
           require_menu_approval: formData.require_menu_approval,
           auto_sync_pricing: formData.auto_sync_pricing,
           notification_email: formData.notification_email,
           business_hours: formData.business_hours,
-        }
-      };
+        }));
+        formDataToSend.append('logo', logoFile);
+        
+        response = await api.put(`/franchise/${franchiseSlug}/settings`, formDataToSend, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      } else {
+        const payload = {
+          name: formData.name,
+          description: formData.description,
+          website: formData.website,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          country: formData.country,
+          postal_code: formData.postal_code,
+          timezone: formData.timezone,
+          currency: formData.currency,
+          primary_color: formData.primary_color,
+          secondary_color: formData.secondary_color,
+          template_type: formData.template_type,
+          settings: {
+            allow_branch_customization: formData.allow_branch_customization,
+            require_menu_approval: formData.require_menu_approval,
+            auto_sync_pricing: formData.auto_sync_pricing,
+            notification_email: formData.notification_email,
+            business_hours: formData.business_hours,
+          }
+        };
 
-      const response = await api.put(`/franchise/${franchiseSlug}/settings`, payload);
+        response = await api.put(`/franchise/${franchiseSlug}/settings`, payload);
+      }
       
       if (response.data.success) {
         toast.success('Settings saved successfully');
@@ -282,6 +327,7 @@ export default function FranchiseSettingsPage() {
           setFormData({
             name: data.name || '',
             description: data.description || '',
+            logo_url: data.logo_url || '',
             website: data.website || '',
             email: data.email || '',
             phone: data.phone || '',
@@ -301,6 +347,12 @@ export default function FranchiseSettingsPage() {
             notification_email: settings.notification_email || '',
             business_hours: settings.business_hours || DEFAULT_BUSINESS_HOURS,
           });
+          
+          // Update logo preview and clear file
+          if (data.logo_url) {
+            setLogoPreview(data.logo_url);
+          }
+          setLogoFile(null);
         }
       }
     } catch (err: any) {
@@ -321,6 +373,24 @@ export default function FranchiseSettingsPage() {
         }
       }
     }));
+  };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeLogo = () => {
+    setLogoFile(null);
+    setLogoPreview(formData.logo_url || null);
   };
 
   if (loading) {
@@ -416,6 +486,55 @@ export default function FranchiseSettingsPage() {
                   placeholder="Brief description of your franchise"
                   rows={3}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="logo">Franchise Logo</Label>
+                <div className="flex items-start gap-4">
+                  {logoPreview && (
+                    <div className="relative shrink-0">
+                      <img 
+                        src={logoPreview} 
+                        alt="Logo preview" 
+                        className="w-24 h-24 object-contain border border-neutral-200 rounded-lg"
+                      />
+                      {logoFile && (
+                        <button
+                          type="button"
+                          onClick={removeLogo}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="logo"
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/svg+xml,image/webp"
+                        onChange={handleLogoChange}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById('logo')?.click()}
+                        className="w-full sm:w-auto"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Logo
+                      </Button>
+                    </div>
+                    <p className="text-sm text-neutral-500 mt-2">
+                      Recommended: Square image, max 2MB (JPEG, PNG, SVG, WebP)
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
