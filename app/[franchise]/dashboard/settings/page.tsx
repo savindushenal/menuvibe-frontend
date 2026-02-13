@@ -255,6 +255,7 @@ export default function FranchiseSettingsPage() {
       
       if (logoFile) {
         const formDataToSend = new FormData();
+        formDataToSend.append('_method', 'PUT');  // Laravel method spoofing for file uploads
         formDataToSend.append('name', formData.name);
         formDataToSend.append('description', formData.description);
         formDataToSend.append('website', formData.website);
@@ -279,11 +280,8 @@ export default function FranchiseSettingsPage() {
         }));
         formDataToSend.append('logo', logoFile);
         
-        response = await api.put(`/franchise/${franchiseSlug}/settings`, formDataToSend, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
+        // Use POST with _method: PUT for file uploads (Laravel method spoofing)
+        response = await api.post(`/franchise/${franchiseSlug}/settings`, formDataToSend);
       } else {
         const payload = {
           name: formData.name,
@@ -356,6 +354,7 @@ export default function FranchiseSettingsPage() {
         }
       }
     } catch (err: any) {
+      console.error('Save settings error:', err);
       toast.error(err.response?.data?.message || 'Failed to save settings');
     } finally {
       setSaving(false);
