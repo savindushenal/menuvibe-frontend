@@ -54,6 +54,8 @@ interface MenuEndpoint {
   scan_count: number;
   last_scanned_at: string | null;
   created_at: string;
+  template_id?: number;
+  location_id?: number;
 }
 
 type EndpointType = 'table' | 'room' | 'area' | 'branch' | 'kiosk' | 'takeaway' | 'event' | 'delivery';
@@ -77,6 +79,8 @@ export default function FranchiseTablesQRPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [templates, setTemplates] = useState<Array<{ id: number; name: string; location?: { name: string } }>>([]);
+  const [locations, setLocations] = useState<Array<{ id: number; name: string; branch_name?: string; branch_code?: string }>>([]);
 
   // Dialogs
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -99,11 +103,15 @@ export default function FranchiseTablesQRPage() {
     type: EndpointType;
     identifier: string;
     description: string;
+    template_id?: number;
+    location_id?: number;
   }>({
     name: '',
     type: 'table',
     identifier: '',
     description: '',
+    template_id: undefined,
+    location_id: undefined,
   });
 
   const [bulkFormData, setBulkFormData] = useState<{
@@ -111,15 +119,21 @@ export default function FranchiseTablesQRPage() {
     prefix: string;
     start: number;
     count: number;
+    template_id?: number;
+    location_id?: number;
   }>({
     type: 'table',
     prefix: 'Table',
     start: 1,
     count: 10,
+    template_id: undefined,
+    location_id: undefined,
   });
 
   useEffect(() => {
     loadEndpoints();
+    loadTemplates();
+    loadLocations();
   }, [franchiseSlug, selectedType]);
 
   const loadEndpoints = async () => {
@@ -138,6 +152,41 @@ export default function FranchiseTablesQRPage() {
       toast.error(error.response?.data?.message || 'Failed to load tables & QR codes');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTemplates = async () => {
+    try {
+      const response = await api.get(`/franchise/${franchiseSlug}/templates`);
+      if (response.data.success) {
+        const templatesData = response.data.data || [];
+        setTemplates(templatesData);
+        // Set default template_id if available
+        if (templatesData.length > 0) {
+          const defaultTemplate = templatesData.find((t: any) => t.is_default) || templatesData[0];
+          setFormData(prev => ({ ...prev, template_id: defaultTemplate.id }));
+          setBulkFormData(prev => ({ ...prev, template_id: defaultTemplate.id }));
+        }
+      }
+    } catch (error: any) {
+      console.error('Failed to load templates:', error);
+    }
+  };
+
+  const loadLocations = async () => {
+    try {
+      const response = await api.get(`/franchise/${franchiseSlug}/locations`);
+      if (response.data.success) {
+        const locationsData = response.data.data || [];
+        setLocations(locationsData);
+        // Set default location_id if available
+        if (locationsData.length > 0) {
+          setFormData(prev => ({ ...prev, location_id: locationsData[0].id }));
+          setBulkFormData(prev => ({ ...prev, location_id: locationsData[0].id }));
+        }
+      }
+    } catch (error: any) {
+      console.error('Failed to load locations:', error);
     }
   };
 
@@ -277,6 +326,8 @@ export default function FranchiseTablesQRPage() {
       type: endpoint.type,
       identifier: endpoint.identifier,
       description: endpoint.description || '',
+      template_id: endpoint.template_id,
+      location_id: endpoint.location_id,
     });
     setIsEditOpen(true);
   };
@@ -287,20 +338,28 @@ export default function FranchiseTablesQRPage() {
   };
 
   const resetForm = () => {
+    const defaultTemplate = templates.find(t => (t as any).is_default) || templates[0];
+    const defaultLocation = locations[0];
     setFormData({
       name: '',
       type: 'table',
       identifier: '',
       description: '',
+      template_id: defaultTemplate?.id,
+      location_id: defaultLocation?.id,
     });
   };
 
   const resetBulkForm = () => {
+    const defaultTemplate = templates.find(t => (t as any).is_default) || templates[0];
+    const defaultLocation = locations[0];
     setBulkFormData({
       type: 'table',
       prefix: 'Table',
       start: 1,
       count: 10,
+      template_id: defaultTemplate?.id,
+      location_id: defaultLocation?.id,
     });
   };
 
@@ -501,6 +560,36 @@ export default function FranchiseTablesQRPage() {
               </select>
             </div>
             <div>
+              <Label>Branch/Location</Label>
+              <select
+                className="w-full mt-1 px-3 py-2 border rounded-md"
+                value={formData.location_id || ''}
+                onChange={(e) => setFormData({ ...formData, location_id: e.target.value ? Number(e.target.value) : undefined })}
+              >
+                {locations.length === 0 && <option value="">Loading locations...</option>}
+                {locations.map(location => (
+                  <option key={location.id} value={location.id}>
+                    {location.branch_name || location.name}{location.branch_code ? ` (${location.branch_code})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>Menu Template</Label>
+              <select
+                className="w-full mt-1 px-3 py-2 border rounded-md"
+                value={formData.template_id || ''}
+                onChange={(e) => setFormData({ ...formData, template_id: e.target.value ? Number(e.target.value) : undefined })}
+              >
+                <option value="">Use Default Menu</option>
+                {templates.map(template => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}{template.location ? ` (${template.location.name})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <Label>Name</Label>
               <Input
                 placeholder="e.g., Table 1, Room A"
@@ -561,6 +650,36 @@ export default function FranchiseTablesQRPage() {
               </select>
             </div>
             <div>
+              <Label>Branch/Location</Label>
+              <select
+                className="w-full mt-1 px-3 py-2 border rounded-md"
+                value={formData.location_id || ''}
+                onChange={(e) => setFormData({ ...formData, location_id: e.target.value ? Number(e.target.value) : undefined })}
+              >
+                {locations.length === 0 && <option value="">Loading locations...</option>}
+                {locations.map(location => (
+                  <option key={location.id} value={location.id}>
+                    {location.branch_name || location.name}{location.branch_code ? ` (${location.branch_code})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>Menu Template</Label>
+              <select
+                className="w-full mt-1 px-3 py-2 border rounded-md"
+                value={formData.template_id || ''}
+                onChange={(e) => setFormData({ ...formData, template_id: e.target.value ? Number(e.target.value) : undefined })}
+              >
+                <option value="">Use Default Menu</option>
+                {templates.map(template => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}{template.location ? ` (${template.location.name})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <Label>Name</Label>
               <Input
                 value={formData.name}
@@ -613,6 +732,36 @@ export default function FranchiseTablesQRPage() {
                 {endpointTypes.map(type => (
                   <option key={type.value} value={type.value}>
                     {type.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>Branch/Location</Label>
+              <select
+                className="w-full mt-1 px-3 py-2 border rounded-md"
+                value={bulkFormData.location_id || ''}
+                onChange={(e) => setBulkFormData({ ...bulkFormData, location_id: e.target.value ? Number(e.target.value) : undefined })}
+              >
+                {locations.length === 0 && <option value="">Loading locations...</option>}
+                {locations.map(location => (
+                  <option key={location.id} value={location.id}>
+                    {location.branch_name || location.name}{location.branch_code ? ` (${location.branch_code})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>Menu Template</Label>
+              <select
+                className="w-full mt-1 px-3 py-2 border rounded-md"
+                value={bulkFormData.template_id || ''}
+                onChange={(e) => setBulkFormData({ ...bulkFormData, template_id: e.target.value ? Number(e.target.value) : undefined })}
+              >
+                <option value="">Use Default Menu</option>
+                {templates.map(template => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}{template.location ? ` (${template.location.name})` : ''}
                   </option>
                 ))}
               </select>
