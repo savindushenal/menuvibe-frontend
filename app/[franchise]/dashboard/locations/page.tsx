@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Plus, Settings } from 'lucide-react';
+import { MapPin, Plus, Clock } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -19,6 +19,7 @@ interface Location {
 
 export default function FranchiseLocationsPage() {
   const params = useParams();
+  const router = useRouter();
   const franchiseSlug = params?.franchise as string;
   
   const [loading, setLoading] = useState(true);
@@ -118,8 +119,13 @@ export default function FranchiseLocationsPage() {
                     <CardTitle className="text-lg">{location.name}</CardTitle>
                     <CardDescription className="mt-1">{location.address}</CardDescription>
                   </div>
-                  <Button variant="ghost" size="icon">
-                    <Settings className="w-4 h-4" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => router.push(`/franchise/${franchiseSlug}/dashboard/locations/${location.id}`)}
+                    title="Manage menu schedules"
+                  >
+                    <Clock className="w-4 h-4" />
                   </Button>
                 </div>
               </CardHeader>
