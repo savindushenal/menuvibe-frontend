@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
-import { X, Loader2 } from 'lucide-react';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
+import { X, Loader2, ChevronRight } from 'lucide-react';
 import { BaristaTemplate } from '@/components/templates/barista';
 import { PremiumMenuTemplate } from './templates/PremiumMenuTemplate';
 import { ClassicMenuTemplate } from './templates/ClassicMenuTemplate';
@@ -21,11 +21,62 @@ function LoadingFallback() {
   );
 }
 
+interface MenuCardProps {
+  menu: {
+    id: number;
+    name: string;
+    slug: string;
+    description?: string;
+    priority?: number;
+  };
+  shortCode: string;
+}
+
+function MenuCard({ menu, shortCode }: MenuCardProps) {
+  const router = useRouter();
+
+  const handleSelectMenu = () => {
+    // Redirect to the same endpoint with menu_id parameter
+    // This will trigger a fetch with that parameter
+    router.push(`/m/${shortCode}?menu_id=${menu.id}`);
+  };
+
+  return (
+    <button
+      onClick={handleSelectMenu}
+      className="group bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden text-left hover:scale-105 transform"
+    >
+      <div className="p-6">
+        <div className="flex items-start justify-between mb-4">
+          <h3 className="text-xl font-bold text-neutral-900 group-hover:text-emerald-600 transition-colors">
+            {menu.name}
+          </h3>
+          <ChevronRight className="w-5 h-5 text-neutral-400 group-hover:text-emerald-600 transition-colors" />
+        </div>
+        
+        {menu.description && (
+          <p className="text-neutral-600 text-sm mb-4 line-clamp-2">
+            {menu.description}
+          </p>
+        )}
+
+        {menu.priority !== undefined && (
+          <div className="inline-block bg-emerald-50 text-emerald-700 text-xs font-medium px-3 py-1 rounded-full">
+            Priority: {menu.priority}
+          </div>
+        )}
+      </div>
+    </button>
+  );
+}
+
 function PublicMenuContent() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const shortCode = params.code as string;
   const tableNumber = searchParams?.get('table');
+  const menuId = searchParams?.get('menu_id');
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +84,7 @@ function PublicMenuContent() {
 
   useEffect(() => {
     loadMenu();
-  }, [shortCode]);
+  }, [shortCode, menuId]);
 
   const loadMenu = async () => {
     try {
@@ -43,7 +94,14 @@ function PublicMenuContent() {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       // Remove trailing /api if present to avoid duplication
       const baseUrl = apiUrl.replace(/\/api\/?$/, '');
-      const response = await fetch(`${baseUrl}/api/public/menu/endpoint/${shortCode}`);
+      let url = `${baseUrl}/api/public/menu/endpoint/${shortCode}`;
+      
+      // Add menu_id parameter if provided (used to force selection from corridor)
+      if (menuId) {
+        url += `?menu_id=${menuId}`;
+      }
+      
+      const response = await fetch(url);
       const data = await response.json();
       
       if (!response.ok || !data.success) {
@@ -51,8 +109,17 @@ function PublicMenuContent() {
         return;
       }
 
-      console.log('Menu data received:', data.data);
-      setMenuData(data.data);
+      console.log('Menu data received:', data);
+      
+      // Handle corridor action (multiple menus available)
+      if (data.action === 'corridor') {
+        console.log('Corridor response detected, rendering menu selector');
+        setMenuData(data);
+        return;
+      }
+      
+      // Handle redirect action or legacy single menu response
+      setMenuData(data.data || data);
     } catch (err: any) {
       console.error('Failed to load menu:', err);
       setError(err.message || 'Failed to load menu');
@@ -83,6 +150,46 @@ function PublicMenuContent() {
           <p className="text-neutral-600">
             {error || 'This menu link may be expired or invalid.'}
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle corridor response (multiple menus available)
+  if (menuData.action === 'corridor' && menuData.data?.menus) {
+    const corridorData = menuData.data;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100 p-4">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="text-center py-8">
+            {corridorData.location?.name && (
+              <>
+                <h1 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
+                  {corridorData.location.name}
+                </h1>
+                <p className="text-neutral-600">Please select a menu</p>
+              </>
+            )}
+          </div>
+
+          {/* Menu Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            {corridorData.menus.map((menu: any) => (
+              <MenuCard
+                key={menu.id}
+                menu={menu}
+                shortCode={shortCode}
+              />
+            ))}
+          </div>
+
+          {/* Cache Info */}
+          {corridorData.cache_ttl_seconds && (
+            <div className="text-center text-sm text-neutral-500 mt-8">
+              <p>This page will refresh in {Math.ceil(corridorData.cache_ttl_seconds / 60)} minutes</p>
+            </div>
+          )}
         </div>
       </div>
     );
