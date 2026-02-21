@@ -60,7 +60,7 @@ class ApiClient {
     this.token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+  private async request<T>(endpoint: string, options: RequestInit & { skipJsonContentType?: boolean } = {}): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
     
     // Always refresh token from localStorage before making requests
@@ -75,19 +75,26 @@ class ApiClient {
     }
     
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
       'Accept': 'application/json',
       'X-Requested-With': 'XMLHttpRequest',
       ...(options.headers as Record<string, string>),
     };
+    
+    // Only set Content-Type if not sending FormData (let browser set multipart/form-data automatically)
+    if (!options.skipJsonContentType) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     if (this.token) {
       headers.Authorization = `Bearer ${this.token}`;
     }
 
     try {
+      // Destructure to exclude custom options and only pass standard fetch options
+      const { skipJsonContentType, ...fetchOptions } = options as any;
+      
       const response = await fetch(url, {
-        ...options,
+        ...fetchOptions,
         headers,
       });
 
@@ -1838,6 +1845,16 @@ class ApiClient {
   }
 
   async post<T = any>(endpoint: string, data?: any): Promise<{ data: ApiResponse<T> }> {
+    // Handle FormData specially (for file uploads)
+    if (data instanceof FormData) {
+      const response = await this.request<T>(endpoint, {
+        method: 'POST',
+        body: data,
+        skipJsonContentType: true, // Signal to skip JSON content-type header
+      });
+      return { data: response };
+    }
+    
     const response = await this.request<T>(endpoint, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
