@@ -17,11 +17,11 @@ interface ItemCustomizationsFormProps {
   currency?: string;
 }
 
-const ItemCustomizationsFormComponent = ({
+export const ItemCustomizationsForm = memo(function ItemCustomizationsFormComponent({
   sections,
   onChange,
   currency = 'LKR',
-}: ItemCustomizationsFormProps) => {
+}: ItemCustomizationsFormProps) {
   const [expandedSection, setExpandedSection] = useState<string | null>(
     sections.length > 0 ? sections[0].id : null
   );
@@ -304,6 +304,4 @@ const ItemCustomizationsFormComponent = ({
       )}
     </div>
   );
-};
-
-export const ItemCustomizationsForm = memo(ItemCustomizationsFormComponent);
+});

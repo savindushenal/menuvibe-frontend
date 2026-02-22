@@ -31,12 +31,12 @@ const SUGGESTED_SIZES = [
   { name: 'Extra Large', shortName: 'XL' },
 ];
 
-const ItemVariantsFormComponent = ({ 
+export const ItemVariantsForm = memo(function ItemVariantsFormComponent({ 
   variants, 
   onChange, 
   currency = 'LKR',
   basePrice = 0 
-}: ItemVariantsFormProps) => {
+}: ItemVariantsFormProps) {
   const [showSuggestions, setShowSuggestions] = useState(variants.length === 0);
 
   const addVariant = useCallback((name?: string) => {
@@ -258,6 +258,4 @@ const ItemVariantsFormComponent = ({
       </CardContent>
     </Card>
   );
-};
-
-export const ItemVariantsForm = memo(ItemVariantsFormComponent);
+});
