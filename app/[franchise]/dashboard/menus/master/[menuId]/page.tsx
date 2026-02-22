@@ -94,6 +94,15 @@ interface MenuItem {
     compare_at_price?: number;
     is_default?: boolean;
   }> | null;
+  customizations?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    required: boolean;
+    min_selections: number;
+    max_selections: number;
+    options: Array<{ id: string; name: string; price_modifier: number }>;
+  }> | null;
 }
 
 interface Offer {
@@ -533,6 +542,16 @@ export default function MasterMenuEditorPage() {
                                           </p>
                                         )}
                                       </>
+                                    )}
+                                    {item.customizations && item.customizations.length > 0 && (
+                                      <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200 mt-1">
+                                        {item.customizations.length} customization{item.customizations.length !== 1 ? 's' : ''}
+                                        {item.customizations.filter(c => c.required).length > 0 && (
+                                          <span className="ml-1 text-purple-500">
+                                            ({item.customizations.filter(c => c.required).length} required)
+                                          </span>
+                                        )}
+                                      </Badge>
                                     )}
                                   </div>
                                   <Badge variant={item.is_available ? 'outline' : 'secondary'} className="text-xs">

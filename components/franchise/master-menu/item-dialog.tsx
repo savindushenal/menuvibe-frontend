@@ -12,6 +12,8 @@ import { Loader2, X, Plus } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { ItemVariantsForm, ItemVariant } from '@/components/menu/item-variants-form';
+import { ItemCustomizationsForm } from '@/components/menu/item-customizations-form';
+import { CustomizationSection } from '@/lib/types';
 
 interface MenuItem {
   id: number;
@@ -30,6 +32,7 @@ interface MenuItem {
   spice_level: number | null;
   category_id: number;
   variations?: ItemVariant[] | null;
+  customizations?: CustomizationSection[] | null;
 }
 
 interface ItemDialogProps {
@@ -65,6 +68,7 @@ export function ItemDialog({
 }: ItemDialogProps) {
   const [loading, setLoading] = useState(false);
   const [variants, setVariants] = useState<ItemVariant[]>([]);
+  const [customizations, setCustomizations] = useState<CustomizationSection[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -102,6 +106,7 @@ export function ItemDialog({
       });
       // Load existing variants
       setVariants(item.variations || []);
+      setCustomizations((item.customizations as CustomizationSection[]) || []);
     } else {
       setFormData({
         name: '',
@@ -120,6 +125,7 @@ export function ItemDialog({
         sku: '',
       });
       setVariants([]);
+      setCustomizations([]);
     }
   }, [item, open]);
 
@@ -158,6 +164,7 @@ export function ItemDialog({
           compare_at_price: v.compare_at_price || null,
           is_default: v.is_default || false,
         })) : null,
+        customizations: customizations.length > 0 ? customizations : null,
       };
       
       const endpoint = item 
@@ -298,6 +305,21 @@ export function ItemDialog({
               currency={currency}
               basePrice={formData.price ? parseFloat(formData.price) : 0}
             />
+
+            {/* Customization Sections */}
+            <div className="space-y-3">
+              <div>
+                <h4 className="text-sm font-semibold">Item Customizations</h4>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  Add optional or required choices (e.g. spice level, base, sides, extras). Each section can be required or optional.
+                </p>
+              </div>
+              <ItemCustomizationsForm
+                sections={customizations}
+                onChange={setCustomizations}
+                currency={currency}
+              />
+            </div>
 
             {/* Toggles */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

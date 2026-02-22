@@ -30,10 +30,14 @@ import {
   CheckCircle,
   Clock,
   Plus,
+  Edit3,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { MenuItemForm } from '@/components/menu/menu-item-form';
+import { ItemVariantsForm, ItemVariant } from '@/components/menu/item-variants-form';
+import { ItemCustomizationsForm } from '@/components/menu/item-customizations-form';
+import { CustomizationSection } from '@/lib/types';
 
 interface MenuItem {
   id: number;
@@ -45,6 +49,8 @@ interface MenuItem {
   master_item_id?: number;
   has_override?: boolean;
   original_price?: number;
+  variations?: ItemVariant[] | null;
+  customizations?: CustomizationSection[] | null;
 }
 
 interface Category {
@@ -81,6 +87,12 @@ export default function BranchMenuEditPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isItemFormOpen, setIsItemFormOpen] = useState(false);
   const [addItemLoading, setAddItemLoading] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<number | null>(null);
+  const [variantsDialogOpen, setVariantsDialogOpen] = useState(false);
+  const [customizationsDialogOpen, setCustomizationsDialogOpen] = useState(false);
+  const [editingVariants, setEditingVariants] = useState<ItemVariant[]>([]);
+  const [editingCustomizations, setEditingCustomizations] = useState<CustomizationSection[]>([]);
+  const [savingVariants, setSavingVariants] = useState(false);
 
   useEffect(() => {
     fetchMenu();
@@ -158,6 +170,54 @@ export default function BranchMenuEditPage() {
       newChanges.delete(itemId);
       return newChanges;
     });
+  };
+
+  const openVariantsDialog = (item: MenuItem) => {
+    setEditingItemId(item.id);
+    setEditingVariants((item.variations as ItemVariant[]) || []);
+    setVariantsDialogOpen(true);
+  };
+
+  const openCustomizationsDialog = (item: MenuItem) => {
+    setEditingItemId(item.id);
+    setEditingCustomizations((item.customizations as CustomizationSection[]) || []);
+    setCustomizationsDialogOpen(true);
+  };
+
+  const handleSaveVariants = async () => {
+    if (!menu || editingItemId === null) return;
+    try {
+      setSavingVariants(true);
+      const response = await api.put(`/menus/${menu.id}/items/${editingItemId}`, { variations: editingVariants });
+      if (response.data.success) {
+        toast.success('Size variants updated');
+        setVariantsDialogOpen(false);
+        setEditingItemId(null);
+        fetchMenu();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to update variants');
+    } finally {
+      setSavingVariants(false);
+    }
+  };
+
+  const handleSaveCustomizations = async () => {
+    if (!menu || editingItemId === null) return;
+    try {
+      setSavingVariants(true);
+      const response = await api.put(`/menus/${menu.id}/items/${editingItemId}`, { customizations: editingCustomizations });
+      if (response.data.success) {
+        toast.success('Customizations updated');
+        setCustomizationsDialogOpen(false);
+        setEditingItemId(null);
+        fetchMenu();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to update customizations');
+    } finally {
+      setSavingVariants(false);
+    }
   };
 
   const getItemPrice = (item: MenuItem) => {
@@ -352,7 +412,7 @@ export default function BranchMenuEditPage() {
                       }`}
                     >
                       <div className="flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="font-medium">{item.name}</h4>
                           {item.has_override && (
                             <Badge variant="secondary" className="text-xs">
@@ -364,6 +424,45 @@ export default function BranchMenuEditPage() {
                             <Badge variant="outline" className="text-xs bg-amber-100 border-amber-300 text-amber-700">
                               <Clock className="h-3 w-3 mr-1" />
                               Unsaved
+                            </Badge>
+                          )}
+                          {item.variations && item.variations.length > 0 && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs cursor-pointer hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-colors"
+                              onClick={() => openVariantsDialog(item)}
+                            >
+                              <Edit3 className="h-3 w-3 mr-1" />
+                              {item.variations.length} sizes
+                            </Badge>
+                          )}
+                          {(!item.variations || item.variations.length === 0) && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs cursor-pointer hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-colors"
+                              onClick={() => openVariantsDialog(item)}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add Sizes
+                            </Badge>
+                          )}
+                          {item.customizations && item.customizations.length > 0 ? (
+                            <Badge
+                              variant="outline"
+                              className="text-xs cursor-pointer hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 transition-colors"
+                              onClick={() => openCustomizationsDialog(item)}
+                            >
+                              <Edit3 className="h-3 w-3 mr-1" />
+                              {item.customizations.length} customization{item.customizations.length !== 1 ? 's' : ''}
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="text-xs cursor-pointer hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 transition-colors"
+                              onClick={() => openCustomizationsDialog(item)}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add Customizations
                             </Badge>
                           )}
                         </div>
@@ -461,6 +560,57 @@ export default function BranchMenuEditPage() {
           isLoading={addItemLoading}
         />
       )}
+
+      {/* Variants Dialog */}
+      <Dialog open={variantsDialogOpen} onOpenChange={setVariantsDialogOpen}>
+        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Size Variants</DialogTitle>
+            <DialogDescription>
+              Manage size options with different prices. Customers choose one size when ordering.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <ItemVariantsForm
+              variants={editingVariants}
+              onChange={setEditingVariants}
+              currency={menu?.categories?.[0]?.items?.[0] ? 'LKR' : 'LKR'}
+              basePrice={0}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVariantsDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveVariants} disabled={savingVariants}>
+              {savingVariants ? 'Saving...' : 'Save Variants'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Customizations Dialog */}
+      <Dialog open={customizationsDialogOpen} onOpenChange={setCustomizationsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Item Customizations</DialogTitle>
+            <DialogDescription>
+              Define customization sections (e.g. base, sides, extras). Mark sections as required or optional.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <ItemCustomizationsForm
+              sections={editingCustomizations}
+              onChange={setEditingCustomizations}
+              currency="LKR"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCustomizationsDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveCustomizations} disabled={savingVariants}>
+              {savingVariants ? 'Saving...' : 'Save Customizations'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
