@@ -33,9 +33,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Plus, X, Upload, Flame } from 'lucide-react';
-import { MenuItem, MenuCategory } from '@/lib/types';
+import { MenuItem, MenuCategory, CustomizationSection } from '@/lib/types';
 import { InlineFeatureBlock } from '@/components/subscription/inline-feature-block';
 import { ItemVariantsForm, ItemVariant } from './item-variants-form';
+import { ItemCustomizationsForm } from './item-customizations-form';
 
 const variantSchema = z.object({
   id: z.string().optional(),
@@ -43,6 +44,22 @@ const variantSchema = z.object({
   price: z.number(),
   compare_at_price: z.number().optional(),
   is_default: z.boolean().optional(),
+});
+
+const customizationOptionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  price_modifier: z.number(),
+});
+
+const customizationSectionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.string(),
+  required: z.boolean(),
+  min_selections: z.number(),
+  max_selections: z.number(),
+  options: z.array(customizationOptionSchema),
 });
 
 const menuItemSchema = z.object({
@@ -60,6 +77,7 @@ const menuItemSchema = z.object({
   allergens: z.array(z.string()).default([]),
   dietary_info: z.array(z.string()).default([]),
   variations: z.array(variantSchema).default([]),
+  customizations: z.array(customizationSectionSchema).default([]),
   sort_order: z.number().default(0),
 });
 
@@ -99,6 +117,7 @@ export function MenuItemForm({
   const [selectedAllergens, setSelectedAllergens] = useState<string[]>(item?.allergens || []);
   const [selectedDietary, setSelectedDietary] = useState<string[]>(item?.dietary_info || []);
   const [variants, setVariants] = useState<ItemVariant[]>((item?.variations as ItemVariant[]) || []);
+  const [customizations, setCustomizations] = useState<CustomizationSection[]>((item?.customizations as CustomizationSection[]) || []);
 
   const form = useForm<MenuItemFormData>({
     resolver: zodResolver(menuItemSchema),
@@ -117,6 +136,7 @@ export function MenuItemForm({
       allergens: item?.allergens || [],
       dietary_info: item?.dietary_info || [],
       variations: (item?.variations as ItemVariant[]) || [],
+      customizations: (item?.customizations as CustomizationSection[]) || [],
       sort_order: item?.sort_order || 0,
     },
   });
@@ -160,12 +180,18 @@ export function MenuItemForm({
     form.setValue('variations', newVariants);
   };
 
+  const handleCustomizationsChange = (newCustomizations: CustomizationSection[]) => {
+    setCustomizations(newCustomizations);
+    form.setValue('customizations', newCustomizations);
+  };
+
   const handleFormSubmit = async (data: MenuItemFormData) => {
     try {
-      // Include variants in submission
+      // Include variants and customizations in submission
       const submitData = {
         ...data,
         variations: variants,
+        customizations: customizations,
       };
       await onSubmit(submitData, selectedImage || undefined);
       form.reset();
@@ -174,6 +200,7 @@ export function MenuItemForm({
       setSelectedAllergens([]);
       setSelectedDietary([]);
       setVariants([]);
+      setCustomizations([]);
       onClose();
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -415,6 +442,19 @@ export function MenuItemForm({
               currency={currentCurrency}
               basePrice={currentPrice}
             />
+
+            {/* Customization Sections */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Item Customizations</h3>
+              <p className="text-sm text-neutral-500">
+                Add customization sections like base selection, sides, optional add-ons, etc. Customers will see only the sections you define.
+              </p>
+              <ItemCustomizationsForm
+                sections={customizations}
+                onChange={handleCustomizationsChange}
+                currency={currentCurrency}
+              />
+            </div>
 
             {/* Spice Level */}
             <div className="space-y-4">

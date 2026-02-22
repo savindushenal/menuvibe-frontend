@@ -39,6 +39,22 @@ export interface ItemVariation {
   is_default?: boolean;
 }
 
+export interface CustomizationOption {
+  id: string;
+  name: string;
+  price_modifier: number;
+}
+
+export interface CustomizationSection {
+  id: string;
+  name: string;
+  type: string;
+  required: boolean;
+  min_selections: number;
+  max_selections: number;
+  options: CustomizationOption[];
+}
+
 export interface MenuItem {
   id: number;
   menu_id: number;
@@ -60,6 +76,7 @@ export interface MenuItem {
   is_spicy: boolean;
   spice_level?: number;
   variations?: ItemVariation[];
+  customizations?: CustomizationSection[];
   created_at: string;
   updated_at: string;
   category?: MenuCategory;
