@@ -103,8 +103,6 @@ const ItemCustomizationsFormComponent = ({
     });
     onChange(updated);
   }, [sections, onChange]);
-    onChange(updated);
-  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -304,8 +302,8 @@ const ItemCustomizationsFormComponent = ({
           </Button>
         </>
       )}
- ;
-
-export const ItemCustomizationsForm = memo(ItemCustomizationsFormComponent);   </div>
+    </div>
   );
-}
+};
+
+export const ItemCustomizationsForm = memo(ItemCustomizationsFormComponent);

@@ -258,4 +258,6 @@ const ItemVariantsFormComponent = ({
       </CardContent>
     </Card>
   );
-}
+};
+
+export const ItemVariantsForm = memo(ItemVariantsFormComponent);
