@@ -79,7 +79,16 @@ export const TEMPLATE_REGISTRY: Record<string, TemplateInfo> = {
     component: IssoSeafoodTemplate,
   },
   
-  // Example: Add your custom templates
+  // Isso template variants
+  'isso/demo': {
+    key: 'isso/demo',
+    name: 'Isso Seafood - Demo',
+    description: 'Isso demo variant with enhanced sectioned customization options',
+    developer: 'MenuVire Team',
+    isPremium: true,
+    previewImage: '/templates/isso-seafood-preview.jpg',
+    component: IssoSeafoodTemplate,
+  },
   // 'premium-cafe': {
   //   key: 'premium-cafe',
   //   name: 'Premium Cafe',

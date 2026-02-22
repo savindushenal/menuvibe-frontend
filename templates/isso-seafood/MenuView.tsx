@@ -52,6 +52,19 @@ export interface MenuItem {
   category_id: number;
   is_available: boolean;
   is_featured?: boolean;
+  variations?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    required: boolean;
+    min_selections?: number;
+    max_selections?: number;
+    options?: Array<{
+      id: string;
+      name: string;
+      price_modifier?: number;
+    }>;
+  }>;
 }
 
 interface Category {
@@ -77,6 +90,7 @@ export default function IssoMenuView() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedVariations, setSelectedVariations] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -114,6 +128,7 @@ export default function IssoMenuView() {
 
   const handleItemClick = (item: MenuItem) => {
     setSelectedItem(item);
+    setSelectedVariations({}); // Reset variations for new item
     setIsProductSheetOpen(true);
   };
 
@@ -145,6 +160,58 @@ export default function IssoMenuView() {
   }, 0);
 
   const cartCount = cartItems.reduce((sum, ci) => sum + ci.quantity, 0);
+
+  // Calculate price with variations
+  const calculateVariationPrice = (item: MenuItem, variations: Record<string, string[]>): number => {
+    let basePrice = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
+    
+    if (!item.variations) return basePrice;
+    
+    let totalModifier = 0;
+    item.variations.forEach((section: any) => {
+      const selectedIds = variations[section.id] || [];
+      selectedIds.forEach((optionId: string) => {
+        const option = section.options?.find((opt: any) => opt.id === optionId);
+        if (option && option.price_modifier) {
+          totalModifier += option.price_modifier;
+        }
+      });
+    });
+    
+    return basePrice + totalModifier;
+  };
+
+  const handleVariationSelect = (sectionId: string, optionId: string, isMultiSelect: boolean) => {
+    setSelectedVariations(prev => {
+      const current = prev[sectionId] || [];
+      let updated: string[];
+      
+      if (isMultiSelect) {
+        // Multiple select
+        if (current.includes(optionId)) {
+          updated = current.filter(id => id !== optionId);
+        } else {
+          updated = [...current, optionId];
+        }
+      } else {
+        // Single select
+        updated = [optionId];
+      }
+      
+      return { ...prev, [sectionId]: updated };
+    });
+  };
+
+  const canAddToCart = (): boolean => {
+    if (!selectedItem?.variations) return true;
+    
+    return selectedItem.variations.every((section: any) => {
+      if (section.required) {
+        return (selectedVariations[section.id] || []).length > 0;
+      }
+      return true;
+    });
+  };
 
   if (loading) {
     return (
@@ -615,13 +682,81 @@ export default function IssoMenuView() {
 
                 <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-200">
                   <span className="text-4xl font-bold" style={{ color: colors.primary }}>
-                    {data.menu?.currency || 'LKR'} {formatPrice(selectedItem.price)}
+                    {data.menu?.currency || 'LKR'} {formatPrice(calculateVariationPrice(selectedItem, selectedVariations))}
                   </span>
                 </div>
 
+                {/* Variations/Customizations Sections */}
+                {selectedItem.variations && selectedItem.variations.length > 0 && (
+                  <div className="mb-8 space-y-6 pb-6 border-b border-gray-200">
+                    {selectedItem.variations.map((section: any) => {
+                      const isMultiSelect = section.max_selections !== 1;
+                      const selected = selectedVariations[section.id] || [];
+                      const isRequired = section.required;
+                      const isValidSelection = !isRequired || selected.length > 0;
+                      
+                      return (
+                        <div key={section.id}>
+                          <div className="mb-3">
+                            <h4 className="font-bold text-lg text-[#1A1A1A]">{section.name}</h4>
+                            {isRequired && (
+                              <p className="text-xs text-red-500 mt-1">Required</p>
+                            )}
+                            {!isValidSelection && (
+                              <p className="text-xs" style={{ color: colors.primary }}>
+                                {section.min_selections > 1 
+                                  ? `Select at least ${section.min_selections} options` 
+                                  : `Select one option`}
+                              </p>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            {section.options?.map((option: any) => (
+                              <label
+                                key={option.id}
+                                className="flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all"
+                                style={{
+                                  borderColor: selected.includes(option.id) ? colors.primary : '#E5E5E5',
+                                  backgroundColor: selected.includes(option.id) ? `${colors.primary}08` : 'transparent'
+                                }}
+                              >
+                                <input
+                                  type={isMultiSelect ? "checkbox" : "radio"}
+                                  name={section.id}
+                                  value={option.id}
+                                  checked={selected.includes(option.id)}
+                                  onChange={() => handleVariationSelect(section.id, option.id, isMultiSelect)}
+                                  className="w-5 h-5 rounded cursor-pointer"
+                                  style={{
+                                    accentColor: colors.primary
+                                  }}
+                                />
+                                <div className="flex-1">
+                                  <p className="font-medium text-[#1A1A1A]">{option.name}</p>
+                                </div>
+                                {option.price_modifier !== 0 && (
+                                  <span className="font-bold text-sm" style={{ color: colors.primary }}>
+                                    {option.price_modifier > 0 ? '+' : ''}
+                                    {data.menu?.currency || 'LKR'} {formatPrice(option.price_modifier)}
+                                  </span>
+                                )}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <button
-                  onClick={() => handleAddToCart(selectedItem, 1)}
-                  className="w-full text-white py-4 rounded-2xl font-bold text-lg transition-colors flex items-center justify-center gap-2"
+                  onClick={() => {
+                    if (canAddToCart()) {
+                      handleAddToCart(selectedItem, 1);
+                    }
+                  }}
+                  disabled={!canAddToCart()}
+                  className="w-full text-white py-4 rounded-2xl font-bold text-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ backgroundColor: colors.primary }}
                 >
                   <ShoppingBag className="w-5 h-5" />
