@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -194,17 +194,25 @@ export default function BranchMenuEditPage() {
     });
   };
 
-  const openVariantsDialog = (item: MenuItem) => {
+  const openVariantsDialog = useCallback((item: MenuItem) => {
     setEditingItemId(item.id);
     setEditingVariants((item.variations as ItemVariant[]) || []);
     setVariantsDialogOpen(true);
-  };
+  }, []);
 
-  const openCustomizationsDialog = (item: MenuItem) => {
+  const handleVariantsChange = useCallback((newVariants: ItemVariant[]) => {
+    setEditingVariants(newVariants);
+  }, []);
+
+  const openCustomizationsDialog = useCallback((item: MenuItem) => {
     setEditingItemId(item.id);
     setEditingCustomizations((item.customizations as CustomizationSection[]) || []);
     setCustomizationsDialogOpen(true);
-  };
+  }, []);
+
+  const handleCustomizationsChange = useCallback((newSections: CustomizationSection[]) => {
+    setEditingCustomizations(newSections);
+  }, []);
 
   const handleSaveVariants = async () => {
     if (!menu || editingItemId === null) return;
@@ -617,7 +625,7 @@ export default function BranchMenuEditPage() {
 
       {/* Variants Dialog */}
       <Dialog open={variantsDialogOpen} onOpenChange={setVariantsDialogOpen}>
-        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto" key={`variants-${editingItemId}`}>
           <DialogHeader>
             <DialogTitle>Size Variants</DialogTitle>
             <DialogDescription>
@@ -627,7 +635,7 @@ export default function BranchMenuEditPage() {
           <div className="py-2">
             <ItemVariantsForm
               variants={editingVariants}
-              onChange={setEditingVariants}
+              onChange={handleVariantsChange}
               currency={menu?.categories?.[0]?.items?.[0] ? 'LKR' : 'LKR'}
               basePrice={0}
             />
@@ -643,7 +651,7 @@ export default function BranchMenuEditPage() {
 
       {/* Customizations Dialog */}
       <Dialog open={customizationsDialogOpen} onOpenChange={setCustomizationsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" key={`customizations-${editingItemId}`}>
           <DialogHeader>
             <DialogTitle>Item Customizations</DialogTitle>
             <DialogDescription>
@@ -653,7 +661,7 @@ export default function BranchMenuEditPage() {
           <div className="py-2">
             <ItemCustomizationsForm
               sections={editingCustomizations}
-              onChange={setEditingCustomizations}
+              onChange={handleCustomizationsChange}
               currency="LKR"
             />
           </div>

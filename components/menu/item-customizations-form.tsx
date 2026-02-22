@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,16 +17,16 @@ interface ItemCustomizationsFormProps {
   currency?: string;
 }
 
-export function ItemCustomizationsForm({
+const ItemCustomizationsFormComponent = ({
   sections,
   onChange,
   currency = 'LKR',
-}: ItemCustomizationsFormProps) {
+}: ItemCustomizationsFormProps) => {
   const [expandedSection, setExpandedSection] = useState<string | null>(
     sections.length > 0 ? sections[0].id : null
   );
 
-  const addSection = () => {
+  const addSection = useCallback(() => {
     const newSection: CustomizationSection = {
       id: `section-${Date.now()}`,
       name: 'New Section',
@@ -38,20 +38,20 @@ export function ItemCustomizationsForm({
     };
     onChange([...sections, newSection]);
     setExpandedSection(newSection.id);
-  };
+  }, [sections, onChange]);
 
-  const removeSection = (sectionId: string) => {
+  const removeSection = useCallback((sectionId: string) => {
     onChange(sections.filter(s => s.id !== sectionId));
-  };
+  }, [sections, onChange]);
 
-  const updateSection = (sectionId: string, field: keyof CustomizationSection, value: any) => {
+  const updateSection = useCallback((sectionId: string, field: keyof CustomizationSection, value: any) => {
     const updated = sections.map(s =>
       s.id === sectionId ? { ...s, [field]: value } : s
     );
     onChange(updated);
-  };
+  }, [sections, onChange]);
 
-  const addOption = (sectionId: string) => {
+  const addOption = useCallback((sectionId: string) => {
     const updated = sections.map(s => {
       if (s.id === sectionId) {
         return {
@@ -69,9 +69,9 @@ export function ItemCustomizationsForm({
       return s;
     });
     onChange(updated);
-  };
+  }, [sections, onChange]);
 
-  const updateOption = (
+  const updateOption = useCallback((
     sectionId: string,
     optionId: string,
     field: keyof CustomizationOption,
@@ -89,9 +89,9 @@ export function ItemCustomizationsForm({
       return s;
     });
     onChange(updated);
-  };
+  }, [sections, onChange]);
 
-  const removeOption = (sectionId: string, optionId: string) => {
+  const removeOption = useCallback((sectionId: string, optionId: string) => {
     const updated = sections.map(s => {
       if (s.id === sectionId) {
         return {
@@ -101,6 +101,8 @@ export function ItemCustomizationsForm({
       }
       return s;
     });
+    onChange(updated);
+  }, [sections, onChange]);
     onChange(updated);
   };
 
@@ -302,6 +304,8 @@ export function ItemCustomizationsForm({
           </Button>
         </>
       )}
-    </div>
+ ;
+
+export const ItemCustomizationsForm = memo(ItemCustomizationsFormComponent);   </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,15 +31,15 @@ const SUGGESTED_SIZES = [
   { name: 'Extra Large', shortName: 'XL' },
 ];
 
-export function ItemVariantsForm({ 
+const ItemVariantsFormComponent = ({ 
   variants, 
   onChange, 
   currency = 'LKR',
   basePrice = 0 
-}: ItemVariantsFormProps) {
+}: ItemVariantsFormProps) => {
   const [showSuggestions, setShowSuggestions] = useState(variants.length === 0);
 
-  const addVariant = (name?: string) => {
+  const addVariant = useCallback((name?: string) => {
     const newVariant: ItemVariant = {
       id: `temp-${Date.now()}`,
       name: name || '',
@@ -48,15 +48,15 @@ export function ItemVariantsForm({
     };
     onChange([...variants, newVariant]);
     setShowSuggestions(false);
-  };
+  }, [variants, basePrice, onChange]);
 
-  const updateVariant = (index: number, field: keyof ItemVariant, value: any) => {
+  const updateVariant = useCallback((index: number, field: keyof ItemVariant, value: any) => {
     const updated = [...variants];
     updated[index] = { ...updated[index], [field]: value };
     onChange(updated);
-  };
+  }, [variants, onChange]);
 
-  const removeVariant = (index: number) => {
+  const removeVariant = useCallback((index: number) => {
     const updated = variants.filter((_, i) => i !== index);
     // If removing default, make first one default
     if (variants[index].is_default && updated.length > 0) {
@@ -66,17 +66,17 @@ export function ItemVariantsForm({
     if (updated.length === 0) {
       setShowSuggestions(true);
     }
-  };
+  }, [variants, onChange]);
 
-  const setDefault = (index: number) => {
+  const setDefault = useCallback((index: number) => {
     const updated = variants.map((v, i) => ({
       ...v,
       is_default: i === index,
     }));
     onChange(updated);
-  };
+  }, [variants, onChange]);
 
-  const addSuggestedSizes = () => {
+  const addSuggestedSizes = useCallback(() => {
     const newVariants: ItemVariant[] = [
       { id: `temp-${Date.now()}-1`, name: 'Small', price: basePrice * 0.8, is_default: false },
       { id: `temp-${Date.now()}-2`, name: 'Medium', price: basePrice, is_default: true },
@@ -84,14 +84,14 @@ export function ItemVariantsForm({
     ];
     onChange(newVariants);
     setShowSuggestions(false);
-  };
+  }, [basePrice, onChange]);
 
-  const formatPrice = (price: number) => {
+  const formatPrice = useCallback((price: number) => {
     return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     }).format(price);
-  };
+  }, []);
 
   return (
     <Card className="border-dashed">
