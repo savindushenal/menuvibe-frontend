@@ -7,9 +7,17 @@ interface IssoLogoProps {
   className?: string;
   variant?: 'dark' | 'white';
   size?: 'sm' | 'md' | 'lg';
+  logoUrl?: string;
+  brandName?: string;
 }
 
-export default function IssoLogo({ className = '', variant = 'dark', size = 'md' }: IssoLogoProps) {
+export default function IssoLogo({ 
+  className = '', 
+  variant = 'dark', 
+  size = 'md',
+  logoUrl = 'https://app.menuvire.com/isso-logo.png',
+  brandName = 'ISSO'
+}: IssoLogoProps) {
   // Size configurations
   const sizeConfig = {
     sm: { width: 80, height: 24 },
@@ -26,14 +34,18 @@ export default function IssoLogo({ className = '', variant = 'dark', size = 'md'
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <Image
-        src="/isso-logo.png"
-        alt="Isso Coffee"
-        width={width}
-        height={height}
-        className={variant === 'white' ? 'brightness-0 invert' : ''}
-        priority
-      />
+      {logoUrl ? (
+        <Image
+          src={logoUrl}
+          alt={brandName}
+          width={width}
+          height={height}
+          className={variant === 'white' ? 'brightness-0 invert' : ''}
+          priority
+        />
+      ) : (
+        <span className="text-xl md:text-2xl font-bold">{brandName}</span>
+      )}
     </motion.div>
   );
 }

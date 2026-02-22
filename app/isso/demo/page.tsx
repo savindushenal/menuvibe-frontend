@@ -295,6 +295,8 @@ export default function IssoDemo() {
         onCartClick={() => setIsCartOpen(true)}
         tableInfo={tableInfo}
         locationName={locationName}
+        logoUrl="https://app.menuvire.com/isso-logo.png"
+        brandName="ISSO"
       />
       
       <HeroSection tableInfo={tableInfo} />

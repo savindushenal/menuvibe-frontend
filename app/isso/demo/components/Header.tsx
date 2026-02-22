@@ -11,9 +11,11 @@ interface HeaderProps {
   onCartClick: () => void;
   tableInfo: TableInfo | null;
   locationName: string;
+  logoUrl?: string;
+  brandName?: string;
 }
 
-export default function Header({ cartCount, onCartClick, tableInfo, locationName }: HeaderProps) {
+export default function Header({ cartCount, onCartClick, tableInfo, locationName, logoUrl, brandName }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -56,7 +58,13 @@ export default function Header({ cartCount, onCartClick, tableInfo, locationName
             </nav>
             
             {/* Logo */}
-            <IssoLogo variant="dark" size="md" className="lg:absolute lg:left-1/2 lg:-translate-x-1/2" />
+            <IssoLogo 
+              variant="dark" 
+              size="md" 
+              className="lg:absolute lg:left-1/2 lg:-translate-x-1/2" 
+              logoUrl={logoUrl}
+              brandName={brandName}
+            />
             
             {/* Right side actions */}
             <div className="flex items-center gap-2 md:gap-4">
@@ -109,7 +117,7 @@ export default function Header({ cartCount, onCartClick, tableInfo, locationName
             >
               {/* Menu Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                <IssoLogo variant="dark" size="sm" />
+                <IssoLogo variant="dark" size="sm" logoUrl={logoUrl} brandName={brandName} />
                 <button 
                   onClick={() => setIsMenuOpen(false)}
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors"
