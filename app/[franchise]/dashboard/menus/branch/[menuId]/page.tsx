@@ -153,8 +153,30 @@ export default function BranchMenuEditPage() {
 
       if (response.data.success) {
         toast.success('Changes saved successfully');
+        
+        // Update local state instead of refetching
+        setMenu(prevMenu => {
+          if (!prevMenu) return prevMenu;
+          return {
+            ...prevMenu,
+            categories: prevMenu.categories.map(cat => ({
+              ...cat,
+              items: cat.items.map(item => {
+                const change = changes.get(item.id);
+                if (change) {
+                  return {
+                    ...item,
+                    ...(change.price !== undefined && { price: change.price }),
+                    ...(change.is_available !== undefined && { is_available: change.is_available })
+                  };
+                }
+                return item;
+              })
+            }))
+          };
+        });
+        
         setChanges(new Map());
-        fetchMenu();
       }
     } catch (err: any) {
       console.error('Failed to save changes:', err);
@@ -191,9 +213,25 @@ export default function BranchMenuEditPage() {
       const response = await api.put(`/menus/${menu.id}/items/${editingItemId}`, { variations: editingVariants });
       if (response.data.success) {
         toast.success('Size variants updated');
+        
+        // Update local state instead of refetching
+        setMenu(prevMenu => {
+          if (!prevMenu) return prevMenu;
+          return {
+            ...prevMenu,
+            categories: prevMenu.categories.map(cat => ({
+              ...cat,
+              items: cat.items.map(item => 
+                item.id === editingItemId 
+                  ? { ...item, variations: editingVariants }
+                  : item
+              )
+            }))
+          };
+        });
+        
         setVariantsDialogOpen(false);
         setEditingItemId(null);
-        fetchMenu();
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to update variants');
@@ -209,9 +247,25 @@ export default function BranchMenuEditPage() {
       const response = await api.put(`/menus/${menu.id}/items/${editingItemId}`, { customizations: editingCustomizations });
       if (response.data.success) {
         toast.success('Customizations updated');
+        
+        // Update local state instead of refetching
+        setMenu(prevMenu => {
+          if (!prevMenu) return prevMenu;
+          return {
+            ...prevMenu,
+            categories: prevMenu.categories.map(cat => ({
+              ...cat,
+              items: cat.items.map(item => 
+                item.id === editingItemId 
+                  ? { ...item, customizations: editingCustomizations }
+                  : item
+              )
+            }))
+          };
+        });
+        
         setCustomizationsDialogOpen(false);
         setEditingItemId(null);
-        fetchMenu();
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to update customizations');
