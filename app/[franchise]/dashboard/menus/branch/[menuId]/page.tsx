@@ -29,9 +29,11 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
+  Plus,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { MenuItemForm } from '@/components/menu/menu-item-form';
 
 interface MenuItem {
   id: number;
@@ -77,6 +79,8 @@ export default function BranchMenuEditPage() {
   const [changes, setChanges] = useState<Map<number, { price?: number; is_available?: boolean }>>(new Map());
   const [qrDialog, setQrDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isItemFormOpen, setIsItemFormOpen] = useState(false);
+  const [addItemLoading, setAddItemLoading] = useState(false);
 
   useEffect(() => {
     fetchMenu();
@@ -170,6 +174,49 @@ export default function BranchMenuEditPage() {
     return changes.has(itemId);
   };
 
+  const handleAddItem = async (data: any, image?: File) => {
+    if (!menu) return;
+
+    try {
+      setAddItemLoading(true);
+      const formData = new FormData();
+      
+      // Add all fields to FormData
+      Object.keys(data).forEach(key => {
+        if (data[key] !== undefined && data[key] !== null) {
+          if (typeof data[key] === 'object') {
+            formData.append(key, JSON.stringify(data[key]));
+          } else {
+            formData.append(key, data[key]);
+          }
+        }
+      });
+
+      if (image) {
+        formData.append('image', image);
+      }
+
+      const response = await api.post(
+        `/menus/${menu.id}/items`,
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success('Item added successfully');
+        setIsItemFormOpen(false);
+        fetchMenu();
+      }
+    } catch (err: any) {
+      console.error('Failed to add item:', err);
+      toast.error(err.response?.data?.message || 'Failed to add item');
+    } finally {
+      setAddItemLoading(false);
+    }
+  };
+
   const filteredCategories = menu?.categories?.filter(cat =>
     cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     cat.items.some(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -238,6 +285,13 @@ export default function BranchMenuEditPage() {
               {changes.size} unsaved change{changes.size !== 1 ? 's' : ''}
             </Badge>
           )}
+          <Button 
+            variant="outline"
+            onClick={() => setIsItemFormOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Item
+          </Button>
           <Button variant="outline" onClick={() => router.push(`/${franchiseSlug}/dashboard/tables-qr`)}>
             <QrCode className="h-4 w-4 mr-2" />
             QR Codes
@@ -393,6 +447,20 @@ export default function BranchMenuEditPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Add Item Dialog */}
+      {menu && (
+        <MenuItemForm
+          menuId={menu.id}
+          item={null}
+          categories={menu.categories || []}
+          isOpen={isItemFormOpen}
+          onClose={() => setIsItemFormOpen(false)}
+          onSubmit={handleAddItem}
+          onCreateCategory={() => {}}
+          isLoading={addItemLoading}
+        />
+      )}
     </div>
   );
 }
