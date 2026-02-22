@@ -28,7 +28,7 @@ interface CategoryDialogProps {
   category: Category | null;
   franchiseId: number | null;
   menuId: number;
-  onSuccess: () => void;
+  onSuccess: (updatedCategory: Category) => void;
 }
 
 export function CategoryDialog({ 
@@ -99,7 +99,7 @@ export function CategoryDialog({
       
       if (response.data.success) {
         toast.success(category ? 'Category updated successfully' : 'Category created successfully');
-        onSuccess();
+        onSuccess(response.data.data);
         onOpenChange(false);
       }
     } catch (err: any) {

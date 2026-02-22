@@ -43,7 +43,7 @@ interface ItemDialogProps {
   franchiseId: number | null;
   menuId: number;
   currency: string;
-  onSuccess: () => void;
+  onSuccess: (updatedItem: MenuItem) => void;
 }
 
 const ALLERGENS = [
@@ -176,7 +176,7 @@ export function ItemDialog({
       
       if (response.data.success) {
         toast.success(item ? 'Item updated successfully' : 'Item created successfully');
-        onSuccess();
+        onSuccess(response.data.data);
         onOpenChange(false);
       }
     } catch (err: any) {

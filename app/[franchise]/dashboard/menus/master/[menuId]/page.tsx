@@ -158,6 +158,52 @@ export default function MasterMenuEditorPage() {
   const [syncDialog, setSyncDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; type: 'category' | 'item' | 'offer'; id: number; name: string } | null>(null);
 
+  const handleItemSuccess = useCallback((updatedItem: MenuItem) => {
+    setMenu(prevMenu => {
+      if (!prevMenu) return prevMenu;
+      
+      const updatedCategories = prevMenu.categories.map(cat => {
+        if (cat.id === updatedItem.category_id) {
+          const itemIndex = cat.items.findIndex(item => item.id === updatedItem.id);
+          if (itemIndex >= 0) {
+            // Update existing item
+            const newItems = [...cat.items];
+            newItems[itemIndex] = updatedItem;
+            return { ...cat, items: newItems };
+          } else {
+            // Add new item
+            return { ...cat, items: [...cat.items, updatedItem] };
+          }
+        }
+        return cat;
+      });
+      
+      return { ...prevMenu, categories: updatedCategories };
+    });
+  }, []);
+
+  const handleCategorySuccess = useCallback((updatedCategory: Category) => {
+    setMenu(prevMenu => {
+      if (!prevMenu) return prevMenu;
+      
+      const categoryIndex = prevMenu.categories.findIndex(cat => cat.id === updatedCategory.id);
+      if (categoryIndex >= 0) {
+        // Update existing category
+        const newCategories = [...prevMenu.categories];
+        newCategories[categoryIndex] = { ...newCategories[categoryIndex], ...updatedCategory };
+        return { ...prevMenu, categories: newCategories };
+      } else {
+        // Add new category
+        return { ...prevMenu, categories: [...prevMenu.categories, updatedCategory] };
+      }
+    });
+  }, []);
+
+  const handleOfferSuccess = useCallback(() => {
+    // Refresh menu for offers since they're not in the category structure
+    fetchMenu();
+  }, [fetchMenu]);
+
   const fetchMenu = useCallback(async () => {
     try {
       setLoading(true);
@@ -837,7 +883,7 @@ export default function MasterMenuEditorPage() {
         category={categoryDialog.category}
         franchiseId={franchiseId}
         menuId={menu.id}
-        onSuccess={fetchMenu}
+        onSuccess={handleCategorySuccess}
       />
 
       <ItemDialog
@@ -848,7 +894,7 @@ export default function MasterMenuEditorPage() {
         franchiseId={franchiseId}
         menuId={menu.id}
         currency={menu.currency}
-        onSuccess={fetchMenu}
+        onSuccess={handleItemSuccess}
       />
 
       <OfferDialog
@@ -858,7 +904,7 @@ export default function MasterMenuEditorPage() {
         franchiseId={franchiseId}
         menuId={menu.id}
         currency={menu.currency}
-        onSuccess={fetchMenu}
+        onSuccess={handleOfferSuccess}
       />
 
       <SyncDialog
