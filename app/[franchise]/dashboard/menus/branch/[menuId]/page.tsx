@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -94,11 +94,7 @@ export default function BranchMenuEditPage() {
   const [editingCustomizations, setEditingCustomizations] = useState<CustomizationSection[]>([]);
   const [savingVariants, setSavingVariants] = useState(false);
 
-  useEffect(() => {
-    fetchMenu();
-  }, [menuId, franchiseSlug]);
-
-  const fetchMenu = async () => {
+  const fetchMenu = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get(`/franchise/${franchiseSlug}/menus/${menuId}`);
@@ -112,7 +108,11 @@ export default function BranchMenuEditPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [franchiseSlug, menuId]);
+
+  useEffect(() => {
+    fetchMenu();
+  }, [fetchMenu]);
 
   const handlePriceChange = (itemId: number, price: string) => {
     const numPrice = parseFloat(price) || 0;
