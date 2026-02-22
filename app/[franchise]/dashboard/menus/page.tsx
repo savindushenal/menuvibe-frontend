@@ -4,9 +4,27 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { UtensilsCrossed, Eye, Edit, ExternalLink } from 'lucide-react';
+import { UtensilsCrossed, Eye, Edit, ExternalLink, MoreVertical, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
 interface Menu {
   id: number;
@@ -32,6 +50,7 @@ export default function FranchiseMenusPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [menus, setMenus] = useState<Menu[]>([]);
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; menu: Menu | null }>({ open: false, menu: null });
 
   useEffect(() => {
     const fetchMenus = async () => {
@@ -57,6 +76,23 @@ export default function FranchiseMenusPage() {
 
   const getTotalItems = (menu: Menu) => {
     return menu.categories?.reduce((total, cat) => total + (cat.items?.length || 0), 0) || 0;
+  };
+
+  const handleDelete = async () => {
+    if (!deleteDialog.menu) return;
+    
+    try {
+      const response = await api.delete(`/franchise/${franchiseSlug}/menus/${deleteDialog.menu.id}`);
+      
+      if (response.data.success) {
+        toast.success('Menu deleted successfully');
+        setMenus(menus.filter(m => m.id !== deleteDialog.menu?.id));
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to delete menu');
+    } finally {
+      setDeleteDialog({ open: false, menu: null });
+    }
   };
 
   if (loading) {
@@ -134,50 +170,82 @@ export default function FranchiseMenusPage() {
             <Card key={menu.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="flex-1">
                     <CardTitle className="text-lg">{menu.name}</CardTitle>
                     <CardDescription className="mt-1">
                       {menu.location?.name || 'No location'}
                     </CardDescription>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    menu.is_active 
-                      ? 'bg-emerald-100 text-emerald-700' 
-                      : 'bg-neutral-100 text-neutral-600'
-                  }`}>
-                    {menu.is_active ? 'Active' : 'Draft'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      menu.is_active 
+                        ? 'bg-emerald-100 text-emerald-700' 
+                        : 'bg-neutral-100 text-neutral-600'
+                    }`}>
+                      {menu.is_active ? 'Active' : 'Draft'}
+                    </span>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => window.location.href = `/${franchiseSlug}/dashboard/menus/branch/${menu.id}`}
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit Menu
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => window.location.href = `/${franchiseSlug}/menu/${menu.location.branch_id || menu.location.id}`}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Preview
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={() => setDeleteDialog({ open: true, menu })}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete Menu
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between text-sm text-neutral-600 mb-4">
+                <div className="flex items-center justify-between text-sm text-neutral-600">
                   <span>{menu.categories?.length || 0} categories</span>
                   <span>{getTotalItems(menu)} items</span>
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1"
-                    onClick={() => window.location.href = `/${franchiseSlug}/dashboard/menus/branch/${menu.id}`}
-                  >
-                    <Edit className="w-3 h-3 mr-1" />
-                    Edit
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => window.location.href = `/${franchiseSlug}/menu/${menu.location.branch_id || menu.location.id}`}
-                  >
-                    <Eye className="w-3 h-3 mr-1" />
-                    Preview
-                  </Button>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, menu: null })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Branch Menu</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteDialog.menu?.name}"? 
+              This will remove all menu items, categories, and custom overrides for this branch. 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              Delete Menu
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
