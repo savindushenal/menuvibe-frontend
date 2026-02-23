@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,6 +85,10 @@ export function ItemDialog({
     calories: '',
     sku: '',
   });
+
+  const handleCustomizationsChange = useCallback((newSections: CustomizationSection[]) => {
+    setCustomizations(newSections);
+  }, []);
 
   useEffect(() => {
     if (item) {
@@ -316,7 +320,7 @@ export function ItemDialog({
               </div>
               <ItemCustomizationsForm
                 sections={customizations}
-                onChange={setCustomizations}
+                onChange={handleCustomizationsChange}
                 currency={currency}
               />
             </div>
