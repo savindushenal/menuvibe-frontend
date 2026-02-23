@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -89,6 +90,8 @@ interface Category {
 interface CartItem {
   item: MenuItem;
   quantity: number;
+  finalPrice: number;
+  selectedOptions: Record<string, string[]>;
 }
 
 export default function IssoMenuView() {
@@ -146,16 +149,27 @@ export default function IssoMenuView() {
   };
 
   const handleAddToCart = (item: MenuItem, quantity: number) => {
+    const finalPrice = calculateVariationPrice(item, selectedVariations);
     setCartItems(prev => {
-      const existingIndex = prev.findIndex(ci => ci.item.id === item.id);
+      // Match by item id AND selected options (same item with different options = separate cart entry)
+      const optionsKey = JSON.stringify(selectedVariations);
+      const existingIndex = prev.findIndex(
+        ci => ci.item.id === item.id && JSON.stringify(ci.selectedOptions) === optionsKey
+      );
       if (existingIndex >= 0) {
         const updated = [...prev];
         updated[existingIndex].quantity += quantity;
         return updated;
       }
-      return [...prev, { item, quantity }];
+      return [...prev, { item, quantity, finalPrice, selectedOptions: { ...selectedVariations } }];
     });
     setIsProductSheetOpen(false);
+    toast.success(`${item.name} added to cart`, {
+      description: finalPrice !== (typeof item.price === 'string' ? parseFloat(item.price) : item.price)
+        ? `Total: ${data?.menu?.currency || 'LKR'} ${finalPrice.toFixed(2)}`
+        : undefined,
+      duration: 2000,
+    });
   };
 
   const handleUpdateQuantity = (itemId: number, delta: number) => {
@@ -168,20 +182,30 @@ export default function IssoMenuView() {
   };
 
   const cartTotal = cartItems.reduce((sum, ci) => {
-    const price = typeof ci.item.price === 'string' ? parseFloat(ci.item.price) : ci.item.price;
-    return sum + (price * ci.quantity);
+    return sum + (ci.finalPrice * ci.quantity);
   }, 0);
 
   const cartCount = cartItems.reduce((sum, ci) => sum + ci.quantity, 0);
 
-  // Calculate price with variations
+  // Calculate price with variations AND customizations
   const calculateVariationPrice = (item: MenuItem, variations: Record<string, string[]>): number => {
     let basePrice = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
     
-    if (!item.variations) return basePrice;
-    
     let totalModifier = 0;
-    item.variations.forEach((section: any) => {
+    
+    // Add modifiers from variations
+    item.variations?.forEach((section: any) => {
+      const selectedIds = variations[section.id] || [];
+      selectedIds.forEach((optionId: string) => {
+        const option = section.options?.find((opt: any) => opt.id === optionId);
+        if (option && option.price_modifier) {
+          totalModifier += option.price_modifier;
+        }
+      });
+    });
+
+    // Add modifiers from customizations
+    item.customizations?.forEach((section: any) => {
       const selectedIds = variations[section.id] || [];
       selectedIds.forEach((optionId: string) => {
         const option = section.options?.find((opt: any) => opt.id === optionId);
@@ -216,14 +240,23 @@ export default function IssoMenuView() {
   };
 
   const canAddToCart = (): boolean => {
-    if (!selectedItem?.variations) return true;
-    
-    return selectedItem.variations.every((section: any) => {
+    // Check required variations
+    const variationsValid = selectedItem?.variations?.every((section: any) => {
       if (section.required) {
         return (selectedVariations[section.id] || []).length > 0;
       }
       return true;
-    });
+    }) ?? true;
+
+    // Check required customizations
+    const customizationsValid = selectedItem?.customizations?.every((section: any) => {
+      if (section.required) {
+        return (selectedVariations[section.id] || []).length > 0;
+      }
+      return true;
+    }) ?? true;
+
+    return variationsValid && customizationsValid;
   };
 
   if (loading) {
@@ -885,7 +918,7 @@ export default function IssoMenuView() {
                   <div className="space-y-4">
                     {cartItems.map((ci) => (
                       <div
-                        key={ci.item.id}
+                        key={`${ci.item.id}-${JSON.stringify(ci.selectedOptions)}`}
                         className="bg-[#FFF8F0] rounded-xl p-4 flex items-center gap-4"
                       >
                         {ci.item.image_url && (
@@ -900,8 +933,20 @@ export default function IssoMenuView() {
                         )}
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold mb-1" style={{ color: colors.text }}>{ci.item.name}</h4>
+                          {/* Show selected customization/variation options */}
+                          {Object.keys(ci.selectedOptions).length > 0 && (
+                            <p className="text-xs text-gray-500 mb-1 truncate">
+                              {[...(ci.item.variations || []), ...(ci.item.customizations || [])]
+                                .flatMap((section: any) =>
+                                  (ci.selectedOptions[section.id] || []).map((optId: string) => {
+                                    const opt = section.options?.find((o: any) => o.id === optId);
+                                    return opt?.name;
+                                  }).filter(Boolean)
+                                ).join(', ')}
+                            </p>
+                          )}
                           <p className="font-bold text-lg" style={{ color: colors.primary }}>
-                            {data.menu?.currency || 'LKR'} {formatPrice(ci.item.price)}
+                            {data.menu?.currency || 'LKR'} {formatPrice(ci.finalPrice)}
                           </p>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
