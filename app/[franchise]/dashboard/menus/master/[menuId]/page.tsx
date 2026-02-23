@@ -158,6 +158,33 @@ export default function MasterMenuEditorPage() {
   const [syncDialog, setSyncDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; type: 'category' | 'item' | 'offer'; id: number; name: string } | null>(null);
 
+  const fetchMenu = useCallback(async () => {
+    try {
+      setLoading(true);
+      // First get franchise details
+      const franchiseRes = await api.get(`/franchise/${franchiseSlug}/dashboard`);
+      if (franchiseRes.data.success && franchiseRes.data.data.franchise) {
+        const fId = franchiseRes.data.data.franchise.id;
+        setFranchiseId(fId);
+        
+        // Fetch menu with categories, items, and offers
+        const response = await api.get(`/franchises/${fId}/master-menus/${menuId}`);
+        if (response.data.success) {
+          setMenu(response.data.data);
+          // Expand first category by default
+          if (response.data.data.categories?.length > 0) {
+            setExpandedCategories(new Set([response.data.data.categories[0].id]));
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch master menu:', err);
+      setError(err.response?.data?.message || 'Failed to load master menu');
+    } finally {
+      setLoading(false);
+    }
+  }, [franchiseSlug, menuId]);
+
   const handleItemSuccess = useCallback((updatedItem: MenuItem) => {
     setMenu(prevMenu => {
       if (!prevMenu) return prevMenu;
@@ -203,33 +230,6 @@ export default function MasterMenuEditorPage() {
     // Refresh menu for offers since they're not in the category structure
     fetchMenu();
   }, [fetchMenu]);
-
-  const fetchMenu = useCallback(async () => {
-    try {
-      setLoading(true);
-      // First get franchise details
-      const franchiseRes = await api.get(`/franchise/${franchiseSlug}/dashboard`);
-      if (franchiseRes.data.success && franchiseRes.data.data.franchise) {
-        const fId = franchiseRes.data.data.franchise.id;
-        setFranchiseId(fId);
-        
-        // Fetch menu with categories, items, and offers
-        const response = await api.get(`/franchises/${fId}/master-menus/${menuId}`);
-        if (response.data.success) {
-          setMenu(response.data.data);
-          // Expand first category by default
-          if (response.data.data.categories?.length > 0) {
-            setExpandedCategories(new Set([response.data.data.categories[0].id]));
-          }
-        }
-      }
-    } catch (err: any) {
-      console.error('Failed to fetch master menu:', err);
-      setError(err.response?.data?.message || 'Failed to load master menu');
-    } finally {
-      setLoading(false);
-    }
-  }, [franchiseSlug, menuId]);
 
   useEffect(() => {
     fetchMenu();
