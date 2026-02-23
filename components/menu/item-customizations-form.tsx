@@ -119,7 +119,7 @@ export function ItemCustomizationsForm({
             <p className="text-sm text-neutral-500 mb-4">
               No customization sections yet. Add one to let customers personalize this item.
             </p>
-            <Button onClick={addSection} size="sm" variant="outline">
+            <Button type="button" onClick={addSection} size="sm" variant="outline">
               <Plus className="w-4 h-4 mr-2" />
               Add First Section
             </Button>
@@ -154,6 +154,7 @@ export function ItemCustomizationsForm({
                         {section.required ? 'Required' : 'Optional'}
                       </Badge>
                       <Button
+                        type="button"
                         variant="ghost"
                         size="icon"
                         onClick={e => {
@@ -266,6 +267,7 @@ export function ItemCustomizationsForm({
                                 </span>
                               </div>
                               <Button
+                                type="button"
                                 variant="ghost"
                                 size="icon"
                                 onClick={() =>
@@ -281,6 +283,7 @@ export function ItemCustomizationsForm({
                       </div>
 
                       <Button
+                        type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => addOption(section.id)}
@@ -296,7 +299,7 @@ export function ItemCustomizationsForm({
             ))}
           </div>
 
-          <Button onClick={addSection} variant="outline" size="sm">
+          <Button type="button" onClick={addSection} variant="outline" size="sm">
             <Plus className="w-4 h-4 mr-2" />
             Add Section
           </Button>
