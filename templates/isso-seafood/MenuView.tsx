@@ -28,15 +28,16 @@ const ShrimpIcon = ({className = "w-16 h-16", color}: { className?: string; colo
 );
 
 // Isso Logo Component (Dynamic)
-const IssoLogo = ({ logoUrl, brandName, className = "" }: { logoUrl?: string; brandName?: string; className?: string }) => (
+const IssoLogo = ({ logoUrl, brandName, className = "", priority = false }: { logoUrl?: string; brandName?: string; className?: string; priority?: boolean }) => (
   <div className={`flex items-center ${className}`}>
     {logoUrl ? (
       <Image 
         src={logoUrl} 
         alt={brandName || "Isso"} 
-        width={120} 
-        height={40} 
-        className="h-8 md:h-10 w-auto" 
+        width={160} 
+        height={50} 
+        className="h-9 md:h-11 w-auto object-contain" 
+        priority={priority}
       />
     ) : (
       <span className="text-xl md:text-2xl font-bold">{brandName || "ISSO"}</span>
@@ -100,6 +101,7 @@ export default function IssoMenuView() {
   
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [isProductSheetOpen, setIsProductSheetOpen] = useState(false);
@@ -116,7 +118,14 @@ export default function IssoMenuView() {
         
         if (result.success) {
           setData(result.data);
-          // Default to showing all items (activeCategory = null)
+          // Extract logo from all possible API sources
+          const d = result.data;
+          const logo =
+            d?.franchise?.design_tokens?.brand?.logo ||
+            d?.franchise?.logo_url ||
+            d?.business?.logo_url ||
+            null;
+          setLogoUrl(logo);
         }
       } catch (error) {
         console.error('Error fetching menu:', error);
@@ -262,8 +271,24 @@ export default function IssoMenuView() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FFF8F0] flex items-center justify-center">
+        {/* Preload logo if available */}
+        {logoUrl && (
+          <link rel="preload" as="image" href={logoUrl} />
+        )}
         <div className="text-center">
-          <ShrimpIcon className="w-16 h-16 text-[#F26522] mx-auto mb-4 animate-pulse" />
+          {logoUrl ? (
+            <Image
+              src={logoUrl}
+              alt="Loading..."
+              width={120}
+              height={60}
+              className="mx-auto mb-4 animate-pulse object-contain"
+              style={{ maxHeight: 60 }}
+              priority
+            />
+          ) : (
+            <ShrimpIcon className="w-16 h-16 text-[#F26522] mx-auto mb-4 animate-pulse" />
+          )}
           <p className="text-gray-600 text-lg">Loading menu...</p>
         </div>
       </div>
@@ -284,7 +309,12 @@ export default function IssoMenuView() {
   const categories: Category[] = data.menu?.categories || [];
   const brandName = data.franchise?.design_tokens?.brand?.name || 'Isso';
   const brandGreeting = data.franchise?.design_tokens?.brand?.greeting || getGreeting();
-  const brandLogo = data.franchise?.design_tokens?.brand?.logo || data.franchise?.logo_url;
+  const brandLogo =
+    logoUrl ||
+    data.franchise?.design_tokens?.brand?.logo ||
+    data.franchise?.logo_url ||
+    data.business?.logo_url ||
+    null;
   const locationName = data.location?.name || 'Main Location';
   
   // Get design tokens colors or use defaults
@@ -342,7 +372,8 @@ export default function IssoMenuView() {
             <IssoLogo 
               logoUrl={brandLogo} 
               brandName={brandName}
-              className="lg:absolute lg:left-1/2 lg:-translate-x-1/2" 
+              className="lg:absolute lg:left-1/2 lg:-translate-x-1/2"
+              priority
             />
             
             <button 
