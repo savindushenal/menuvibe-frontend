@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +17,7 @@ interface ItemCustomizationsFormProps {
   currency?: string;
 }
 
-function ItemCustomizationsFormComponent({
+export function ItemCustomizationsForm({
   sections,
   onChange,
   currency = 'LKR',
@@ -305,7 +305,3 @@ function ItemCustomizationsFormComponent({
     </div>
   );
 }
-
-ItemCustomizationsFormComponent.displayName = 'ItemCustomizationsForm';
-
-export const ItemCustomizationsForm = React.memo(ItemCustomizationsFormComponent);

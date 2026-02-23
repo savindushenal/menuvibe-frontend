@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,7 +31,7 @@ const SUGGESTED_SIZES = [
   { name: 'Extra Large', shortName: 'XL' },
 ];
 
-function ItemVariantsFormComponent({ 
+export function ItemVariantsForm({ 
   variants, 
   onChange, 
   currency = 'LKR',
@@ -259,7 +259,3 @@ function ItemVariantsFormComponent({
     </Card>
   );
 }
-
-ItemVariantsFormComponent.displayName = 'ItemVariantsForm';
-
-export const ItemVariantsForm = React.memo(ItemVariantsFormComponent);
