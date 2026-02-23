@@ -65,6 +65,19 @@ export interface MenuItem {
       price_modifier?: number;
     }>;
   }>;
+  customizations?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    required: boolean;
+    min_selections?: number;
+    max_selections?: number;
+    options?: Array<{
+      id: string;
+      name: string;
+      price_modifier?: number;
+    }>;
+  }>;
 }
 
 interface Category {
@@ -690,6 +703,69 @@ export default function IssoMenuView() {
                 {selectedItem.variations && selectedItem.variations.length > 0 && (
                   <div className="mb-8 space-y-6 pb-6 border-b border-gray-200">
                     {selectedItem.variations.map((section: any) => {
+                      const isMultiSelect = section.max_selections !== 1;
+                      const selected = selectedVariations[section.id] || [];
+                      const isRequired = section.required;
+                      const isValidSelection = !isRequired || selected.length > 0;
+                      
+                      return (
+                        <div key={section.id}>
+                          <div className="mb-3">
+                            <h4 className="font-bold text-lg text-[#1A1A1A]">{section.name}</h4>
+                            {isRequired && (
+                              <p className="text-xs text-red-500 mt-1">Required</p>
+                            )}
+                            {!isValidSelection && (
+                              <p className="text-xs" style={{ color: colors.primary }}>
+                                {section.min_selections > 1 
+                                  ? `Select at least ${section.min_selections} options` 
+                                  : `Select one option`}
+                              </p>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            {section.options?.map((option: any) => (
+                              <label
+                                key={option.id}
+                                className="flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all"
+                                style={{
+                                  borderColor: selected.includes(option.id) ? colors.primary : '#E5E5E5',
+                                  backgroundColor: selected.includes(option.id) ? `${colors.primary}08` : 'transparent'
+                                }}
+                              >
+                                <input
+                                  type={isMultiSelect ? "checkbox" : "radio"}
+                                  name={section.id}
+                                  value={option.id}
+                                  checked={selected.includes(option.id)}
+                                  onChange={() => handleVariationSelect(section.id, option.id, isMultiSelect)}
+                                  className="w-5 h-5 rounded cursor-pointer"
+                                  style={{
+                                    accentColor: colors.primary
+                                  }}
+                                />
+                                <div className="flex-1">
+                                  <p className="font-medium text-[#1A1A1A]">{option.name}</p>
+                                </div>
+                                {option.price_modifier !== 0 && (
+                                  <span className="font-bold text-sm" style={{ color: colors.primary }}>
+                                    {option.price_modifier > 0 ? '+' : ''}
+                                    {data.menu?.currency || 'LKR'} {formatPrice(option.price_modifier)}
+                                  </span>
+                                )}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Customizations Sections */}
+                {selectedItem.customizations && selectedItem.customizations.length > 0 && (
+                  <div className="mb-8 space-y-6 pb-6 border-b border-gray-200">
+                    {selectedItem.customizations.map((section: any) => {
                       const isMultiSelect = section.max_selections !== 1;
                       const selected = selectedVariations[section.id] || [];
                       const isRequired = section.required;
