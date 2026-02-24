@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/select';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { OfferDialog } from '@/components/franchise/master-menu/offer-dialog';
 
 interface Offer {
   id: number;
@@ -86,6 +87,7 @@ export default function OffersPage() {
   const [selectedMenu, setSelectedMenu] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; offer: Offer | null }>({ open: false, offer: null });
+  const [offerDialog, setOfferDialog] = useState<{ open: boolean; offer: Offer | null; menuId: number | null }>({ open: false, offer: null, menuId: null });
 
   useEffect(() => {
     fetchData();
@@ -103,14 +105,18 @@ export default function OffersPage() {
         const menusRes = await api.get(`/franchises/${fId}/master-menus`);
         if (menusRes.data.success) {
           setMenus(menusRes.data.data || []);
+          // Pre-select first menu as default for offer creation
+          if ((menusRes.data.data || []).length > 0) {
+            setOfferDialog(prev => ({ ...prev, menuId: menusRes.data.data[0].id }));
+          }
           
-          // Fetch offers from each menu
+          // Fetch offers from each menu using the dedicated offers endpoint
           const allOffers: Offer[] = [];
           for (const menu of menusRes.data.data || []) {
             try {
-              const menuRes = await api.get(`/franchises/${fId}/master-menus/${menu.id}`);
-              if (menuRes.data.success && menuRes.data.data.offers) {
-                const offersWithMenu = menuRes.data.data.offers.map((o: any) => ({
+              const offersRes = await api.get(`/franchises/${fId}/master-menus/${menu.id}/offers`);
+              if (offersRes.data.success) {
+                const offersWithMenu = (offersRes.data.data || []).map((o: any) => ({
                   ...o,
                   master_menu_id: menu.id,
                   master_menu_name: menu.name
@@ -272,10 +278,27 @@ export default function OffersPage() {
           </p>
         </div>
         {menus.length > 0 && (
-          <Button onClick={() => router.push(`/${franchiseSlug}/dashboard/menus/master`)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Offer
-          </Button>
+          <div className="flex items-center gap-2">
+            {menus.length > 1 && (
+              <Select
+                value={offerDialog.menuId?.toString() ?? menus[0]?.id?.toString()}
+                onValueChange={(v) => setOfferDialog(prev => ({ ...prev, menuId: Number(v) }))}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select menu" />
+                </SelectTrigger>
+                <SelectContent>
+                  {menus.map(m => (
+                    <SelectItem key={m.id} value={m.id.toString()}>{m.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Button onClick={() => setOfferDialog({ open: true, offer: null, menuId: offerDialog.menuId ?? menus[0]?.id ?? null })}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Offer
+            </Button>
+          </div>
         )}
       </div>
 
@@ -415,7 +438,7 @@ export default function OffersPage() {
                   onToggle={handleToggle}
                   onDuplicate={handleDuplicate}
                   onDelete={() => setDeleteDialog({ open: true, offer })}
-                  onEdit={() => router.push(`/${franchiseSlug}/dashboard/menus/master/${offer.master_menu_id}`)}
+                  onEdit={() => setOfferDialog({ open: true, offer, menuId: offer.master_menu_id })}
                   getOfferTypeIcon={getOfferTypeIcon}
                   getOfferTypeBadge={getOfferTypeBadge}
                 />
@@ -432,7 +455,7 @@ export default function OffersPage() {
                   onToggle={handleToggle}
                   onDuplicate={handleDuplicate}
                   onDelete={() => setDeleteDialog({ open: true, offer })}
-                  onEdit={() => router.push(`/${franchiseSlug}/dashboard/menus/master/${offer.master_menu_id}`)}
+                  onEdit={() => setOfferDialog({ open: true, offer, menuId: offer.master_menu_id })}
                   getOfferTypeIcon={getOfferTypeIcon}
                   getOfferTypeBadge={getOfferTypeBadge}
                 />
@@ -440,6 +463,22 @@ export default function OffersPage() {
             </div>
           </TabsContent>
         </Tabs>
+      )}
+
+      {/* Create / Edit Offer Dialog */}
+      {offerDialog.menuId && (
+        <OfferDialog
+          open={offerDialog.open}
+          onOpenChange={(open) => setOfferDialog({ ...offerDialog, open })}
+          offer={offerDialog.offer as any}
+          franchiseId={franchiseId}
+          menuId={offerDialog.menuId}
+          currency="LKR"
+          onSuccess={() => {
+            setOfferDialog({ open: false, offer: null, menuId: null });
+            fetchData();
+          }}
+        />
       )}
 
       {/* Delete Confirmation */}
