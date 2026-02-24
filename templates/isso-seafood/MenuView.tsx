@@ -339,54 +339,12 @@ export default function IssoMenuView() {
         audio.play().catch(() => {});
       } catch (e) {}
       setIsPlacingOrder(true);
-      // Place order via API
-      if (sessionToken) {
-        try {
-          // Build human-readable selectedVariation for POS display
-          const buildVariationDisplay = (ci: CartItem): { name: string; price: number } | null => {
-            const parts: string[] = [];
-            ci.item.variations?.forEach(section => {
-              (ci.selectedOptions[section.id] || []).forEach(optId => {
-                const opt = section.options?.find(o => o.id === optId);
-                if (opt) parts.push(opt.name);
-              });
-            });
-            ci.item.customizations?.forEach(section => {
-              (ci.selectedOptions[section.id] || []).forEach(optId => {
-                const opt = section.options?.find(o => o.id === optId);
-                if (opt) parts.push(opt.name);
-              });
-            });
-            return parts.length > 0 ? { name: parts.join(', '), price: ci.finalPrice } : null;
-          };
 
-          const res = await fetch(`https://api.menuvire.com/api/menu-session/${sessionToken}/orders`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              items: cartItems.map(ci => {
-                const variationDisplay = buildVariationDisplay(ci);
-                // variation_labels = flat array of selected option names (backend fallback)
-                const variation_labels = variationDisplay ? variationDisplay.name.split(', ') : [];
-                return {
-                  id: ci.item.id,
-                  name: ci.item.name,
-                  quantity: ci.quantity,
-                  unit_price: ci.finalPrice,
-                  selected_options: ci.selectedOptions,
-                  selectedVariation: variationDisplay,
-                  variation_labels,
-                };
-              }),
-              notes: '',
-            }),
-          });
-          const result = await res.json();
-          if (result.success) {
-            setSessionOrders(prev => [result.data, ...prev]);
-          }
-        } catch (e) {}
-      }
+      // Capture cart snapshot before clearing (fire-and-forget API call)
+      const cartSnapshot = [...cartItems];
+      const tokenSnapshot = sessionToken;
+
+      // Close cart immediately — don't block on API response
       setTimeout(() => {
         setIsCartOpen(false);
         setCartItems([]);
@@ -395,6 +353,56 @@ export default function IssoMenuView() {
         toast.success('Order confirmed! 🎉', { duration: 3000 });
         setTimeout(() => setShowOrderStatus(true), 600);
       }, 400);
+
+      // API call in background — order added to state when response arrives
+      if (tokenSnapshot) {
+        (async () => {
+          try {
+            const buildVariationDisplay = (ci: CartItem): { name: string; price: number } | null => {
+              const parts: string[] = [];
+              ci.item.variations?.forEach(section => {
+                (ci.selectedOptions[section.id] || []).forEach(optId => {
+                  const opt = section.options?.find(o => o.id === optId);
+                  if (opt) parts.push(opt.name);
+                });
+              });
+              ci.item.customizations?.forEach(section => {
+                (ci.selectedOptions[section.id] || []).forEach(optId => {
+                  const opt = section.options?.find(o => o.id === optId);
+                  if (opt) parts.push(opt.name);
+                });
+              });
+              return parts.length > 0 ? { name: parts.join(', '), price: ci.finalPrice } : null;
+            };
+
+            const res = await fetch(`https://api.menuvire.com/api/menu-session/${tokenSnapshot}/orders`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                items: cartSnapshot.map(ci => {
+                  const variationDisplay = buildVariationDisplay(ci);
+                  const variation_labels = variationDisplay ? variationDisplay.name.split(', ') : [];
+                  return {
+                    id: ci.item.id,
+                    name: ci.item.name,
+                    quantity: ci.quantity,
+                    unit_price: ci.finalPrice,
+                    selected_options: ci.selectedOptions,
+                    selectedVariation: variationDisplay,
+                    variation_labels,
+                  };
+                }),
+                notes: '',
+              }),
+            });
+            const result = await res.json();
+            if (result.success) {
+              // Adds order to state → triggers Pusher re-subscription for real-time status updates
+              setSessionOrders(prev => [result.data, ...prev]);
+            }
+          } catch (e) {}
+        })();
+      }
     } else {
       sliderX.set(0);
     }
