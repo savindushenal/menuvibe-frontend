@@ -146,8 +146,8 @@ export function ItemDialog({
       return;
     }
     
-    if (!formData.price || parseFloat(formData.price) <= 0) {
-      toast.error('Please enter a valid price');
+    if (formData.price === '' || formData.price === null || formData.price === undefined || parseFloat(formData.price) < 0) {
+      toast.error('Please enter a valid price (0 or more)');
       return;
     }
 

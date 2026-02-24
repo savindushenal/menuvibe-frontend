@@ -65,7 +65,7 @@ const customizationSectionSchema = z.object({
 const menuItemSchema = z.object({
   name: z.string().min(1, 'Item name is required'),
   description: z.string().optional(),
-  price: z.number().min(0, 'Price must be positive'),
+  price: z.number().min(0, 'Price must be 0 or more'),
   currency: z.string().default('USD'),
   category_id: z.number().min(1, 'Category is required'),
   image_url: z.string().optional(),
