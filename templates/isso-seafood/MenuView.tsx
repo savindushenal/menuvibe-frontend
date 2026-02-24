@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { useParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { 
   ShoppingBag, X, MapPin, Star, ChevronRight,
-  Fish, UtensilsCrossed, Salad, Sparkles, Plus, Minus, Gift
+  Fish, UtensilsCrossed, Salad, Sparkles, Plus, Minus, Gift, Loader2, Check
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -109,6 +109,38 @@ export default function IssoMenuView() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVariations, setSelectedVariations] = useState<Record<string, string[]>>({});
+  const [isAdding, setIsAdding] = useState(false);
+  const [isAdded, setIsAdded] = useState(false);
+
+  // Slide-to-confirm state
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const [sliderWidth, setSliderWidth] = useState(0);
+  const sliderX = useMotionValue(0);
+  const thumbWidth = 56;
+  const maxDrag = sliderWidth - thumbWidth - 8;
+  const sliderProgress = useTransform(sliderX, [0, maxDrag > 0 ? maxDrag : 1], [0, 1]);
+  const sliderBgWidth = useTransform(sliderX, [0, maxDrag > 0 ? maxDrag : 1], ['0%', '100%']);
+  const sliderLabelOpacity = useTransform(sliderProgress, [0, 0.3], [1, 0]);
+
+  // Measure slider width
+  useEffect(() => {
+    const update = () => {
+      if (sliderRef.current) setSliderWidth(sliderRef.current.offsetWidth);
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [isCartOpen]);
+
+  // Reset slider when cart closes
+  useEffect(() => {
+    if (!isCartOpen) sliderX.set(0);
+  }, [isCartOpen]);
+
+  // Reset animation when product sheet closes
+  useEffect(() => {
+    if (!isProductSheetOpen) { setIsAdding(false); setIsAdded(false); }
+  }, [isProductSheetOpen]);
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -155,6 +187,44 @@ export default function IssoMenuView() {
     setSelectedItem(item);
     setSelectedVariations({}); // Reset variations for new item
     setIsProductSheetOpen(true);
+  };
+
+  const handleAddToCartWithAnimation = async (item: MenuItem) => {
+    if (!canAddToCart() || isAdding || isAdded) return;
+    setIsAdding(true);
+    if (navigator.vibrate) navigator.vibrate(50);
+    try {
+      const audio = new Audio('/sounds/add-to-cart.mp3');
+      audio.volume = 0.5;
+      audio.play().catch(() => {});
+    } catch (e) {}
+    await new Promise(r => setTimeout(r, 400));
+    setIsAdding(false);
+    setIsAdded(true);
+    if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+    await new Promise(r => setTimeout(r, 500));
+    handleAddToCart(item, 1);
+    setIsAdded(false);
+  };
+
+  const handleSliderDragEnd = () => {
+    const cur = sliderX.get();
+    if (cur > maxDrag * 0.75 && maxDrag > 0) {
+      sliderX.set(maxDrag);
+      if (navigator.vibrate) navigator.vibrate([50, 30, 100]);
+      try {
+        const audio = new Audio('/sounds/applepay.mp3');
+        audio.volume = 0.5;
+        audio.play().catch(() => {});
+      } catch (e) {}
+      setTimeout(() => {
+        setIsCartOpen(false);
+        sliderX.set(0);
+        toast.success('Order confirmed! 🎉', { duration: 3000 });
+      }, 400);
+    } else {
+      sliderX.set(0);
+    }
   };
 
   const handleAddToCart = (item: MenuItem, quantity: number) => {
@@ -873,19 +943,25 @@ export default function IssoMenuView() {
                   </div>
                 )}
 
-                <button
-                  onClick={() => {
-                    if (canAddToCart()) {
-                      handleAddToCart(selectedItem, 1);
-                    }
+                <motion.button
+                  onClick={() => handleAddToCartWithAnimation(selectedItem)}
+                  disabled={!canAddToCart() || isAdding || isAdded}
+                  whileTap={{ scale: 0.97 }}
+                  className="w-full text-white py-4 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: isAdded ? '#22c55e' : colors.primary,
+                    opacity: (!canAddToCart() && !isAdding && !isAdded) ? 0.5 : 1,
                   }}
-                  disabled={!canAddToCart()}
-                  className="w-full text-white py-4 rounded-2xl font-bold text-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: colors.primary }}
                 >
-                  <ShoppingBag className="w-5 h-5" />
-                  Add to Cart
-                </button>
+                  {isAdding ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : isAdded ? (
+                    <Check className="w-5 h-5" />
+                  ) : (
+                    <ShoppingBag className="w-5 h-5" />
+                  )}
+                  {isAdding ? 'Adding...' : isAdded ? 'Added!' : 'Add to Cart'}
+                </motion.button>
               </div>
             </motion.div>
           </>
@@ -990,15 +1066,42 @@ export default function IssoMenuView() {
 
               {cartItems.length > 0 && (
                 <div className="border-t border-gray-200 p-6" style={{ backgroundColor: `${colors.background}dd` || '#FFF8F0' }}>
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center justify-between mb-5">
                     <span className="text-xl font-bold" style={{ color: colors.text }}>Total</span>
                     <span className="text-3xl font-bold" style={{ color: colors.primary }}>
                       {data.menu?.currency || 'LKR'} {cartTotal.toFixed(2)}
                     </span>
                   </div>
-                  <button className="w-full text-white py-4 rounded-xl font-bold text-lg transition-colors" style={{ backgroundColor: colors.primary }}>
-                    Checkout
-                  </button>
+                  {/* Slide to confirm */}
+                  <div
+                    ref={sliderRef}
+                    className="relative h-14 bg-gray-100 rounded-full overflow-hidden select-none"
+                  >
+                    {/* Fill track */}
+                    <motion.div
+                      className="absolute inset-y-0 left-0 rounded-full"
+                      style={{ width: sliderBgWidth, backgroundColor: colors.primary, opacity: 0.25 }}
+                    />
+                    {/* Label */}
+                    <motion.span
+                      style={{ opacity: sliderLabelOpacity }}
+                      className="absolute inset-0 flex items-center justify-center text-gray-500 font-semibold text-sm pointer-events-none select-none"
+                    >
+                      Slide to confirm →
+                    </motion.span>
+                    {/* Thumb */}
+                    <motion.div
+                      drag="x"
+                      dragConstraints={{ left: 0, right: maxDrag > 0 ? maxDrag : 0 }}
+                      dragElastic={0}
+                      dragMomentum={false}
+                      style={{ x: sliderX, backgroundColor: colors.primary }}
+                      onDragEnd={handleSliderDragEnd}
+                      className="absolute top-1 left-1 w-12 h-12 rounded-full flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing z-10"
+                    >
+                      <ChevronRight className="w-6 h-6 text-white" />
+                    </motion.div>
+                  </div>
                 </div>
               )}
             </motion.div>

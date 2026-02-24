@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google';
 import { AuthProvider } from '@/contexts/auth-context';
 import { LocationProvider } from '@/contexts/location-context';
 import { Toaster } from '@/components/ui/toaster';
+import { Toaster as SonnerToaster } from 'sonner';
 import { ConsoleCleanup } from '@/components/console-cleanup';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -26,6 +27,7 @@ export default function RootLayout({
           <LocationProvider>
             {children}
             <Toaster />
+            <SonnerToaster position="bottom-center" richColors />
           </LocationProvider>
         </AuthProvider>
       </body>
