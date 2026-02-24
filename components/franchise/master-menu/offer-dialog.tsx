@@ -33,7 +33,7 @@ interface Offer {
   is_featured: boolean;
   minimum_order: number | null;
   apply_to_all: boolean;
-  branch_overrides?: { branch_id: number; is_active: boolean }[];
+  branch_overrides?: { location_id: number; is_active: boolean }[];
 }
 
 interface Branch {
@@ -117,7 +117,7 @@ export function OfferDialog({
         is_featured: offer.is_featured ?? false,
         apply_to_all: offer.apply_to_all ?? true,
         selectedBranchIds: offer.branch_overrides
-          ? offer.branch_overrides.filter(o => o.is_active).map(o => o.branch_id)
+          ? offer.branch_overrides.filter(o => o.is_active).map(o => o.location_id)
           : [],
       });
     } else {
@@ -195,7 +195,7 @@ export function OfferDialog({
         // Handle branch overrides when not apply_to_all
         if (!formData.apply_to_all && savedOfferId && franchiseId) {
           const prevIds = offer?.branch_overrides
-            ? offer.branch_overrides.filter(o => o.is_active).map(o => o.branch_id)
+            ? offer.branch_overrides.filter(o => o.is_active).map(o => o.location_id)
             : [];
           const toAdd = formData.selectedBranchIds.filter(id => !prevIds.includes(id));
           const toRemove = prevIds.filter(id => !formData.selectedBranchIds.includes(id));

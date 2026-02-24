@@ -68,7 +68,7 @@ interface Offer {
   is_active: boolean;
   is_featured: boolean;
   apply_to_all: boolean;
-  branch_overrides?: { branch_id: number; is_active: boolean }[];
+  branch_overrides?: { location_id: number; is_active: boolean }[];
 }
 
 interface Branch {
