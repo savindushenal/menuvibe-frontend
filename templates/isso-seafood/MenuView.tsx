@@ -362,14 +362,20 @@ export default function IssoMenuView() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              items: cartItems.map(ci => ({
-                id: ci.item.id,
-                name: ci.item.name,
-                quantity: ci.quantity,
-                unit_price: ci.finalPrice,
-                selected_options: ci.selectedOptions,
-                selectedVariation: buildVariationDisplay(ci),
-              })),
+              items: cartItems.map(ci => {
+                const variationDisplay = buildVariationDisplay(ci);
+                // variation_labels = flat array of selected option names (backend fallback)
+                const variation_labels = variationDisplay ? variationDisplay.name.split(', ') : [];
+                return {
+                  id: ci.item.id,
+                  name: ci.item.name,
+                  quantity: ci.quantity,
+                  unit_price: ci.finalPrice,
+                  selected_options: ci.selectedOptions,
+                  selectedVariation: variationDisplay,
+                  variation_labels,
+                };
+              }),
               notes: '',
             }),
           });
