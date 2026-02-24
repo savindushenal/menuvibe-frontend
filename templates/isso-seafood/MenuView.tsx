@@ -790,13 +790,15 @@ export default function IssoMenuView() {
                     {data.offers[0].description}
                   </p>
                   
-                  {data.offers[0].discount_percentage && (
+                  {data.offers[0].discount_value && (
                     <div className="flex items-center gap-2 mt-1.5">
                       <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: colors.accent, color: colors.text }}>
-                        -{data.offers[0].discount_percentage}% OFF
+                        {data.offers[0].discount_type === 'percentage'
+                          ? `-${data.offers[0].discount_value}% OFF`
+                          : `-${data.offers[0].discount_value} OFF`}
                       </span>
-                      {data.offers[0].code && (
-                        <span className="text-xs text-white/70">Code: {data.offers[0].code}</span>
+                      {data.offers[0].badge_text && (
+                        <span className="text-xs text-white/70">{data.offers[0].badge_text}</span>
                       )}
                     </div>
                   )}
