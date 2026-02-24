@@ -17,6 +17,7 @@ type OrderStatus = 'pending' | 'preparing' | 'ready' | 'delivered' | 'completed'
 
 interface OrderItem {
   id: number; name: string; quantity: number; unit_price: number;
+  selectedVariation?: { name: string; price: number } | null;
 }
 
 interface Order {
@@ -128,6 +129,9 @@ function OrderCard({ order, token, locationId, onStatusUpdate }: {
           <div key={i} className="flex items-center justify-between text-sm">
             <span className="text-gray-800">
               <span className="font-bold text-gray-900">{item.quantity}×</span> {item.name}
+              {item.selectedVariation?.name && (
+                <span className="block text-xs text-gray-400 ml-4">{item.selectedVariation.name}</span>
+              )}
             </span>
             <span className="text-gray-500">{order.currency || 'LKR'} {((item.unit_price ?? 0) * item.quantity).toFixed(2)}</span>
           </div>
@@ -281,7 +285,7 @@ export default function PosPage() {
       });
       // Play sound
       try {
-        if (!notifBell.current) notifBell.current = new Audio('/sounds/add-to-cart.mp3');
+        if (!notifBell.current) notifBell.current = new Audio('/sounds/order-received.mp3');
         notifBell.current.play().catch(() => {});
       } catch (e) {}
       // Show in-page notification

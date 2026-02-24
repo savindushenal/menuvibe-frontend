@@ -30,6 +30,9 @@ import {
   isItemAvailable,
   formatPrice,
 } from './types';
+import { useParams } from 'next/navigation';
+import { useMenuSession } from '@/hooks/useMenuSession';
+import { OrderTracker } from '@/components/menu/OrderTracker';
 
 // Default icons
 const DEFAULT_ITEM_ICON = '🍽️';
@@ -51,6 +54,21 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
 
   const design = getColorTheme(menuData.template.settings);
   const symbol = getCurrencySymbol(menuData.template.currency);
+
+  const params = useParams();
+  const { orders, isPlacingOrder, placeOrder } = useMenuSession(params?.code as string ?? '');
+
+  const handlePlaceOrder = async () => {
+    const items = cart.map(ci => ({
+      id: ci.item.id,
+      name: ci.item.name,
+      quantity: ci.quantity,
+      unit_price: ci.selectedVariation?.price ?? getItemPrice(ci.item, menuData.overrides),
+      selectedVariation: ci.selectedVariation ?? null,
+    }));
+    const result = await placeOrder(items, menuData.template.currency || 'LKR');
+    if (result) { setCart([]); setIsCartOpen(false); }
+  };
 
   const addToCart = (item: PublicMenuItem) => {
     if (!isItemAvailable(item, menuData.overrides)) return;
@@ -534,10 +552,12 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
                     </span>
                   </div>
                   <button
-                    className="w-full py-4 rounded-xl text-white font-medium"
+                    onClick={handlePlaceOrder}
+                    disabled={isPlacingOrder}
+                    className="w-full py-4 rounded-xl text-white font-medium disabled:opacity-70"
                     style={{ backgroundColor: design.accent }}
                   >
-                    Place Order
+                    {isPlacingOrder ? 'Placing Order…' : 'Place Order'}
                   </button>
                 </div>
               )}
@@ -556,6 +576,7 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
           scrollbar-width: none;
         }
       `}</style>
+      <OrderTracker orders={orders} />
     </div>
   );
 }
