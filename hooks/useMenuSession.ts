@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { getDeviceId } from '@/lib/deviceId';
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'https://api.menuvire.com/api')
   .replace(/\/api\/?$/, '') + '/api';
@@ -69,12 +70,13 @@ export function useMenuSession(shortCode: string) {
   useEffect(() => {
     if (!shortCode || typeof window === 'undefined') return;
     const stored = getCookie(storageKey);
+    const deviceId = getDeviceId();
     (async () => {
       try {
         const res = await fetch(`${API_BASE}/menu-session/${shortCode}/init`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(stored ? { session_token: stored } : {}),
+          body: JSON.stringify({ session_token: stored, device_id: deviceId }),
         });
         if (!res.ok) return;
         const data = await res.json();

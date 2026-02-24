@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock, Check, ChefHat, CheckCircle2, Truck, XCircle,
-  Bell, BellOff, Wifi, WifiOff, RefreshCw, LogOut,
+  Bell, BellOff, Wifi, WifiOff, RefreshCw, LogOut, Volume2, VolumeX,
 } from 'lucide-react';
 import Pusher from 'pusher-js';
 
@@ -177,8 +177,38 @@ export default function PosPage() {
   const [connected, setConnected] = useState(false);
   const [notifGranted, setNotifGranted] = useState(false);
   const [activeTab, setActiveTab] = useState<'live' | 'done'>('live');
+  // Persistent alarm state — new orders queue until acknowledged
+  const [alertOrders, setAlertOrders] = useState<Order[]>([]);
+  const [alarmMuted, setAlarmMuted] = useState(false);
+  const alarmMutedRef = useRef(false);
   const pusherRef = useRef<Pusher | null>(null);
   const notifBell = useRef<HTMLAudioElement | null>(null);
+  const alarmRef = useRef<HTMLAudioElement | null>(null);
+
+  // Keep ref in sync with state
+  useEffect(() => { alarmMutedRef.current = alarmMuted; }, [alarmMuted]);
+
+  const startAlarm = useCallback(() => {
+    if (alarmMutedRef.current) return;
+    try {
+      if (!alarmRef.current) {
+        alarmRef.current = new Audio('/sounds/order-received.mp3');
+        alarmRef.current.loop = true;
+        alarmRef.current.volume = 0.85;
+      }
+      alarmRef.current.currentTime = 0;
+      alarmRef.current.play().catch(() => {});
+    } catch (e) {}
+  }, []);
+
+  const stopAlarm = useCallback(() => {
+    try { alarmRef.current?.pause(); } catch (e) {}
+  }, []);
+
+  const acknowledgeAlerts = useCallback(() => {
+    setAlertOrders([]);
+    stopAlarm();
+  }, [stopAlarm]);
 
   // Load auth token from sessionStorage (pos login) or localStorage (dashboard login)
   useEffect(() => {
@@ -283,12 +313,10 @@ export default function PosPage() {
         if (prev.find(o => o.id === data.order.id)) return prev;
         return [data.order, ...prev];
       });
-      // Play sound
-      try {
-        if (!notifBell.current) notifBell.current = new Audio('/sounds/order-received.mp3');
-        notifBell.current.play().catch(() => {});
-      } catch (e) {}
-      // Show in-page notification
+      // Add to alert queue — looping alarm until acknowledged
+      setAlertOrders(prev => prev.find(o => o.id === data.order.id) ? prev : [...prev, data.order]);
+      startAlarm();
+      // OS notification (background tab)
       if (Notification.permission === 'granted') {
         new Notification(`🍽 New Order — ${data.order.order_number}`, {
           body: `Table ${data.order.table_identifier || '?'} · ${data.order.items?.length} item(s)`,
@@ -305,7 +333,7 @@ export default function PosPage() {
       pusher.unsubscribe(`pos.${locationId}`);
       pusher.disconnect();
     };
-  }, [locationId]);
+  }, [locationId, startAlarm]);
 
   const handleStatusUpdate = (id: number, newStatus: OrderStatus) => {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus, is_active: ['pending','preparing','ready'].includes(newStatus) } : o));
@@ -326,6 +354,90 @@ export default function PosPage() {
 
   return (
     <div className="min-h-screen bg-[#0F0F0F] text-white">
+
+      {/* ===== PERSISTENT ALARM MODAL ===== */}
+      <AnimatePresence>
+        {alertOrders.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex flex-col items-center justify-center"
+            style={{ backgroundColor: 'rgba(0,0,0,0.92)' }}
+          >
+            {/* Pulsing ring */}
+            <motion.div
+              animate={{ scale: [1, 1.08, 1], opacity: [0.6, 1, 0.6] }}
+              transition={{ repeat: Infinity, duration: 1.2 }}
+              className="absolute w-72 h-72 rounded-full border-4 border-[#F26522] pointer-events-none"
+            />
+
+            <div className="relative z-10 flex flex-col items-center px-6 w-full max-w-lg">
+              {/* Header */}
+              <motion.div
+                animate={{ scale: [1, 1.04, 1] }}
+                transition={{ repeat: Infinity, duration: 0.9 }}
+                className="flex items-center gap-3 mb-6"
+              >
+                <Bell className="w-10 h-10 text-[#F26522]" />
+                <span className="text-4xl font-black text-white tracking-wide">NEW ORDER{alertOrders.length > 1 ? 'S' : ''}!</span>
+              </motion.div>
+
+              {/* Order cards */}
+              <div className="w-full space-y-3 max-h-[55vh] overflow-y-auto mb-6">
+                {alertOrders.map(order => (
+                  <div key={order.id} className="bg-[#1A1A1A] rounded-2xl p-4 border-2 border-[#F26522]">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-black text-xl text-white">{order.order_number}</span>
+                      {order.table_identifier && (
+                        <span className="px-3 py-1 bg-[#F26522] rounded-full text-xs font-bold text-white">
+                          {order.table_identifier}
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-0.5">
+                      {(order.items || []).map((item, i) => (
+                        <p key={i} className="text-sm text-gray-300">
+                          <span className="font-bold text-white">{item.quantity}×</span> {item.name}
+                          {item.selectedVariation?.name && (
+                            <span className="text-gray-500 ml-1">({item.selectedVariation.name})</span>
+                          )}
+                        </p>
+                      ))}
+                    </div>
+                    <p className="mt-2 font-bold text-[#F26522]">
+                      {order.currency || 'LKR'} {parseFloat(String(order.total)).toFixed(2)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => {
+                    const next = !alarmMuted;
+                    setAlarmMuted(next);
+                    alarmMutedRef.current = next;
+                    if (next) stopAlarm(); else startAlarm();
+                  }}
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/15 transition-colors text-sm font-semibold text-gray-300"
+                >
+                  {alarmMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                  {alarmMuted ? 'Unmute' : 'Mute'}
+                </button>
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
+                  onClick={acknowledgeAlerts}
+                  className="flex-1 py-4 rounded-xl bg-[#F26522] hover:bg-[#d4551a] text-white font-black text-xl transition-colors"
+                >
+                  ✅ ACKNOWLEDGE ({alertOrders.length})
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Top bar */}
       <header className="bg-[#1A1A1A] border-b border-white/10 px-4 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">

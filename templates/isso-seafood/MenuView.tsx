@@ -11,6 +11,7 @@ import {
 import Image from 'next/image';
 import Pusher from 'pusher-js';
 import { OrderTracker } from '@/components/menu/OrderTracker';
+import { getDeviceId } from '@/lib/deviceId';
 
 // Cookie helpers — more reliable than localStorage for session tokens
 const setCookie = (name: string, value: string, days = 7) => {
@@ -198,12 +199,13 @@ export default function IssoMenuView() {
     if (!code) return;
     const storageKey = `isso_session_token_${code}`;
     const storedToken = getCookie(storageKey);
+    const deviceId = getDeviceId();
     (async () => {
       try {
         const res = await fetch(`https://api.menuvire.com/api/menu-session/${code}/init`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: storedToken }),
+          body: JSON.stringify({ token: storedToken, session_token: storedToken, device_id: deviceId }),
         });
         const result = await res.json();
         if (result.success) {
