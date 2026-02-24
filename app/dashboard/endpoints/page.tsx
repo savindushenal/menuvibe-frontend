@@ -139,7 +139,8 @@ function EndpointsPageContent() {
   });
 
   const { toast } = useToast();
-  const { currentLocation } = useLocation();
+  const { currentLocation, defaultLocation } = useLocation();
+  const businessLogoUrl = (currentLocation ?? defaultLocation)?.logo_url ?? null;
 
   const { execute: executeCreate, isLoading: isCreating } = useAsyncAction({
     successMessage: 'Endpoint created successfully',
@@ -797,11 +798,24 @@ function EndpointsPageContent() {
           <div className="py-6 flex flex-col items-center">
             {qrCodeData?.url ? (
               <div className="bg-white p-4 rounded-xl shadow-inner border">
-                <img
-                  src={qrCodeData.url}
-                  alt="QR Code"
-                  className="w-64 h-64"
-                />
+                <div className="relative inline-block">
+                  <img
+                    src={qrCodeData.url}
+                    alt="QR Code"
+                    className="w-64 h-64"
+                  />
+                  {businessLogoUrl && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="bg-white rounded-xl shadow p-1.5" style={{ width: '22%', height: '22%' }}>
+                        <img
+                          src={businessLogoUrl}
+                          alt="Brand logo"
+                          className="w-full h-full object-contain rounded-lg"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="w-64 h-64 bg-neutral-100 rounded-xl flex items-center justify-center">

@@ -17,6 +17,7 @@ interface QRCodeDynamicProps {
   endpointName: string;
   locationName?: string;
   businessColor?: string;
+  logoUrl?: string | null;
 }
 
 /**
@@ -37,7 +38,8 @@ export function QRCodeDynamic({
   code, 
   endpointName, 
   locationName,
-  businessColor = '#3B82F6'
+  businessColor = '#3B82F6',
+  logoUrl,
 }: QRCodeDynamicProps) {
   const [showModal, setShowModal] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -117,13 +119,25 @@ export function QRCodeDynamic({
         <CardContent className="space-y-4">
           {/* QR Code Display - Dynamic SVG from API */}
           <div className="relative group bg-white p-4 rounded-lg border-2 flex items-center justify-center">
-            <img 
-              src={qrSvgUrl} 
-              alt={`QR Code for ${endpointName}`}
-              className="w-48 h-48 cursor-pointer hover:scale-105 transition-transform"
-              onClick={() => setShowModal(true)}
-              loading="lazy"
-            />
+            <div className="relative inline-block cursor-pointer hover:scale-105 transition-transform" onClick={() => setShowModal(true)}>
+              <img 
+                src={qrSvgUrl} 
+                alt={`QR Code for ${endpointName}`}
+                className="w-48 h-48"
+                loading="lazy"
+              />
+              {logoUrl && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="bg-white rounded-xl shadow-sm p-1.5" style={{ width: '22%', height: '22%' }}>
+                    <img
+                      src={logoUrl}
+                      alt="Brand logo"
+                      className="w-full h-full object-contain rounded-lg"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
             
             {/* Hover overlay */}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -242,11 +256,24 @@ export function QRCodeDynamic({
           <div className="space-y-4">
             {/* Large QR Display */}
             <div className="bg-white p-8 rounded-lg border-2 flex items-center justify-center">
-              <img 
-                src={qrSvgUrl} 
-                alt={`QR Code for ${endpointName}`}
-                className="w-full max-w-md h-auto"
-              />
+              <div className="relative inline-block w-full max-w-md">
+                <img 
+                  src={qrSvgUrl} 
+                  alt={`QR Code for ${endpointName}`}
+                  className="w-full h-auto"
+                />
+                {logoUrl && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="bg-white rounded-2xl shadow-md p-2" style={{ width: '20%', height: '20%' }}>
+                      <img
+                        src={logoUrl}
+                        alt="Brand logo"
+                        className="w-full h-full object-contain rounded-xl"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             
             {/* Download Options */}
