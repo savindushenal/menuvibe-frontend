@@ -184,12 +184,65 @@ export default function PosPage() {
   const pusherRef = useRef<Pusher | null>(null);
   const notifBell = useRef<HTMLAudioElement | null>(null);
   const alarmRef = useRef<HTMLAudioElement | null>(null);
+  // Web Audio API — unlocked on first user interaction, works on mobile PWA
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const alarmIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioUnlockedRef = useRef(false);
 
-  // Keep ref in sync with state
+  // Keep muted ref in sync with state
   useEffect(() => { alarmMutedRef.current = alarmMuted; }, [alarmMuted]);
+
+  // Unlock AudioContext on first touch/click — required on iOS/Android
+  useEffect(() => {
+    const unlock = () => {
+      if (audioUnlockedRef.current) return;
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        // Play a silent buffer to fully unlock
+        const buf = ctx.createBuffer(1, 1, 22050);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(ctx.destination);
+        src.start(0);
+        audioCtxRef.current = ctx;
+        audioUnlockedRef.current = true;
+      } catch (e) {}
+    };
+    window.addEventListener('touchstart', unlock, { once: true });
+    window.addEventListener('click', unlock, { once: true });
+    return () => {
+      window.removeEventListener('touchstart', unlock);
+      window.removeEventListener('click', unlock);
+    };
+  }, []);
+
+  // Synthesize a double-beep alarm pattern using Web Audio API (works on all devices)
+  const playBeepPattern = useCallback(() => {
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    // Two sharp beeps: 880Hz then 1100Hz
+    [[0, 880], [0.22, 1100]].forEach(([offset, freq]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const t = ctx.currentTime + offset;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.7, t + 0.01);
+      gain.gain.setValueAtTime(0.7, t + 0.14);
+      gain.gain.linearRampToValueAtTime(0, t + 0.18);
+      osc.start(t);
+      osc.stop(t + 0.2);
+    });
+  }, []);
 
   const startAlarm = useCallback(() => {
     if (alarmMutedRef.current) return;
+
+    // 1. Try HTML Audio first (works on desktop after interaction)
     try {
       if (!alarmRef.current) {
         alarmRef.current = new Audio('/sounds/order-received.mp3');
@@ -197,18 +250,55 @@ export default function PosPage() {
         alarmRef.current.volume = 0.85;
       }
       alarmRef.current.currentTime = 0;
-      alarmRef.current.play().catch(() => {});
-    } catch (e) {}
-  }, []);
+      alarmRef.current.play().catch(() => {
+        // Audio file blocked (mobile autoplay policy) — fall back to Web Audio beeps
+        if (!alarmMutedRef.current) {
+          playBeepPattern();
+          if (alarmIntervalRef.current) clearInterval(alarmIntervalRef.current);
+          alarmIntervalRef.current = setInterval(() => {
+            if (!alarmMutedRef.current) playBeepPattern();
+          }, 1500);
+        }
+      });
+    } catch (e) {
+      // No Audio API at all — use Web Audio only
+      playBeepPattern();
+      if (alarmIntervalRef.current) clearInterval(alarmIntervalRef.current);
+      alarmIntervalRef.current = setInterval(() => {
+        if (!alarmMutedRef.current) playBeepPattern();
+      }, 1500);
+    }
+
+    // 2. Always also schedule Web Audio beeps as redundant layer on mobile
+    if (audioUnlockedRef.current) {
+      playBeepPattern();
+      if (alarmIntervalRef.current) clearInterval(alarmIntervalRef.current);
+      alarmIntervalRef.current = setInterval(() => {
+        if (!alarmMutedRef.current) playBeepPattern();
+      }, 1500);
+    }
+  }, [playBeepPattern]);
 
   const stopAlarm = useCallback(() => {
     try { alarmRef.current?.pause(); } catch (e) {}
+    if (alarmIntervalRef.current) {
+      clearInterval(alarmIntervalRef.current);
+      alarmIntervalRef.current = null;
+    }
   }, []);
 
   const acknowledgeAlerts = useCallback(() => {
     setAlertOrders([]);
     stopAlarm();
   }, [stopAlarm]);
+
+  // Clean up alarm interval and AudioContext on unmount
+  useEffect(() => {
+    return () => {
+      if (alarmIntervalRef.current) clearInterval(alarmIntervalRef.current);
+      try { audioCtxRef.current?.close(); } catch (e) {}
+    };
+  }, []);
 
   // Load auth token from sessionStorage (pos login) or localStorage (dashboard login)
   useEffect(() => {
