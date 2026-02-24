@@ -9,6 +9,7 @@ import {
   Fish, UtensilsCrossed, Salad, Sparkles, Plus, Minus, Gift, Loader2, Check, ClipboardList
 } from 'lucide-react';
 import Image from 'next/image';
+import Pusher from 'pusher-js';
 
 // Shrimp SVG Icon
 const ShrimpIcon = ({className = "w-16 h-16", color}: { className?: string; color?: string }) => (
@@ -192,7 +193,7 @@ export default function IssoMenuView() {
         });
         const result = await res.json();
         if (result.success) {
-          const { session_token, cart_data, active_orders, recent_orders } = result;
+          const { session_token, cart_data, active_orders, recent_orders } = result.data;
           setSessionToken(session_token);
           localStorage.setItem(storageKey, session_token);
           if (cart_data && Array.isArray(cart_data) && cart_data.length > 0) {
@@ -223,22 +224,50 @@ export default function IssoMenuView() {
     return () => { if (cartSaveTimerRef.current) clearTimeout(cartSaveTimerRef.current); };
   }, [cartItems, sessionToken]);
 
-  // Poll order status while status screen is open
+  // Subscribe to Pusher for real-time order status when status screen is open
   useEffect(() => {
-    if (!showOrderStatus || !sessionToken) return;
-    const fetchStatus = async () => {
+    if (!showOrderStatus || !sessionOrders.length) return;
+    const activeIds = sessionOrders
+      .filter(o => ['pending', 'preparing', 'ready'].includes(o.status))
+      .map(o => o.id);
+    if (!activeIds.length) return;
+
+    const pusher = new Pusher('f61e00b9dc8be69dc054', { cluster: 'ap2' });
+    const channels = activeIds.map((id) => {
+      const ch = pusher.subscribe(`order.${id}`);
+      ch.bind('order.status_changed', (data: { order: any }) => {
+        setSessionOrders(prev => prev.map(ord =>
+          ord.id === data.order.id ? { ...ord, ...data.order } : ord
+        ));
+        if (data.order.status === 'ready') {
+          toast.success(`Your order ${data.order.order_number} is ready! 🎉`, { duration: 6000 });
+        }
+      });
+      return ch;
+    });
+    return () => { channels.forEach(ch => ch.unbind_all()); pusher.disconnect(); };
+  }, [showOrderStatus]);
+
+  // Background poll every 30s when orders are active but status screen is closed
+  useEffect(() => {
+    if (showOrderStatus || !sessionToken) return;
+    const hasActive = sessionOrders.some(o => ['pending', 'preparing', 'ready'].includes(o.status));
+    if (!hasActive) return;
+    const interval = setInterval(async () => {
       try {
         const res = await fetch(`https://api.menuvire.com/api/menu-session/${sessionToken}/status`);
         const result = await res.json();
         if (result.success) {
-          setSessionOrders([...(result.active_orders || []), ...(result.done_orders || [])]);
+          const updated = [...(result.data.active_orders || []), ...(result.data.done_orders || [])];
+          setSessionOrders(updated);
+          const justReady = updated.find((o: any) => o.status === 'ready' &&
+            !sessionOrders.find((prev: any) => prev.id === o.id && prev.status === 'ready'));
+          if (justReady) toast.success(`Order ${justReady.order_number} is ready! 🎉`, { duration: 6000 });
         }
       } catch (e) {}
-    };
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 15000);
+    }, 30000);
     return () => clearInterval(interval);
-  }, [showOrderStatus, sessionToken]);
+  }, [showOrderStatus, sessionToken, sessionOrders]);
 
   const formatPrice = (price: number | string): string => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
@@ -306,7 +335,7 @@ export default function IssoMenuView() {
           });
           const result = await res.json();
           if (result.success) {
-            setSessionOrders(prev => [result.order, ...prev]);
+            setSessionOrders(prev => [result.data, ...prev]);
           }
         } catch (e) {}
       }
