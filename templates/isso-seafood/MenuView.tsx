@@ -11,7 +11,6 @@ import {
 import Image from 'next/image';
 import Pusher from 'pusher-js';
 import { OrderTracker } from '@/components/menu/OrderTracker';
-import { OrderTracker } from '@/components/menu/OrderTracker';
 
 // Shrimp SVG Icon
 const ShrimpIcon = ({className = "w-16 h-16", color}: { className?: string; color?: string }) => (
