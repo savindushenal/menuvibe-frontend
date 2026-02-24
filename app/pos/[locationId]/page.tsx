@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock, Check, ChefHat, CheckCircle2, Truck, XCircle,
@@ -163,9 +163,11 @@ function OrderCard({ order, token, locationId, onStatusUpdate }: {
 
 export default function PosPage() {
   const params = useParams();
+  const router = useRouter();
   const locationId = params?.locationId as string;
 
   const [token, setToken] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>('');
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
@@ -174,11 +176,19 @@ export default function PosPage() {
   const pusherRef = useRef<Pusher | null>(null);
   const notifBell = useRef<HTMLAudioElement | null>(null);
 
-  // Load auth token
+  // Load auth token from sessionStorage (cleared on tab close)
   useEffect(() => {
-    const t = localStorage.getItem('auth_token');
-    if (t) setToken(t);
-  }, []);
+    const t = sessionStorage.getItem('pos_token');
+    if (!t) {
+      router.replace('/pos/login');
+      return;
+    }
+    setToken(t);
+    try {
+      const u = JSON.parse(sessionStorage.getItem('pos_user') || '{}');
+      setUserName(u.name || u.email || '');
+    } catch {}
+  }, [router]);
 
   // Register service worker + request notification permission
   useEffect(() => {
@@ -197,6 +207,12 @@ export default function PosPage() {
       setNotifGranted(true);
       subscribeWebPush();
     }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('pos_token');
+    sessionStorage.removeItem('pos_user');
+    router.replace('/pos/login');
   };
 
   const subscribeWebPush = useCallback(async () => {
@@ -298,15 +314,9 @@ export default function PosPage() {
   const preparing = activeOrders.filter(o => o.status === 'preparing');
   const ready     = activeOrders.filter(o => o.status === 'ready');
 
+  // While token is being loaded, show a blank screen (redirect happens in useEffect)
   if (!token) {
-    return (
-      <div className="min-h-screen bg-[#1A1A1A] flex items-center justify-center">
-        <div className="text-center text-white">
-          <p className="text-lg mb-4">Please log in to access POS</p>
-          <a href="/auth/login" className="px-6 py-3 bg-[#F26522] rounded-xl font-bold">Log In</a>
-        </div>
-      </div>
-    );
+    return <div className="min-h-screen bg-[#0F0F0F]" />;
   }
 
   return (
@@ -320,7 +330,7 @@ export default function PosPage() {
             </div>
             <div>
               <h1 className="font-bold text-lg leading-none">POS — Kitchen View</h1>
-              <p className="text-xs text-gray-400">Location #{locationId}</p>
+              <p className="text-xs text-gray-400">{userName ? `${userName} · ` : ''}Branch #{locationId}</p>
             </div>
           </div>
 
@@ -350,6 +360,15 @@ export default function PosPage() {
               className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
             >
               <RefreshCw className="w-4 h-4 text-gray-400" />
+            </button>
+
+            {/* Logout */}
+            <button
+              onClick={handleLogout}
+              className="p-1.5 rounded-lg bg-white/5 hover:bg-red-900/40 transition-colors"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4 text-gray-400" />
             </button>
           </div>
         </div>
