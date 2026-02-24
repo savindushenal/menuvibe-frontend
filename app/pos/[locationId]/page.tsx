@@ -176,9 +176,9 @@ export default function PosPage() {
   const pusherRef = useRef<Pusher | null>(null);
   const notifBell = useRef<HTMLAudioElement | null>(null);
 
-  // Load auth token from sessionStorage (cleared on tab close)
+  // Load auth token from sessionStorage (pos login) or localStorage (dashboard login)
   useEffect(() => {
-    const t = sessionStorage.getItem('pos_token');
+    const t = sessionStorage.getItem('pos_token') || localStorage.getItem('auth_token');
     if (!t) {
       router.replace('/pos/login');
       return;
@@ -212,6 +212,7 @@ export default function PosPage() {
   const handleLogout = () => {
     sessionStorage.removeItem('pos_token');
     sessionStorage.removeItem('pos_user');
+    localStorage.removeItem('auth_token');
     router.replace('/pos/login');
   };
 

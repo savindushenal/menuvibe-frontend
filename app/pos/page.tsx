@@ -22,7 +22,7 @@ export default function PosIndexPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const t = sessionStorage.getItem('pos_token');
+    const t = sessionStorage.getItem('pos_token') || localStorage.getItem('auth_token');
     const u = sessionStorage.getItem('pos_user');
     if (!t) {
       router.replace('/pos/login');
@@ -72,6 +72,7 @@ export default function PosIndexPage() {
   const handleLogout = () => {
     sessionStorage.removeItem('pos_token');
     sessionStorage.removeItem('pos_user');
+    localStorage.removeItem('auth_token');
     router.replace('/pos/login');
   };
 
