@@ -67,6 +67,14 @@ interface Offer {
   ends_at: string | null;
   is_active: boolean;
   is_featured: boolean;
+  apply_to_all: boolean;
+  branch_overrides?: { branch_id: number; is_active: boolean }[];
+}
+
+interface Branch {
+  id: number;
+  name: string;
+  branch_name?: string;
 }
 
 interface MasterMenu {
@@ -83,6 +91,7 @@ export default function OffersPage() {
   const [error, setError] = useState<string | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [menus, setMenus] = useState<MasterMenu[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [franchiseId, setFranchiseId] = useState<number | null>(null);
   const [selectedMenu, setSelectedMenu] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
@@ -100,6 +109,16 @@ export default function OffersPage() {
       if (franchiseRes.data.success && franchiseRes.data.data.franchise) {
         const fId = franchiseRes.data.data.franchise.id;
         setFranchiseId(fId);
+
+        // Fetch branches for this franchise
+        try {
+          const branchRes = await api.get(`/franchise/${franchiseSlug}/branches`);
+          if (branchRes.data.success) {
+            setBranches(branchRes.data.data || []);
+          }
+        } catch (e) {
+          console.error('Failed to fetch branches');
+        }
         
         // Fetch all master menus
         const menusRes = await api.get(`/franchises/${fId}/master-menus`);
@@ -474,6 +493,7 @@ export default function OffersPage() {
           franchiseId={franchiseId}
           menuId={offerDialog.menuId}
           currency="LKR"
+          branches={branches}
           onSuccess={() => {
             setOfferDialog({ open: false, offer: null, menuId: null });
             fetchData();

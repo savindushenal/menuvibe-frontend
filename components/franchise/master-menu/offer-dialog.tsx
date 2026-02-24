@@ -10,7 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Loader2, CalendarIcon, Sparkles, Zap, Calendar as CalendarIconAlt, Tag, Clock } from 'lucide-react';
+import { Loader2, CalendarIcon, Sparkles, Zap, Calendar as CalendarIconAlt, Tag, Clock, MapPin, Check } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
@@ -32,6 +33,13 @@ interface Offer {
   is_featured: boolean;
   minimum_order: number | null;
   apply_to_all: boolean;
+  branch_overrides?: { branch_id: number; is_active: boolean }[];
+}
+
+interface Branch {
+  id: number;
+  name: string;
+  branch_name?: string;
 }
 
 interface OfferDialogProps {
@@ -41,6 +49,7 @@ interface OfferDialogProps {
   franchiseId: number | null;
   menuId: number;
   currency: string;
+  branches?: Branch[];
   onSuccess: () => void;
 }
 
@@ -66,6 +75,7 @@ export function OfferDialog({
   franchiseId, 
   menuId, 
   currency,
+  branches = [],
   onSuccess 
 }: OfferDialogProps) {
   const [loading, setLoading] = useState(false);
@@ -85,6 +95,7 @@ export function OfferDialog({
     is_active: true,
     is_featured: false,
     apply_to_all: true,
+    selectedBranchIds: [] as number[],
   });
 
   useEffect(() => {
@@ -105,6 +116,9 @@ export function OfferDialog({
         is_active: offer.is_active ?? true,
         is_featured: offer.is_featured ?? false,
         apply_to_all: offer.apply_to_all ?? true,
+        selectedBranchIds: offer.branch_overrides
+          ? offer.branch_overrides.filter(o => o.is_active).map(o => o.branch_id)
+          : [],
       });
     } else {
       setFormData({
@@ -123,6 +137,7 @@ export function OfferDialog({
         is_active: true,
         is_featured: false,
         apply_to_all: true,
+        selectedBranchIds: [],
       });
     }
   }, [offer, open]);
@@ -174,6 +189,27 @@ export function OfferDialog({
       const response = await api[method](endpoint, payload);
       
       if (response.data.success) {
+        const savedOffer = response.data.data;
+        const savedOfferId = savedOffer?.id ?? offer?.id;
+
+        // Handle branch overrides when not apply_to_all
+        if (!formData.apply_to_all && savedOfferId && franchiseId) {
+          const prevIds = offer?.branch_overrides
+            ? offer.branch_overrides.filter(o => o.is_active).map(o => o.branch_id)
+            : [];
+          const toAdd = formData.selectedBranchIds.filter(id => !prevIds.includes(id));
+          const toRemove = prevIds.filter(id => !formData.selectedBranchIds.includes(id));
+
+          await Promise.allSettled([
+            ...toAdd.map(branchId =>
+              api.post(`/franchises/${franchiseId}/master-menus/${menuId}/offers/${savedOfferId}/override/${branchId}`, { is_active: true })
+            ),
+            ...toRemove.map(branchId =>
+              api.delete(`/franchises/${franchiseId}/master-menus/${menuId}/offers/${savedOfferId}/override/${branchId}`)
+            ),
+          ]);
+        }
+
         toast.success(offer ? 'Offer updated successfully' : 'Offer created successfully');
         onSuccess();
         onOpenChange(false);
@@ -461,16 +497,65 @@ export function OfferDialog({
 
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
-                  <Label>Apply to All</Label>
-                  <p className="text-xs text-neutral-500">All menu items</p>
+                  <Label>All Branches</Label>
+                  <p className="text-xs text-neutral-500">Show on all branches</p>
                 </div>
                 <Switch
                   checked={formData.apply_to_all}
-                  onCheckedChange={(checked) => setFormData({ ...formData, apply_to_all: checked })}
+                  onCheckedChange={(checked) => setFormData({ ...formData, apply_to_all: checked, selectedBranchIds: [] })}
                   disabled={loading}
                 />
               </div>
             </div>
+
+            {/* Branch selector (only when apply_to_all is off) */}
+            {!formData.apply_to_all && branches.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-neutral-500" />
+                  <Label>Select Branches</Label>
+                  <span className="text-xs text-neutral-400">({formData.selectedBranchIds.length} selected)</span>
+                </div>
+                <div className="rounded-lg border divide-y max-h-48 overflow-y-auto">
+                  {branches.map((branch) => {
+                    const checked = formData.selectedBranchIds.includes(branch.id);
+                    return (
+                      <label
+                        key={branch.id}
+                        className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-neutral-50 transition-colors"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(val) => {
+                            const ids = val
+                              ? [...formData.selectedBranchIds, branch.id]
+                              : formData.selectedBranchIds.filter(id => id !== branch.id);
+                            setFormData({ ...formData, selectedBranchIds: ids });
+                          }}
+                          disabled={loading}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{branch.name}</p>
+                          {branch.branch_name && branch.branch_name !== branch.name && (
+                            <p className="text-xs text-neutral-400">{branch.branch_name}</p>
+                          )}
+                        </div>
+                        {checked && <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
+                      </label>
+                    );
+                  })}
+                </div>
+                {formData.selectedBranchIds.length === 0 && (
+                  <p className="text-xs text-amber-600">No branches selected — offer won't show anywhere.</p>
+                )}
+              </div>
+            )}
+
+            {!formData.apply_to_all && branches.length === 0 && (
+              <p className="text-xs text-neutral-500 rounded-lg border p-3">
+                No branches found. The offer won't show unless branches are configured.
+              </p>
+            )}
           </div>
           
           <DialogFooter>
