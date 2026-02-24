@@ -7,6 +7,8 @@ import {
   MapPin, Coffee, X, Plus, Minus, Menu as MenuIcon,
   Percent, Tag, Sparkles, Timer, Gift
 } from 'lucide-react';
+import { useMenuSession } from '@/hooks/useMenuSession';
+import { OrderTracker } from '@/components/menu/OrderTracker';
 
 /**
  * Barista Style Template
@@ -72,6 +74,21 @@ export default function BaristaStyleTemplate({ code }: { code: string }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const { orders, isPlacingOrder, placeOrder } = useMenuSession(code);
+
+  const handlePlaceOrder = async () => {
+    const currency = data?.template?.currency || data?.menu?.currency || 'LKR';
+    const items = cart.map(ci => ({
+      id: ci.item.id,
+      name: ci.item.name,
+      quantity: ci.quantity,
+      unit_price: ci.item.price,
+      selectedVariation: null,
+    }));
+    const result = await placeOrder(items, currency);
+    if (result) { setCart([]); setIsCartOpen(false); }
+  };
 
   useEffect(() => {
     fetchMenuData();
@@ -723,11 +740,12 @@ export default function BaristaStyleTemplate({ code }: { code: string }) {
                     <span style={{ color: colors.primary }}>{currency} {cartTotal.toLocaleString()}</span>
                   </div>
                   <button
-                    onClick={() => alert('Checkout - Connect to POS!')}
-                    className="w-full py-4 rounded-xl text-white font-bold text-lg"
+                    onClick={handlePlaceOrder}
+                    disabled={isPlacingOrder}
+                    className="w-full py-4 rounded-xl text-white font-bold text-lg disabled:opacity-70"
                     style={{ backgroundColor: colors.primary }}
                   >
-                    Place Order
+                    {isPlacingOrder ? 'Placing Order…' : 'Place Order'}
                   </button>
                 </div>
               )}
@@ -750,6 +768,7 @@ export default function BaristaStyleTemplate({ code }: { code: string }) {
           </div>
         </div>
       </footer>
+      <OrderTracker orders={orders} />
     </div>
   );
 }

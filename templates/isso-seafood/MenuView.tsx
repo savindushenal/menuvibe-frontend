@@ -319,6 +319,24 @@ export default function IssoMenuView() {
       // Place order via API
       if (sessionToken) {
         try {
+          // Build human-readable selectedVariation for POS display
+          const buildVariationDisplay = (ci: CartItem): { name: string; price: number } | null => {
+            const parts: string[] = [];
+            ci.item.variations?.forEach(section => {
+              (ci.selectedOptions[section.id] || []).forEach(optId => {
+                const opt = section.options?.find(o => o.id === optId);
+                if (opt) parts.push(opt.name);
+              });
+            });
+            ci.item.customizations?.forEach(section => {
+              (ci.selectedOptions[section.id] || []).forEach(optId => {
+                const opt = section.options?.find(o => o.id === optId);
+                if (opt) parts.push(opt.name);
+              });
+            });
+            return parts.length > 0 ? { name: parts.join(', '), price: ci.finalPrice } : null;
+          };
+
           const res = await fetch(`https://api.menuvire.com/api/menu-session/${sessionToken}/orders`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -329,6 +347,7 @@ export default function IssoMenuView() {
                 quantity: ci.quantity,
                 unit_price: ci.finalPrice,
                 selected_options: ci.selectedOptions,
+                selectedVariation: buildVariationDisplay(ci),
               })),
               notes: '',
             }),
