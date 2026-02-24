@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Pusher from 'pusher-js';
+import { OrderTracker } from '@/components/menu/OrderTracker';
+import { OrderTracker } from '@/components/menu/OrderTracker';
 
 // Shrimp SVG Icon
 const ShrimpIcon = ({className = "w-16 h-16", color}: { className?: string; color?: string }) => (
@@ -201,6 +203,10 @@ export default function IssoMenuView() {
           }
           const allOrders = [...(active_orders || []), ...(recent_orders || [])];
           setSessionOrders(allOrders);
+          // Auto-show order status if there are active orders after refresh
+          if ((active_orders || []).length > 0) {
+            setShowOrderStatus(true);
+          }
         }
       } catch (e) {
         console.error('Session init error', e);
@@ -224,13 +230,16 @@ export default function IssoMenuView() {
     return () => { if (cartSaveTimerRef.current) clearTimeout(cartSaveTimerRef.current); };
   }, [cartItems, sessionToken]);
 
-  // Subscribe to Pusher for real-time order status when status screen is open
+  // Subscribe to Pusher for real-time order status — runs whenever active order set changes
+  const activeOrderKey = sessionOrders
+    .filter(o => ['pending', 'preparing', 'ready'].includes(o.status))
+    .map(o => o.id)
+    .sort()
+    .join(',');
+
   useEffect(() => {
-    if (!showOrderStatus || !sessionOrders.length) return;
-    const activeIds = sessionOrders
-      .filter(o => ['pending', 'preparing', 'ready'].includes(o.status))
-      .map(o => o.id);
-    if (!activeIds.length) return;
+    if (!activeOrderKey) return;
+    const activeIds = activeOrderKey.split(',').map(Number);
 
     const pusher = new Pusher('f61e00b9dc8be69dc054', { cluster: 'ap2' });
     const channels = activeIds.map((id) => {
@@ -246,7 +255,7 @@ export default function IssoMenuView() {
       return ch;
     });
     return () => { channels.forEach(ch => ch.unbind_all()); pusher.disconnect(); };
-  }, [showOrderStatus]);
+  }, [activeOrderKey]);
 
   // Background poll every 30s when orders are active but status screen is closed
   useEffect(() => {
@@ -1386,6 +1395,8 @@ export default function IssoMenuView() {
         )}
       </AnimatePresence>
 
+      {/* Floating order tracker — visible whenever session has orders, even after page refresh */}
+      {!showOrderStatus && <OrderTracker orders={sessionOrders} />}
 
     </div>
   );
