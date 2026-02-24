@@ -80,7 +80,7 @@ export default function FranchiseTablesQRPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [templates, setTemplates] = useState<Array<{ id: number; name: string; location?: { name: string } }>>([]);
-  const [locations, setLocations] = useState<Array<{ id: number; name: string; branch_name?: string; branch_code?: string }>>([]);
+const [locations, setLocations] = useState<Array<{ id: number; name: string; branch_name?: string; branch_code?: string; logo_url?: string | null }>>([]);
 
   // Dialogs
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -838,14 +838,29 @@ export default function FranchiseTablesQRPage() {
               Scan this QR code to access the menu
             </DialogDescription>
           </DialogHeader>
-          {qrCodeData && (
+          {qrCodeData && (() => {
+            const endpointLocation = locations.find(l => l.id === selectedEndpoint?.location_id) ?? locations[0];
+            return (
             <div className="space-y-4">
               <div className="flex justify-center p-6 bg-white rounded-lg border">
-                <img
-                  src={qrCodeData.qr_code_url}
-                  alt="QR Code"
-                  className="w-64 h-64"
-                />
+                <div className="relative inline-block">
+                  <img
+                    src={qrCodeData.qr_code_url}
+                    alt="QR Code"
+                    className="w-64 h-64"
+                  />
+                  {endpointLocation?.logo_url && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="bg-white rounded-xl shadow p-1.5" style={{ width: '22%', height: '22%' }}>
+                        <img
+                          src={endpointLocation.logo_url}
+                          alt="Brand logo"
+                          className="w-full h-full object-contain rounded-lg"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -890,7 +905,8 @@ export default function FranchiseTablesQRPage() {
                 </Button>
               </div>
             </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
