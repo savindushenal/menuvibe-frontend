@@ -16,6 +16,7 @@ import {
   Tag,
   HelpCircle,
   QrCode,
+  Monitor,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useParams, useRouter } from 'next/navigation';
@@ -46,6 +47,7 @@ export function FranchiseSidebar({ franchiseSlug }: FranchiseSidebarProps) {
   // Include both 'manager' and 'branch_manager' for manager-level access
   const allMenuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: `/${franchiseSlug}/dashboard`, roles: ['all'] },
+    { icon: Monitor, label: 'POS', href: `/pos`, roles: ['owner', 'admin', 'manager', 'branch_manager', 'staff'] },
     { icon: ChefHat, label: 'Master Menu', href: `/${franchiseSlug}/dashboard/menus/master`, roles: ['owner', 'admin'] },
     { icon: Tag, label: 'Offers', href: `/${franchiseSlug}/dashboard/menus/offers`, roles: ['owner', 'admin'] },
     { icon: UtensilsCrossed, label: 'Branch Menus', href: `/${franchiseSlug}/dashboard/menus`, roles: ['owner', 'admin', 'manager', 'branch_manager'] },
