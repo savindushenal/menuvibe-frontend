@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { 
   ShoppingBag, X, MapPin, Star, ChevronRight,
-  Fish, UtensilsCrossed, Salad, Sparkles, Plus, Minus, Gift, Loader2, Check
+  Fish, UtensilsCrossed, Salad, Sparkles, Plus, Minus, Gift, Loader2, Check, ClipboardList
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -112,6 +112,13 @@ export default function IssoMenuView() {
   const [isAdding, setIsAdding] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
 
+  // Session + orders state
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [sessionOrders, setSessionOrders] = useState<any[]>([]);
+  const [showOrderStatus, setShowOrderStatus] = useState(false);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const cartSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Slide-to-confirm state
   const sliderRef = useRef<HTMLDivElement>(null);
   const [sliderWidth, setSliderWidth] = useState(0);
@@ -171,6 +178,68 @@ export default function IssoMenuView() {
     }
   }, [code]);
 
+  // Session init — restore cart & active orders from server
+  useEffect(() => {
+    if (!code) return;
+    const storageKey = `isso_session_token_${code}`;
+    const storedToken = localStorage.getItem(storageKey);
+    (async () => {
+      try {
+        const res = await fetch(`https://api.menuvire.com/api/menu-session/${code}/init`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: storedToken }),
+        });
+        const result = await res.json();
+        if (result.success) {
+          const { session_token, cart_data, active_orders, recent_orders } = result;
+          setSessionToken(session_token);
+          localStorage.setItem(storageKey, session_token);
+          if (cart_data && Array.isArray(cart_data) && cart_data.length > 0) {
+            setCartItems(cart_data);
+          }
+          const allOrders = [...(active_orders || []), ...(recent_orders || [])];
+          setSessionOrders(allOrders);
+        }
+      } catch (e) {
+        console.error('Session init error', e);
+      }
+    })();
+  }, [code]);
+
+  // Debounced cart save to server
+  useEffect(() => {
+    if (!sessionToken) return;
+    if (cartSaveTimerRef.current) clearTimeout(cartSaveTimerRef.current);
+    cartSaveTimerRef.current = setTimeout(async () => {
+      try {
+        await fetch(`https://api.menuvire.com/api/menu-session/${sessionToken}/cart`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cart: cartItems }),
+        });
+      } catch (e) {}
+    }, 800);
+    return () => { if (cartSaveTimerRef.current) clearTimeout(cartSaveTimerRef.current); };
+  }, [cartItems, sessionToken]);
+
+  // Poll order status while status screen is open
+  useEffect(() => {
+    if (!showOrderStatus || !sessionToken) return;
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch(`https://api.menuvire.com/api/menu-session/${sessionToken}/status`);
+        const result = await res.json();
+        if (result.success) {
+          setSessionOrders([...(result.active_orders || []), ...(result.done_orders || [])]);
+        }
+      } catch (e) {}
+    };
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 15000);
+    return () => clearInterval(interval);
+  }, [showOrderStatus, sessionToken]);
+
   const formatPrice = (price: number | string): string => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
     return numPrice.toFixed(2);
@@ -207,7 +276,7 @@ export default function IssoMenuView() {
     setIsAdded(false);
   };
 
-  const handleSliderDragEnd = () => {
+  const handleSliderDragEnd = async () => {
     const cur = sliderX.get();
     if (cur > maxDrag * 0.75 && maxDrag > 0) {
       sliderX.set(maxDrag);
@@ -217,10 +286,37 @@ export default function IssoMenuView() {
         audio.volume = 0.5;
         audio.play().catch(() => {});
       } catch (e) {}
+      setIsPlacingOrder(true);
+      // Place order via API
+      if (sessionToken) {
+        try {
+          const res = await fetch(`https://api.menuvire.com/api/menu-session/${sessionToken}/orders`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              items: cartItems.map(ci => ({
+                id: ci.item.id,
+                name: ci.item.name,
+                quantity: ci.quantity,
+                unit_price: ci.finalPrice,
+                selected_options: ci.selectedOptions,
+              })),
+              notes: '',
+            }),
+          });
+          const result = await res.json();
+          if (result.success) {
+            setSessionOrders(prev => [result.order, ...prev]);
+          }
+        } catch (e) {}
+      }
       setTimeout(() => {
         setIsCartOpen(false);
+        setCartItems([]);
         sliderX.set(0);
+        setIsPlacingOrder(false);
         toast.success('Order confirmed! 🎉', { duration: 3000 });
+        setTimeout(() => setShowOrderStatus(true), 600);
       }, 400);
     } else {
       sliderX.set(0);
@@ -430,22 +526,38 @@ export default function IssoMenuView() {
               priority
             />
             
-            <button 
-              onClick={() => setIsCartOpen(true)}
-              className="relative p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <ShoppingBag className="w-6 h-6 text-[#1A1A1A]" />
-              {cartCount > 0 && (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute -top-1 -right-1 text-white text-xs w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center font-semibold"
-                  style={{ backgroundColor: colors.primary }}
+            <div className="flex items-center gap-1">
+              {sessionOrders.filter(o => ['pending','preparing','ready'].includes(o.status)).length > 0 && (
+                <button
+                  onClick={() => setShowOrderStatus(true)}
+                  className="relative p-2 hover:bg-gray-100 rounded-full transition-colors"
                 >
-                  {cartCount}
-                </motion.span>
+                  <ClipboardList className="w-6 h-6" style={{ color: colors.primary }} />
+                  <span
+                    className="absolute -top-1 -right-1 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-semibold"
+                    style={{ backgroundColor: colors.secondary || '#6DBDB6' }}
+                  >
+                    {sessionOrders.filter(o => ['pending','preparing','ready'].includes(o.status)).length}
+                  </span>
+                </button>
               )}
-            </button>
+              <button 
+                onClick={() => setIsCartOpen(true)}
+                className="relative p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <ShoppingBag className="w-6 h-6 text-[#1A1A1A]" />
+                {cartCount > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1 -right-1 text-white text-xs w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center font-semibold"
+                    style={{ backgroundColor: colors.primary }}
+                  >
+                    {cartCount}
+                  </motion.span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </motion.header>
@@ -1104,6 +1216,121 @@ export default function IssoMenuView() {
                   </div>
                 </div>
               )}
+            </motion.div>
+          </>
+        )}
+      {/* Order Status Screen */}
+      <AnimatePresence>
+        {showOrderStatus && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+              onClick={() => setShowOrderStatus(false)}
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30 }}
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-50 max-h-[85vh] flex flex-col"
+            >
+              <div className="px-6 py-5 flex items-center justify-between rounded-t-3xl" style={{ backgroundColor: colors.primary }}>
+                <div>
+                  <h3 className="text-2xl font-bold text-white">Your Orders</h3>
+                  <p className="text-white/90 text-sm">{sessionOrders.length} order{sessionOrders.length !== 1 ? 's' : ''} this session</p>
+                </div>
+                <button
+                  onClick={() => setShowOrderStatus(false)}
+                  className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                >
+                  <X className="w-6 h-6 text-white" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {sessionOrders.length === 0 ? (
+                  <div className="text-center py-16">
+                    <ClipboardList className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">No orders yet</p>
+                  </div>
+                ) : (
+                  sessionOrders.map((order: any) => {
+                    const statusColors: Record<string, string> = {
+                      pending: '#F59E0B',
+                      preparing: colors.primary,
+                      ready: '#10B981',
+                      delivered: '#6B7280',
+                      completed: '#6B7280',
+                      cancelled: '#EF4444',
+                    };
+                    const statusLabels: Record<string, string> = {
+                      pending: '⏳ Pending',
+                      preparing: '👨‍🍳 Preparing',
+                      ready: '✅ Ready!',
+                      delivered: 'Delivered',
+                      completed: 'Completed',
+                      cancelled: 'Cancelled',
+                    };
+                    return (
+                      <div key={order.id} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="font-bold text-lg text-[#1A1A1A]">{order.order_number}</span>
+                          <span
+                            className="px-3 py-1 rounded-full text-sm font-semibold text-white"
+                            style={{ backgroundColor: statusColors[order.status] || '#6B7280' }}
+                          >
+                            {statusLabels[order.status] || order.status}
+                          </span>
+                        </div>
+                        <div className="space-y-1 mb-3">
+                          {(order.items || []).slice(0, 3).map((item: any, idx: number) => (
+                            <p key={idx} className="text-sm text-gray-600">
+                              {item.quantity}× {item.name}
+                            </p>
+                          ))}
+                          {(order.items || []).length > 3 && (
+                            <p className="text-sm text-gray-400">+{(order.items || []).length - 3} more items</p>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold" style={{ color: colors.primary }}>
+                            {data?.menu?.currency || 'LKR'} {parseFloat(order.total || 0).toFixed(2)}
+                          </span>
+                          {order.status === 'pending' && (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await fetch(`https://api.menuvire.com/api/menu-session/${sessionToken}/orders/${order.id}`, {
+                                    method: 'DELETE',
+                                  });
+                                  setSessionOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'cancelled' } : o));
+                                  toast.info('Order cancelled');
+                                } catch (e) {}
+                              }}
+                              className="text-sm text-red-500 font-medium hover:underline"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="p-6 border-t border-gray-100">
+                <button
+                  onClick={() => setShowOrderStatus(false)}
+                  className="w-full py-4 rounded-2xl font-bold text-white text-lg transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: colors.primary }}
+                >
+                  + Add More Items
+                </button>
+              </div>
             </motion.div>
           </>
         )}
