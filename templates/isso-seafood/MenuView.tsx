@@ -1219,6 +1219,8 @@ export default function IssoMenuView() {
             </motion.div>
           </>
         )}
+      </AnimatePresence>
+
       {/* Order Status Screen */}
       <AnimatePresence>
         {showOrderStatus && (
