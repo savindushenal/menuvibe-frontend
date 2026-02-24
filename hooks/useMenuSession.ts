@@ -5,6 +5,19 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'https://api.menuvire.com/api')
   .replace(/\/api\/?$/, '') + '/api';
 
+// Cookie helpers — more persistent than localStorage across browser sessions
+const setCookie = (name: string, value: string, days = 7) => {
+  if (typeof document === 'undefined') return;
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+};
+
+const getCookie = (name: string): string | null => {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+};
+
 export interface OrderSummary {
   id: number;
   order_number: string;
@@ -55,7 +68,7 @@ export function useMenuSession(shortCode: string) {
   // Init / restore session on mount
   useEffect(() => {
     if (!shortCode || typeof window === 'undefined') return;
-    const stored = localStorage.getItem(storageKey);
+    const stored = getCookie(storageKey);
     (async () => {
       try {
         const res = await fetch(`${API_BASE}/menu-session/${shortCode}/init`, {
@@ -69,7 +82,7 @@ export function useMenuSession(shortCode: string) {
           const tok: string = data.data.session_token;
           setSessionToken(tok);
           tokenRef.current = tok;
-          localStorage.setItem(storageKey, tok);
+          setCookie(storageKey, tok, 7);
           const all: OrderSummary[] = [
             ...(data.data.active_orders ?? []),
             ...(data.data.recent_orders ?? []),

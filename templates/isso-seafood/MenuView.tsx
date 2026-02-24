@@ -12,6 +12,19 @@ import Image from 'next/image';
 import Pusher from 'pusher-js';
 import { OrderTracker } from '@/components/menu/OrderTracker';
 
+// Cookie helpers — more reliable than localStorage for session tokens
+const setCookie = (name: string, value: string, days = 7) => {
+  if (typeof document === 'undefined') return;
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+};
+
+const getCookie = (name: string): string | null => {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+};
+
 // Shrimp SVG Icon
 const ShrimpIcon = ({className = "w-16 h-16", color}: { className?: string; color?: string }) => (
   <svg className={className} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -184,7 +197,7 @@ export default function IssoMenuView() {
   useEffect(() => {
     if (!code) return;
     const storageKey = `isso_session_token_${code}`;
-    const storedToken = localStorage.getItem(storageKey);
+    const storedToken = getCookie(storageKey);
     (async () => {
       try {
         const res = await fetch(`https://api.menuvire.com/api/menu-session/${code}/init`, {
@@ -196,7 +209,7 @@ export default function IssoMenuView() {
         if (result.success) {
           const { session_token, cart_data, active_orders, recent_orders } = result.data;
           setSessionToken(session_token);
-          localStorage.setItem(storageKey, session_token);
+          setCookie(storageKey, session_token, 7);
           if (cart_data && Array.isArray(cart_data) && cart_data.length > 0) {
             setCartItems(cart_data);
           }
