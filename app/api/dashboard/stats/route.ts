@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/dashboard/stats - Proxy to Laravel backend
 export async function GET(request: NextRequest) {
   try {

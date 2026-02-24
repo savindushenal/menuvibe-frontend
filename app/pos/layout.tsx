@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from 'next';
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'MenuVibe POS',
@@ -9,10 +9,6 @@ export const metadata: Metadata = {
     title: 'MenuVibe POS',
     statusBarStyle: 'black-translucent',
   },
-};
-
-export const viewport: Viewport = {
-  themeColor: '#F26522',
 };
 
 export default function PosLayout({ children }: { children: React.ReactNode }) {
