@@ -80,7 +80,8 @@ export default function FranchiseTablesQRPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [templates, setTemplates] = useState<Array<{ id: number; name: string; location?: { name: string } }>>([]);
-const [locations, setLocations] = useState<Array<{ id: number; name: string; branch_name?: string; branch_code?: string; logo_url?: string | null }>>([]);
+  const [locations, setLocations] = useState<Array<{ id: number; name: string; branch_name?: string; branch_code?: string; logo_url?: string | null }>>([]);
+  const [franchiseLogo, setFranchiseLogo] = useState<string | null>(null);
 
   // Dialogs
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -136,6 +137,10 @@ const [locations, setLocations] = useState<Array<{ id: number; name: string; bra
     loadLocations();
   }, [franchiseSlug, selectedType]);
 
+  useEffect(() => {
+    if (franchiseSlug) loadFranchiseLogo();
+  }, [franchiseSlug]);
+
   const loadEndpoints = async () => {
     try {
       setLoading(true);
@@ -187,6 +192,21 @@ const [locations, setLocations] = useState<Array<{ id: number; name: string; bra
       }
     } catch (error: any) {
       console.error('Failed to load locations:', error);
+    }
+  };
+
+  const loadFranchiseLogo = async () => {
+    try {
+      const response = await api.get(`/franchise/${franchiseSlug}/dashboard`);
+      if (response.data.success) {
+        const logo =
+          response.data.data?.franchise?.logo_url ||
+          response.data.data?.logo_url ||
+          null;
+        setFranchiseLogo(logo);
+      }
+    } catch {
+      // non-critical — logo just won't show
     }
   };
 
@@ -840,6 +860,7 @@ const [locations, setLocations] = useState<Array<{ id: number; name: string; bra
           </DialogHeader>
           {qrCodeData && (() => {
             const endpointLocation = locations.find(l => l.id === selectedEndpoint?.location_id) ?? locations[0];
+            const logoUrl = endpointLocation?.logo_url || franchiseLogo;
             return (
             <div className="space-y-4">
               <div className="flex justify-center p-6 bg-white rounded-lg border">
@@ -849,11 +870,11 @@ const [locations, setLocations] = useState<Array<{ id: number; name: string; bra
                     alt="QR Code"
                     className="w-64 h-64"
                   />
-                  {endpointLocation?.logo_url && (
+                  {logoUrl && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div className="bg-white rounded-xl shadow p-1.5" style={{ width: '22%', height: '22%' }}>
                         <img
-                          src={endpointLocation.logo_url}
+                          src={logoUrl}
                           alt="Brand logo"
                           className="w-full h-full object-contain rounded-lg"
                         />
