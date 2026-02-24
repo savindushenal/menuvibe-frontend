@@ -271,25 +271,9 @@ export default function IssoMenuView() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FFF8F0] flex items-center justify-center">
-        {/* Preload logo if available */}
-        {logoUrl && (
-          <link rel="preload" as="image" href={logoUrl} />
-        )}
         <div className="text-center">
-          {logoUrl ? (
-            <Image
-              src={logoUrl}
-              alt="Loading..."
-              width={120}
-              height={60}
-              className="mx-auto mb-4 animate-pulse object-contain"
-              style={{ maxHeight: 60 }}
-              priority
-            />
-          ) : (
-            <ShrimpIcon className="w-16 h-16 text-[#F26522] mx-auto mb-4 animate-pulse" />
-          )}
-          <p className="text-gray-600 text-lg">Loading menu...</p>
+          <div className="w-12 h-12 border-4 border-[#F26522] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-500 text-base">Loading menu...</p>
         </div>
       </div>
     );
@@ -1022,17 +1006,7 @@ export default function IssoMenuView() {
         )}
       </AnimatePresence>
 
-      {/* Footer */}
-      <footer className="bg-[#1A1A1A] text-white py-12 px-4 sm:px-6 lg:px-12 mt-16">
-        <div className="max-w-7xl mx-auto text-center">
-          <ShrimpIcon className="w-12 h-12 mx-auto mb-4" color={colors.primary} />
-          <h3 className="text-2xl font-bold mb-2">{brandName}</h3>
-          <p className="text-white/70 mb-4">Fresh from the ocean, served with love</p>
-          <p className="text-sm text-white/50">
-            Powered by MenuVibe • Fresh seafood delivered daily
-          </p>
-        </div>
-      </footer>
+
     </div>
   );
 }
