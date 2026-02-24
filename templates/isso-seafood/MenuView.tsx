@@ -957,9 +957,11 @@ export default function IssoMenuView() {
                         {item.description}
                       </p>
                     )}
-                    <div className="text-lg md:text-xl font-bold" style={{ color: colors.primary }}>
-                      {data.menu?.currency || 'LKR'} {formatPrice(item.price)}
-                    </div>
+                    {parseFloat(item.price as any) !== 0 && (
+                      <div className="text-lg md:text-xl font-bold" style={{ color: colors.primary }}>
+                        {data.menu?.currency || 'LKR'} {formatPrice(item.price)}
+                      </div>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -1024,11 +1026,13 @@ export default function IssoMenuView() {
                   <p className="text-gray-600 text-lg mb-6">{selectedItem.description}</p>
                 )}
 
-                <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-200">
-                  <span className="text-4xl font-bold" style={{ color: colors.primary }}>
-                    {data.menu?.currency || 'LKR'} {formatPrice(calculateVariationPrice(selectedItem, selectedVariations))}
-                  </span>
-                </div>
+                {calculateVariationPrice(selectedItem, selectedVariations) !== 0 && (
+                  <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-200">
+                    <span className="text-4xl font-bold" style={{ color: colors.primary }}>
+                      {data.menu?.currency || 'LKR'} {formatPrice(calculateVariationPrice(selectedItem, selectedVariations))}
+                    </span>
+                  </div>
+                )}
 
                 {/* Variations/Customizations Sections */}
                 {selectedItem.variations && selectedItem.variations.length > 0 && (
