@@ -133,6 +133,7 @@ export default function IssoMenuView() {
   const [sessionOrders, setSessionOrders] = useState<any[]>([]);
   const [showOrderStatus, setShowOrderStatus] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [checkoutPhase, setCheckoutPhase] = useState<'idle' | 'processing' | 'success'>('idle');
   const cartSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Slide-to-confirm state
@@ -332,29 +333,45 @@ export default function IssoMenuView() {
     const cur = sliderX.get();
     if (cur > maxDrag * 0.75 && maxDrag > 0) {
       sliderX.set(maxDrag);
-      if (navigator.vibrate) navigator.vibrate([50, 30, 100]);
+      if (navigator.vibrate) navigator.vibrate([30, 20, 80]);
+
+      // Play Apple Pay sound
       try {
         const audio = new Audio('/sounds/applepay.mp3');
-        audio.volume = 0.5;
+        audio.volume = 0.6;
         audio.play().catch(() => {});
       } catch (e) {}
-      setIsPlacingOrder(true);
 
-      // Capture cart snapshot before clearing (fire-and-forget API call)
+      // Capture snapshots immediately
       const cartSnapshot = [...cartItems];
       const tokenSnapshot = sessionToken;
 
-      // Close cart immediately — don't block on API response
+      // Show Apple Pay-style processing overlay
+      setIsPlacingOrder(true);
+      setCheckoutPhase('processing');
+      setIsCartOpen(false);
+
+      // Transition to success checkmark after 1.1s
       setTimeout(() => {
-        setIsCartOpen(false);
+        setCheckoutPhase('success');
+        if (navigator.vibrate) navigator.vibrate([40, 20, 120]);
+        try {
+          const s = new Audio('/sounds/success.mp3');
+          s.volume = 0.5;
+          s.play().catch(() => {});
+        } catch (e) {}
+      }, 1100);
+
+      // Dismiss overlay and show order status after 2.2s
+      setTimeout(() => {
+        setCheckoutPhase('idle');
         setCartItems([]);
         sliderX.set(0);
         setIsPlacingOrder(false);
-        toast.success('Order confirmed! 🎉', { duration: 3000 });
-        setTimeout(() => setShowOrderStatus(true), 600);
-      }, 400);
+        setTimeout(() => setShowOrderStatus(true), 300);
+      }, 2200);
 
-      // API call in background — order added to state when response arrives
+      // Fire API in background — order added to state when response arrives
       if (tokenSnapshot) {
         (async () => {
           try {
@@ -397,7 +414,6 @@ export default function IssoMenuView() {
             });
             const result = await res.json();
             if (result.success) {
-              // Adds order to state → triggers Pusher re-subscription for real-time status updates
               setSessionOrders(prev => [result.data, ...prev]);
             }
           } catch (e) {}
@@ -1425,6 +1441,96 @@ export default function IssoMenuView() {
 
       {/* Floating order tracker — visible whenever session has orders, even after page refresh */}
       {!showOrderStatus && <OrderTracker orders={sessionOrders} />}
+
+      {/* Apple Pay-style checkout processing overlay */}
+      <AnimatePresence>
+        {checkoutPhase !== 'idle' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 z-[200] flex flex-col items-center justify-center"
+            style={{ backgroundColor: 'rgba(0,0,0,0.92)' }}
+          >
+            <div className="relative w-36 h-36 flex items-center justify-center">
+              {checkoutPhase === 'processing' && (
+                <>
+                  {/* Track ring */}
+                  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="5" />
+                  </svg>
+                  {/* Filling ring */}
+                  <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 120 120">
+                    <motion.circle
+                      cx="60" cy="60" r="52"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="5"
+                      strokeLinecap="round"
+                      strokeDasharray={2 * Math.PI * 52}
+                      initial={{ strokeDashoffset: 2 * Math.PI * 52 }}
+                      animate={{ strokeDashoffset: 0 }}
+                      transition={{ duration: 1.0, ease: 'easeInOut' }}
+                    />
+                  </svg>
+                  {/* Center icon pulsing */}
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 0.8, repeat: Infinity }}
+                  >
+                    <ShoppingBag className="w-10 h-10 text-white/60" />
+                  </motion.div>
+                </>
+              )}
+
+              {checkoutPhase === 'success' && (
+                <motion.div
+                  initial={{ scale: 0.4, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 260, damping: 16 }}
+                  className="flex items-center justify-center"
+                >
+                  <svg width="144" height="144" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="white" strokeWidth="5" />
+                    <motion.path
+                      d="M36 60 L52 78 L84 42"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 0.35, ease: 'easeOut' }}
+                    />
+                  </svg>
+                </motion.div>
+              )}
+            </div>
+
+            <motion.p
+              key={checkoutPhase}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-8 text-white font-semibold text-lg tracking-wide"
+            >
+              {checkoutPhase === 'processing' ? 'Placing order…' : 'Order placed!'}
+            </motion.p>
+
+            {checkoutPhase === 'success' && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="mt-2 text-white/50 text-sm"
+              >
+                Preparing your order tracker…
+              </motion.p>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
