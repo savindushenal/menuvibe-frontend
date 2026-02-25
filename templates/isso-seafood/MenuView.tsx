@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { 
   ShoppingBag, X, MapPin, Star, ChevronRight,
-  Fish, UtensilsCrossed, Salad, Sparkles, Plus, Minus, Gift, Loader2, Check, ClipboardList
+  Fish, UtensilsCrossed, Salad, Sparkles, Plus, Minus, Gift, Loader2, Check, ClipboardList, Tag
 } from 'lucide-react';
 import Image from 'next/image';
 import Pusher from 'pusher-js';
@@ -125,6 +125,7 @@ export default function IssoMenuView() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVariations, setSelectedVariations] = useState<Record<string, string[]>>({});
+  const [appliedOfferId, setAppliedOfferId] = useState<number | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
 
@@ -362,10 +363,16 @@ export default function IssoMenuView() {
         } catch (e) {}
       }, 1100);
 
+      // Capture offer snapshot
+      const offerIdSnapshot = appliedOfferId;
+      const discountSnapshot = discountAmount;
+      const finalTotalSnapshot = finalTotal;
+
       // Dismiss overlay and show order status after 2.2s
       setTimeout(() => {
         setCheckoutPhase('idle');
         setCartItems([]);
+        setAppliedOfferId(null);
         sliderX.set(0);
         setIsPlacingOrder(false);
         setTimeout(() => setShowOrderStatus(true), 300);
@@ -409,6 +416,9 @@ export default function IssoMenuView() {
                     variation_labels,
                   };
                 }),
+                offer_id: offerIdSnapshot,
+                discount_amount: discountSnapshot,
+                total_amount: finalTotalSnapshot,
                 notes: '',
               }),
             });
@@ -464,6 +474,25 @@ export default function IssoMenuView() {
   }, 0);
 
   const cartCount = cartItems.reduce((sum, ci) => sum + ci.quantity, 0);
+
+  const appliedOffer = appliedOfferId != null
+    ? (data?.offers || []).find((o: any) => o.id === appliedOfferId) ?? null
+    : null;
+
+  const discountAmount = (() => {
+    if (!appliedOffer) return 0;
+    const minOrder = Number(appliedOffer.minimum_order) || 0;
+    if (cartTotal < minOrder) return 0;
+    if (appliedOffer.discount_type === 'percentage') {
+      return cartTotal * (Number(appliedOffer.discount_value) / 100);
+    }
+    if (appliedOffer.discount_type === 'flat') {
+      return Math.min(Number(appliedOffer.discount_value), cartTotal);
+    }
+    return 0;
+  })();
+
+  const finalTotal = cartTotal - discountAmount;
 
   // Calculate price with variations AND customizations
   const calculateVariationPrice = (item: MenuItem, variations: Record<string, string[]>): number => {
@@ -1334,10 +1363,69 @@ export default function IssoMenuView() {
 
               {cartItems.length > 0 && (
                 <div className="border-t border-gray-200 p-6" style={{ backgroundColor: `${colors.background}dd` || '#FFF8F0' }}>
+                  {/* Offer Chips */}
+                  {(data.offers || []).length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Available Offers</p>
+                      <div className="flex flex-wrap gap-2">
+                        {(data.offers as any[]).map((offer: any) => {
+                          const isApplied = appliedOfferId === offer.id;
+                          const minOrder = Number(offer.minimum_order) || 0;
+                          const eligible = cartTotal >= minOrder;
+                          return (
+                            <button
+                              key={offer.id}
+                              onClick={() => setAppliedOfferId(isApplied ? null : offer.id)}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                                isApplied
+                                  ? 'text-white border-transparent'
+                                  : eligible
+                                  ? 'bg-white border-dashed'
+                                  : 'bg-gray-50 border-gray-200 opacity-60'
+                              }`}
+                              style={isApplied ? { backgroundColor: colors.primary, borderColor: colors.primary } : { borderColor: colors.primary, color: colors.primary }}
+                            >
+                              <Tag className="w-3 h-3" />
+                              {offer.title}
+                              {offer.discount_value ? (
+                                <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                  isApplied ? 'bg-white/20' : 'bg-orange-50'
+                                }`}>
+                                  {offer.discount_type === 'percentage' ? `-${offer.discount_value}%` : `-${offer.discount_value}`}
+                                </span>
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {appliedOffer && (() => {
+                        const minOrder = Number(appliedOffer.minimum_order) || 0;
+                        return cartTotal < minOrder ? (
+                          <p className="text-xs text-orange-500 mt-2">
+                            Add {data.menu?.currency || 'LKR'} {(minOrder - cartTotal).toFixed(2)} more to unlock this offer
+                          </p>
+                        ) : null;
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Totals */}
+                  {discountAmount > 0 && (
+                    <>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-gray-500">Subtotal</span>
+                        <span className="text-sm text-gray-500">{data.menu?.currency || 'LKR'} {cartTotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-semibold" style={{ color: '#22c55e' }}>Discount ({appliedOffer?.title})</span>
+                        <span className="text-sm font-semibold" style={{ color: '#22c55e' }}>- {data.menu?.currency || 'LKR'} {discountAmount.toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
                   <div className="flex items-center justify-between mb-5">
                     <span className="text-xl font-bold" style={{ color: colors.text }}>Total</span>
                     <span className="text-3xl font-bold" style={{ color: colors.primary }}>
-                      {data.menu?.currency || 'LKR'} {cartTotal.toFixed(2)}
+                      {data.menu?.currency || 'LKR'} {finalTotal.toFixed(2)}
                     </span>
                   </div>
                   {/* Slide to confirm */}
