@@ -11,7 +11,7 @@ interface AuthContextType {
   isLoading: boolean;
   needsOnboarding: boolean;
   setNeedsOnboarding: (value: boolean) => void;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, redirectTo?: string) => Promise<void>;
   register: (name: string, email: string, password: string, passwordConfirmation: string) => Promise<void>;
   logout: () => Promise<void>;
   googleAuth: (accessToken: string) => Promise<void>;
@@ -124,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, redirectTo?: string) => {
     try {
       const response = await apiClient.login({ email, password });
       
@@ -151,7 +151,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(userData);
         
         // Redirect based on user role and contexts
-        if (user.role === 'super_admin' || user.role === 'admin' || user.role === 'support_officer') {
+        if (redirectTo) {
+          router.push(redirectTo);
+        } else if (user.role === 'super_admin' || user.role === 'admin' || user.role === 'support_officer') {
           router.push('/admin');
         } else if (contexts && contexts.length > 0) {
           // Store contexts in sessionStorage for the select-context page

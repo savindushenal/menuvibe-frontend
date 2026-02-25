@@ -300,18 +300,15 @@ export default function PosPage() {
     };
   }, []);
 
-  // Load auth token from sessionStorage (pos login) or localStorage (dashboard login)
+  // Load auth token from localStorage (main login flow, works on iOS PWA)
   useEffect(() => {
-    const t = sessionStorage.getItem('pos_token') || localStorage.getItem('auth_token');
+    const t = localStorage.getItem('auth_token');
     if (!t) {
-      router.replace('/pos/login');
+      router.replace('/auth/login?redirect=/pos');
       return;
     }
     setToken(t);
-    try {
-      const u = JSON.parse(sessionStorage.getItem('pos_user') || '{}');
-      setUserName(u.name || u.email || '');
-    } catch {}
+    setUserName('');
   }, [router]);
 
   // Register service worker + request notification permission
@@ -334,10 +331,8 @@ export default function PosPage() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('pos_token');
-    sessionStorage.removeItem('pos_user');
     localStorage.removeItem('auth_token');
-    router.replace('/pos/login');
+    router.replace('/auth/login');
   };
 
   const subscribeWebPush = useCallback(async () => {

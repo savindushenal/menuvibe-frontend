@@ -22,16 +22,12 @@ export default function PosIndexPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const t = sessionStorage.getItem('pos_token') || localStorage.getItem('auth_token');
-    const u = sessionStorage.getItem('pos_user');
+    const t = localStorage.getItem('auth_token');
     if (!t) {
-      router.replace('/pos/login');
+      router.replace('/auth/login?redirect=/pos');
       return;
     }
     setToken(t);
-    if (u) {
-      try { setUser(JSON.parse(u)); } catch {}
-    }
   }, [router]);
 
   useEffect(() => {
@@ -56,7 +52,10 @@ export default function PosIndexPage() {
         setLoading(false);
         return;
       }
-      const locs: Location[] = data.data || [];
+      const locs: Location[] = data.data?.locations || data.data || [];
+      if (data.data?.user) {
+        setUser(data.data.user);
+      }
       if (locs.length === 1) {
         // Only one branch — go straight in
         router.replace(`/pos/${locs[0].id}`);
@@ -70,10 +69,8 @@ export default function PosIndexPage() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('pos_token');
-    sessionStorage.removeItem('pos_user');
     localStorage.removeItem('auth_token');
-    router.replace('/pos/login');
+    router.replace('/auth/login');
   };
 
   if (loading) {
