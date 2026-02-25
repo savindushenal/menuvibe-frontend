@@ -135,8 +135,6 @@ export default function IssoMenuView() {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [checkoutPhase, setCheckoutPhase] = useState<'idle' | 'processing' | 'success'>('idle');
   const cartSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const sectionRefs = useRef<Record<number, HTMLElement | null>>({});
-  const navRef = useRef<HTMLDivElement>(null);
 
   // Slide-to-confirm state
   const sliderRef = useRef<HTMLDivElement>(null);
@@ -167,40 +165,6 @@ export default function IssoMenuView() {
   useEffect(() => {
     if (!isProductSheetOpen) { setIsAdding(false); setIsAdded(false); }
   }, [isProductSheetOpen]);
-
-  // Uber Eats-style: observe which section is in viewport → highlight nav pill
-  useEffect(() => {
-    if (!data) return;
-    const cats: Category[] = data.menu?.categories || [];
-    const observers: IntersectionObserver[] = [];
-    cats.forEach((cat) => {
-      const el = sectionRefs.current[cat.id];
-      if (!el) return;
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) {
-            setActiveCategory(cat.id);
-            const btn = navRef.current?.querySelector(`[data-cat="${cat.id}"]`) as HTMLElement;
-            btn?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-          }
-        },
-        { rootMargin: '-38% 0px -55% 0px', threshold: 0 }
-      );
-      observer.observe(el);
-      observers.push(observer);
-    });
-    return () => observers.forEach((obs) => obs.disconnect());
-  }, [data]);
-
-  const scrollToSection = (categoryId: number) => {
-    setActiveCategory(categoryId);
-    const el = sectionRefs.current[categoryId];
-    if (el) {
-      const offset = 145;
-      const top = el.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({ top, behavior: 'smooth' });
-    }
-  };
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -898,13 +862,13 @@ export default function IssoMenuView() {
 
       {/* Category Navigation */}
       <div className="sticky top-[73px] md:top-[82px] z-40 bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-12 py-4">
-        <div className="max-w-7xl mx-auto overflow-x-auto scrollbar-hide" ref={navRef}>
+        <div className="max-w-7xl mx-auto overflow-x-auto scrollbar-hide">
           <div className="flex gap-3 min-w-max">
             {/* All Items Button */}
             <motion.button
               onClick={() => {
+                setActiveCategory(null);
                 setSearchQuery('');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -920,10 +884,9 @@ export default function IssoMenuView() {
               return (
                 <motion.button
                   key={category.id}
-                  data-cat={category.id}
                   onClick={() => {
+                    setActiveCategory(category.id);
                     setSearchQuery('');
-                    scrollToSection(category.id);
                   }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -946,7 +909,7 @@ export default function IssoMenuView() {
         </div>
       </div>
 
-      {/* Menu Sections — Uber Eats style: all categories stacked */}
+      {/* Menu — filter by category or show all stacked */}
       <section className="px-4 sm:px-6 lg:px-12 py-6 pb-24">
         <div className="max-w-7xl mx-auto">
           {searchQuery.trim() ? (
@@ -994,13 +957,15 @@ export default function IssoMenuView() {
               </div>
             </div>
           ) : (
-            /* All sections stacked */
+            /* Category filter active → single section; null → all sections stacked */
             <div className="space-y-12">
-              {categories.filter(cat => cat.items.some(i => i.is_available)).map((category) => (
-                <div
-                  key={category.id}
-                  ref={(el) => { sectionRefs.current[category.id] = el; }}
-                >
+              {categories
+                .filter(cat =>
+                  (activeCategory === null || cat.id === activeCategory) &&
+                  cat.items.some(i => i.is_available)
+                )
+                .map((category) => (
+                <div key={category.id}>
                   {/* Section heading */}
                   <div className="flex items-center gap-3 mb-5">
                     <div className="w-1 h-7 rounded-full flex-shrink-0" style={{ backgroundColor: colors.primary }} />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ShoppingCart, Search, Star, Clock, MapPin, Phone, X, Plus, Minus, Check } from 'lucide-react';
 
 /**
@@ -22,8 +22,6 @@ export default function PremiumRestaurantTemplate({ code }: { code: string }) {
   const [cartOpen, setCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const sectionRefs = useRef<Record<number, HTMLElement | null>>({});
-  const navRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchMenuData();
@@ -36,9 +34,7 @@ export default function PremiumRestaurantTemplate({ code }: { code: string }) {
       const result = await response.json();
       if (result.success) {
         setData(result.data);
-        if (result.data.menu.categories?.length > 0) {
-          setSelectedCategory(result.data.menu.categories[0].id);
-        }
+
       }
     } catch (error) {
       console.error('Failed to load menu:', error);
@@ -88,39 +84,7 @@ export default function PremiumRestaurantTemplate({ code }: { code: string }) {
       )
     : [];
 
-  // Uber Eats-style: observe which section is in viewport → highlight nav pill
-  useEffect(() => {
-    if (!data) return;
-    const cats = data.menu?.categories || [];
-    const observers: IntersectionObserver[] = [];
-    cats.forEach((cat: any) => {
-      const el = sectionRefs.current[cat.id];
-      if (!el) return;
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) {
-            setSelectedCategory(cat.id);
-            const btn = navRef.current?.querySelector(`[data-cat="${cat.id}"]`) as HTMLElement;
-            btn?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-          }
-        },
-        { rootMargin: '-38% 0px -55% 0px', threshold: 0 }
-      );
-      observer.observe(el);
-      observers.push(observer);
-    });
-    return () => observers.forEach((obs) => obs.disconnect());
-  }, [data]);
 
-  const scrollToSection = (categoryId: number) => {
-    setSelectedCategory(categoryId);
-    const el = sectionRefs.current[categoryId];
-    if (el) {
-      const offset = 130;
-      const top = el.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({ top, behavior: 'smooth' });
-    }
-  };
 
   if (loading) {
     return (
@@ -219,12 +183,21 @@ export default function PremiumRestaurantTemplate({ code }: { code: string }) {
               />
             </div>
             {/* Category Pills */}
-            <div className="flex gap-2 overflow-x-auto flex-1" ref={navRef}>
+            <div className="flex gap-2 overflow-x-auto flex-1">
+              <button
+                onClick={() => { setSelectedCategory(null); setSearchQuery(''); }}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${
+                  selectedCategory === null
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                All
+              </button>
               {data.menu.categories?.map((cat: any) => (
                 <button
                   key={cat.id}
-                  data-cat={cat.id}
-                  onClick={() => { setSearchQuery(''); scrollToSection(cat.id); }}
+                  onClick={() => { setSearchQuery(''); setSelectedCategory(cat.id); }}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${
                     selectedCategory === cat.id
                       ? 'bg-emerald-600 text-white shadow-md'
@@ -347,10 +320,9 @@ export default function PremiumRestaurantTemplate({ code }: { code: string }) {
         ) : (
           /* All sections stacked */
           <div className="space-y-14">
-            {data.menu.categories?.filter((cat: any) => (cat.items || []).length > 0).map((category: any) => (
+            {data.menu.categories?.filter((cat: any) => (cat.items || []).length > 0 && (selectedCategory === null || cat.id === selectedCategory)).map((category: any) => (
               <div
                 key={category.id}
-                ref={(el) => { sectionRefs.current[category.id] = el; }}
               >
                 {/* Section heading */}
                 <div className="flex items-center gap-3 mb-6">
