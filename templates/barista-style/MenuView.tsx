@@ -661,29 +661,6 @@ export default function BaristaStyleTemplate({ code }: { code: string }) {
           </div>
         )}
       </motion.section>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between">
-                            <h3 className="font-semibold text-gray-800 text-base line-clamp-1">{item.name}</h3>
-                            <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0 hidden md:block" />
-                          </div>
-                          <div className="flex items-center gap-1 mt-1">
-                            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                            <span className="text-xs text-gray-500">4.9</span>
-                          </div>
-                          <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.description}</p>
-                          <p className="font-bold mt-2 text-base" style={{ color: colors.primary }}>
-                            {currency} {item.price.toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </motion.section>
 
       {/* Product Sheet */}
       <AnimatePresence>
