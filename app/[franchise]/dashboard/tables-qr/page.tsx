@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -98,6 +98,66 @@ export default function FranchiseTablesQRPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+
+  // Generate QR with ECL=H + logo in center on a canvas
+  const generateQrWithLogo = useCallback(async (url: string, logoSrc: string | null): Promise<string> => {
+    const QRCode = (await import('qrcode')).default;
+    const size = 512;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    await QRCode.toCanvas(canvas, url, {
+      errorCorrectionLevel: 'H',
+      width: size,
+      margin: 2,
+      color: { dark: '#000000', light: '#ffffff' },
+    });
+    const ctx = canvas.getContext('2d')!;
+    if (logoSrc) {
+      try {
+        const logoImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = logoSrc;
+        });
+        const logoBox = Math.round(size * 0.20);  // 20% — safe within ECL-H 30% tolerance
+        const logoPad = Math.round(logoBox * 0.12);
+        const logoSize = logoBox - logoPad * 2;
+        const x = Math.round((size - logoBox) / 2);
+        const y = Math.round((size - logoBox) / 2);
+        const radius = Math.round(logoBox * 0.18);
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + logoBox - radius, y);
+        ctx.quadraticCurveTo(x + logoBox, y, x + logoBox, y + radius);
+        ctx.lineTo(x + logoBox, y + logoBox - radius);
+        ctx.quadraticCurveTo(x + logoBox, y + logoBox, x + logoBox - radius, y + logoBox);
+        ctx.lineTo(x + radius, y + logoBox);
+        ctx.quadraticCurveTo(x, y + logoBox, x, y + logoBox - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.drawImage(logoImg, x + logoPad, y + logoPad, logoSize, logoSize);
+      } catch {
+        // proceed without logo overlay
+      }
+    }
+    return canvas.toDataURL('image/png');
+  }, []);
+
+  // Re-generate QR whenever the dialog opens
+  useEffect(() => {
+    if (!isQROpen || !qrCodeData) { setQrDataUrl(null); return; }
+    const url = qrCodeData.short_url || qrCodeData.url;
+    const endpointLocation = locations.find(l => l.id === selectedEndpoint?.location_id) ?? locations[0];
+    const logoSrc = endpointLocation?.logo_url || franchiseLogo || null;
+    generateQrWithLogo(url, logoSrc).then(setQrDataUrl).catch(() => setQrDataUrl(null));
+  }, [isQROpen, qrCodeData, selectedEndpoint, locations, franchiseLogo, generateQrWithLogo]);
 
   const [formData, setFormData] = useState<{
     name: string;
@@ -320,83 +380,13 @@ export default function FranchiseTablesQRPage() {
   };
 
   const handleDownloadQR = async () => {
-    if (!qrCodeData?.qr_code_url) return;
-    const logoSrc = franchiseLogo || null;
-
-    try {
-      // Load QR image (proxy through canvas to avoid taint)
-      const qrImg = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = qrCodeData.qr_code_url;
-      });
-
-      const size = qrImg.naturalWidth || 500;
-      const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext('2d')!;
-
-      // Draw QR
-      ctx.drawImage(qrImg, 0, 0, size, size);
-
-      // Overlay logo if available
-      if (logoSrc) {
-        const logoImg = await new Promise<HTMLImageElement>((resolve, reject) => {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = () => resolve(img);
-          img.onerror = reject;
-          img.src = logoSrc;
-        });
-
-        const logoBox = Math.round(size * 0.22);   // 22% of QR
-        const logoImg_size = Math.round(logoBox * 0.75); // logo inside padding
-        const x = Math.round((size - logoBox) / 2);
-        const y = Math.round((size - logoBox) / 2);
-        const pad = Math.round((logoBox - logoImg_size) / 2);
-        const radius = Math.round(logoBox * 0.2);
-
-        // White rounded-square background
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.moveTo(x + radius, y);
-        ctx.lineTo(x + logoBox - radius, y);
-        ctx.quadraticCurveTo(x + logoBox, y, x + logoBox, y + radius);
-        ctx.lineTo(x + logoBox, y + logoBox - radius);
-        ctx.quadraticCurveTo(x + logoBox, y + logoBox, x + logoBox - radius, y + logoBox);
-        ctx.lineTo(x + radius, y + logoBox);
-        ctx.quadraticCurveTo(x, y + logoBox, x, y + logoBox - radius);
-        ctx.lineTo(x, y + radius);
-        ctx.quadraticCurveTo(x, y, x + radius, y);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.drawImage(logoImg, x + pad, y + pad, logoImg_size, logoImg_size);
-      }
-
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${selectedEndpoint?.name || 'qr-code'}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, 'image/png');
-    } catch {
-      // Fallback: plain download without logo
-      const link = document.createElement('a');
-      link.href = qrCodeData.qr_code_url;
-      link.download = `${selectedEndpoint?.name || 'qr-code'}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    if (!qrDataUrl) return;
+    const link = document.createElement('a');
+    link.href = qrDataUrl;
+    link.download = `${selectedEndpoint?.name || 'qr-code'}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleCopyURL = (url: string) => {
@@ -928,30 +918,20 @@ export default function FranchiseTablesQRPage() {
               Scan this QR code to access the menu
             </DialogDescription>
           </DialogHeader>
-          {qrCodeData && (() => {
-            const endpointLocation = locations.find(l => l.id === selectedEndpoint?.location_id) ?? locations[0];
-            const logoUrl = endpointLocation?.logo_url || franchiseLogo;
-            return (
+          {qrCodeData && (
             <div className="space-y-4">
               <div className="flex justify-center p-6 bg-white rounded-lg border">
-                <div className="relative inline-block">
+                {qrDataUrl ? (
                   <img
-                    src={qrCodeData.qr_code_url}
+                    src={qrDataUrl}
                     alt="QR Code"
                     className="w-64 h-64"
                   />
-                  {logoUrl && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="bg-white rounded-xl shadow p-1.5" style={{ width: '22%', height: '22%' }}>
-                        <img
-                          src={logoUrl}
-                          alt="Brand logo"
-                          className="w-full h-full object-contain rounded-lg"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
+                ) : (
+                  <div className="w-64 h-64 flex items-center justify-center">
+                    <RefreshCw className="w-8 h-8 animate-spin text-gray-300" />
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -996,8 +976,7 @@ export default function FranchiseTablesQRPage() {
                 </Button>
               </div>
             </div>
-            );
-          })()}
+            )}
         </DialogContent>
       </Dialog>
     </div>
