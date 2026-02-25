@@ -101,6 +101,7 @@ export interface MenuItem {
 interface Category {
   id: number;
   name: string;
+  description?: string;
   items: MenuItem[];
 }
 
@@ -998,12 +999,19 @@ export default function IssoMenuView() {
                 .map((category) => (
                 <div key={category.id}>
                   {/* Section heading */}
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="w-1 h-7 rounded-full flex-shrink-0" style={{ backgroundColor: colors.primary }} />
-                    <h2 className="text-xl md:text-2xl font-bold text-[#1A1A1A]">{category.name}</h2>
-                    <span className="text-sm text-gray-400 font-medium">
-                      {category.items.filter(i => i.is_available).length} items
-                    </span>
+                  <div className="mb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1 h-7 rounded-full flex-shrink-0" style={{ backgroundColor: colors.primary }} />
+                      <h2 className="text-xl md:text-2xl font-bold text-[#1A1A1A]">{category.name}</h2>
+                      <span className="text-sm text-gray-400 font-medium">
+                        {category.items.filter(i => i.is_available).length} items
+                      </span>
+                    </div>
+                    {category.description && (
+                      <p className="mt-1.5 ml-4 text-sm text-gray-500 italic border-l-2 pl-3" style={{ borderColor: `${colors.primary}55` }}>
+                        {category.description}
+                      </p>
+                    )}
                   </div>
                   {/* Items grid */}
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">

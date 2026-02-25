@@ -610,12 +610,19 @@ export default function BaristaStyleTemplate({ code }: { code: string }) {
               .map((category: Category) => (
                 <div key={category.id}>
                   {/* Section heading */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-1 h-7 rounded-full flex-shrink-0" style={{ backgroundColor: colors.primary }} />
-                    <h2 className="text-lg md:text-xl font-bold text-gray-800">{category.name}</h2>
-                    <span className="text-sm text-gray-400 font-medium">
-                      {category.items.filter((i: MenuItem) => i.is_available !== false).length} items
-                    </span>
+                  <div className="mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-1 h-7 rounded-full flex-shrink-0" style={{ backgroundColor: colors.primary }} />
+                      <h2 className="text-lg md:text-xl font-bold text-gray-800">{category.name}</h2>
+                      <span className="text-sm text-gray-400 font-medium">
+                        {category.items.filter((i: MenuItem) => i.is_available !== false).length} items
+                      </span>
+                    </div>
+                    {(category as any).description && (
+                      <p className="mt-1.5 ml-4 text-sm text-gray-500 italic border-l-2 pl-3" style={{ borderColor: `${colors.primary}55` }}>
+                        {(category as any).description}
+                      </p>
+                    )}
                   </div>
                   {/* Items list */}
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4">

@@ -35,6 +35,9 @@ interface Order {
   preparing_at: string | null;
   ready_at: string | null;
   delivered_at: string | null;
+  discount_amount?: number | string | null;
+  offer_id?: number | null;
+  offer_title?: string | null;
 }
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bg: string; border: string; icon: any }> = {
@@ -142,6 +145,23 @@ function OrderCard({ order, token, locationId, onStatusUpdate }: {
       {order.notes && (
         <div className="px-4 pb-2 text-xs text-amber-700 bg-amber-50 border-t border-amber-100 py-2">
           📝 {order.notes}
+        </div>
+      )}
+
+      {/* Offer / Discount */}
+      {order.discount_amount != null && Number(order.discount_amount) > 0 && (
+        <div className="px-4 py-2 bg-green-50 border-t border-green-100 space-y-0.5">
+          {order.offer_title && (
+            <div className="text-xs text-green-700 font-semibold">🏷️ {order.offer_title}</div>
+          )}
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-500">Subtotal</span>
+            <span className="text-gray-500">{order.currency || 'LKR'} {(total + Number(order.discount_amount)).toFixed(2)}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-green-700 font-semibold">Discount</span>
+            <span className="text-green-700 font-semibold">- {order.currency || 'LKR'} {Number(order.discount_amount).toFixed(2)}</span>
+          </div>
         </div>
       )}
 

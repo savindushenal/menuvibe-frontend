@@ -325,13 +325,20 @@ export default function PremiumRestaurantTemplate({ code }: { code: string }) {
                 key={category.id}
               >
                 {/* Section heading */}
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-1 h-8 rounded-full bg-emerald-600 flex-shrink-0" />
-                  <h2 className="text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-2">
-                    {category.icon && <span className="text-3xl">{category.icon}</span>}
-                    {category.name}
-                  </h2>
-                  <span className="text-sm text-gray-400 font-medium">{category.items.length} items</span>
+                <div className="mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-1 h-8 rounded-full bg-emerald-600 flex-shrink-0" />
+                    <h2 className="text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-2">
+                      {category.icon && <span className="text-3xl">{category.icon}</span>}
+                      {category.name}
+                    </h2>
+                    <span className="text-sm text-gray-400 font-medium">{category.items.length} items</span>
+                  </div>
+                  {category.description && (
+                    <p className="mt-1.5 ml-4 text-sm text-gray-500 italic border-l-2 border-emerald-200 pl-3">
+                      {category.description}
+                    </p>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {category.items.map((item: any) => (
