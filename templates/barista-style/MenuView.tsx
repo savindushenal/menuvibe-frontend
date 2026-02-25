@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShoppingBag, Search, Star, ChevronRight, Clock, 
@@ -74,6 +74,8 @@ export default function BaristaStyleTemplate({ code }: { code: string }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const sectionRefs = useRef<Record<number, HTMLElement | null>>({});
+  const navRef = useRef<HTMLDivElement>(null);
 
   const { orders, isPlacingOrder, placeOrder } = useMenuSession(code);
 
@@ -102,7 +104,7 @@ export default function BaristaStyleTemplate({ code }: { code: string }) {
       
       if (result.success) {
         setData(result.data);
-        // Set first category as active
+        // Set first category as active for initial highlight
         if (result.data.menu.categories?.length > 0) {
           setActiveCategory(result.data.menu.categories[0].id);
         }
@@ -147,12 +149,53 @@ export default function BaristaStyleTemplate({ code }: { code: string }) {
   const cartTotal = cart.reduce((sum, ci) => sum + (ci.item.price * ci.quantity), 0);
   const cartCount = cart.reduce((sum, ci) => sum + ci.quantity, 0);
 
-  // Filter items by active category
-  const activeItems = data?.menu.categories?.find((c: Category) => c.id === activeCategory)?.items || [];
+  // Search-filtered flat list (for search mode only)
+  const allItems: MenuItem[] = data?.menu?.categories?.flatMap((c: Category) => c.items) || [];
+  const searchResults = searchQuery.trim()
+    ? allItems.filter((item: MenuItem) =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : [];
+
   const featuredItems = data?.menu.categories
     ?.flatMap((c: Category) => c.items)
     .filter((item: MenuItem) => item.is_featured)
     .slice(0, 4);
+
+  // Uber Eats-style: observe which section is in viewport → highlight nav pill
+  useEffect(() => {
+    if (!data) return;
+    const cats: Category[] = data.menu?.categories || [];
+    const observers: IntersectionObserver[] = [];
+    cats.forEach((cat) => {
+      const el = sectionRefs.current[cat.id];
+      if (!el) return;
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setActiveCategory(cat.id);
+            const btn = navRef.current?.querySelector(`[data-cat="${cat.id}"]`) as HTMLElement;
+            btn?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+          }
+        },
+        { rootMargin: '-38% 0px -55% 0px', threshold: 0 }
+      );
+      observer.observe(el);
+      observers.push(observer);
+    });
+    return () => observers.forEach((obs) => obs.disconnect());
+  }, [data]);
+
+  const scrollToSection = (categoryId: number) => {
+    setActiveCategory(categoryId);
+    const el = sectionRefs.current[categoryId];
+    if (el) {
+      const offset = 145;
+      const top = el.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+  };
 
   if (loading) {
     return (
@@ -512,11 +555,12 @@ export default function BaristaStyleTemplate({ code }: { code: string }) {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
       >
-        <div className="flex gap-2 overflow-x-auto px-4 py-3">
+        <div className="flex gap-2 overflow-x-auto px-4 py-3" ref={navRef}>
           {data.menu.categories?.map((category: Category) => (
             <button
               key={category.id}
-              onClick={() => setActiveCategory(category.id)}
+              data-cat={category.id}
+              onClick={() => scrollToSection(category.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all ${
                 activeCategory === category.id
                   ? 'text-white shadow-lg'
@@ -533,61 +577,110 @@ export default function BaristaStyleTemplate({ code }: { code: string }) {
         </div>
       </motion.section>
 
-      {/* Menu Items */}
+      {/* Menu Sections — Uber Eats style: all categories stacked */}
       <motion.section 
-        className="px-4 pb-24"
+        className="px-4 pb-28"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.6 }}
       >
-        <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-4 mt-6">Menu</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4">
-          {activeItems.map((item: MenuItem, index: number) => (
-            <motion.div
-              key={item.id}
-              onClick={() => { setSelectedItem(item); setIsProductSheetOpen(true); }}
-              className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7 + index * 0.05 }}
-              whileHover={{ scale: 1.01, y: -2 }}
-              whileTap={{ scale: 0.99 }}
-            >
-              <div className="flex gap-4">
-                {/* Image */}
-                <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
-                  {item.image_url ? (
-                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-3xl">
-                      {item.icon || '🍽️'}
+        {searchQuery.trim() ? (
+          /* Search flat list */
+          <div className="pt-6">
+            <p className="text-sm text-gray-500 mb-4">
+              {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for &ldquo;{searchQuery}&rdquo;
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4">
+              {searchResults.map((item: MenuItem, index: number) => (
+                <motion.div
+                  key={item.id}
+                  onClick={() => { setSelectedItem(item); setIsProductSheetOpen(true); }}
+                  className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.04 }}
+                  whileHover={{ scale: 1.01, y: -2 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  <div className="flex gap-4">
+                    <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+                      {item.image_url ? (
+                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-3xl">{item.icon || '🍽️'}</div>
+                      )}
                     </div>
-                  )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-800 text-base line-clamp-1">{item.name}</h3>
+                      <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.description}</p>
+                      <p className="font-bold mt-2 text-base" style={{ color: colors.primary }}>
+                        {currency} {item.price.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          /* All sections stacked */
+          <div className="space-y-10 pt-6">
+            {data.menu.categories?.filter((cat: Category) => cat.items.some((i: MenuItem) => i.is_available !== false)).map((category: Category) => (
+              <div
+                key={category.id}
+                ref={(el) => { sectionRefs.current[category.id] = el; }}
+              >
+                {/* Section heading */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-1 h-7 rounded-full flex-shrink-0" style={{ backgroundColor: colors.primary }} />
+                  <h2 className="text-lg md:text-xl font-bold text-gray-800">{category.name}</h2>
+                  <span className="text-sm text-gray-400 font-medium">
+                    {category.items.filter((i: MenuItem) => i.is_available !== false).length} items
+                  </span>
                 </div>
-                
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between">
-                    <h3 className="font-semibold text-gray-800 text-base">{item.name}</h3>
-                    <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0 hidden md:block" />
-                  </div>
-                  
-                  <div className="flex items-center gap-1 mt-1">
-                    <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                    <span className="text-xs text-gray-500">4.9 (reviews)</span>
-                  </div>
-                  
-                  <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.description}</p>
-                  
-                  <p className="font-bold mt-2 text-base" style={{ color: colors.primary }}>
-                    {currency} {item.price.toLocaleString()}
-                  </p>
+                {/* Items list */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4">
+                  {category.items.filter((i: MenuItem) => i.is_available !== false).map((item: MenuItem, index: number) => (
+                    <motion.div
+                      key={item.id}
+                      onClick={() => { setSelectedItem(item); setIsProductSheetOpen(true); }}
+                      className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-lg transition-shadow"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.04 }}
+                      whileHover={{ scale: 1.01, y: -2 }}
+                      whileTap={{ scale: 0.99 }}
+                    >
+                      <div className="flex gap-4">
+                        <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+                          {item.image_url ? (
+                            <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-3xl">{item.icon || '🍽️'}</div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between">
+                            <h3 className="font-semibold text-gray-800 text-base line-clamp-1">{item.name}</h3>
+                            <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0 hidden md:block" />
+                          </div>
+                          <div className="flex items-center gap-1 mt-1">
+                            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                            <span className="text-xs text-gray-500">4.9</span>
+                          </div>
+                          <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.description}</p>
+                          <p className="font-bold mt-2 text-base" style={{ color: colors.primary }}>
+                            {currency} {item.price.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
               </div>
-            </motion.div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </motion.section>
 
       {/* Product Sheet */}

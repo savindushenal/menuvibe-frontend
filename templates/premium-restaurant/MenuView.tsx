@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ShoppingCart, Search, Star, Clock, MapPin, Phone, X, Plus, Minus, Check } from 'lucide-react';
 
 /**
@@ -21,7 +21,9 @@ export default function PremiumRestaurantTemplate({ code }: { code: string }) {
   const [cart, setCart] = useState<any[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const sectionRefs = useRef<Record<number, HTMLElement | null>>({});
+  const navRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchMenuData();
@@ -32,9 +34,11 @@ export default function PremiumRestaurantTemplate({ code }: { code: string }) {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
       const response = await fetch(`${apiUrl}/menu/${code}`);
       const result = await response.json();
-      
       if (result.success) {
         setData(result.data);
+        if (result.data.menu.categories?.length > 0) {
+          setSelectedCategory(result.data.menu.categories[0].id);
+        }
       }
     } catch (error) {
       console.error('Failed to load menu:', error);
@@ -75,16 +79,48 @@ export default function PremiumRestaurantTemplate({ code }: { code: string }) {
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Filter items
-  const filteredCategories = data?.menu.categories?.map((category: any) => ({
-    ...category,
-    items: category.items.filter((item: any) => 
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  })).filter((category: any) => 
-    selectedCategory === 'all' || category.id === parseInt(selectedCategory)
-  );
+  // Search-filtered flat results
+  const allItems = data?.menu.categories?.flatMap((c: any) => c.items || []) || [];
+  const searchResults = searchQuery.trim()
+    ? allItems.filter((item: any) =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : [];
+
+  // Uber Eats-style: observe which section is in viewport → highlight nav pill
+  useEffect(() => {
+    if (!data) return;
+    const cats = data.menu?.categories || [];
+    const observers: IntersectionObserver[] = [];
+    cats.forEach((cat: any) => {
+      const el = sectionRefs.current[cat.id];
+      if (!el) return;
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setSelectedCategory(cat.id);
+            const btn = navRef.current?.querySelector(`[data-cat="${cat.id}"]`) as HTMLElement;
+            btn?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+          }
+        },
+        { rootMargin: '-38% 0px -55% 0px', threshold: 0 }
+      );
+      observer.observe(el);
+      observers.push(observer);
+    });
+    return () => observers.forEach((obs) => obs.disconnect());
+  }, [data]);
+
+  const scrollToSection = (categoryId: number) => {
+    setSelectedCategory(categoryId);
+    const el = sectionRefs.current[categoryId];
+    if (el) {
+      const offset = 130;
+      const top = el.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+  };
 
   if (loading) {
     return (
@@ -167,45 +203,47 @@ export default function PremiumRestaurantTemplate({ code }: { code: string }) {
         </div>
       </div>
 
-      {/* Search & Filter Bar */}
+      {/* Search & Category Bar */}
       <div className="sticky top-0 z-30 bg-white border-b shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex flex-col md:flex-row gap-4">
+        <div className="max-w-6xl mx-auto px-4 py-3">
+          <div className="flex gap-3 items-center">
             {/* Search */}
-            <div className="flex-1 relative">
+            <div className="flex-1 relative max-w-xs">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search menu items..."
+                placeholder="Search items..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
               />
             </div>
-
-            {/* Category Filter */}
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="all">All Categories</option>
+            {/* Category Pills */}
+            <div className="flex gap-2 overflow-x-auto flex-1" ref={navRef}>
               {data.menu.categories?.map((cat: any) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.icon} {cat.name}
-                </option>
+                <button
+                  key={cat.id}
+                  data-cat={cat.id}
+                  onClick={() => { setSearchQuery(''); scrollToSection(cat.id); }}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${
+                    selectedCategory === cat.id
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {cat.icon && <span>{cat.icon}</span>}
+                  {cat.name}
+                </button>
               ))}
-            </select>
-
+            </div>
             {/* Cart Button */}
             <button
               onClick={() => setCartOpen(true)}
-              className="relative px-6 py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors flex items-center gap-2"
+              className="relative px-4 py-2.5 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors flex items-center gap-2 flex-shrink-0"
             >
               <ShoppingCart className="w-5 h-5" />
-              <span>Cart</span>
               {cartItemCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                   {cartItemCount}
                 </span>
               )}
@@ -276,61 +314,78 @@ export default function PremiumRestaurantTemplate({ code }: { code: string }) {
         </section>
       )}
 
-      {/* Menu Categories */}
-      <section className="max-w-6xl mx-auto px-4 py-12">
-        {filteredCategories?.map((category: any) => (
-          category.items.length > 0 && (
-            <div key={category.id} className="mb-16">
-              <h2 className="text-4xl font-bold text-gray-800 mb-8 flex items-center gap-3">
-                {category.icon && <span className="text-5xl">{category.icon}</span>}
-                {category.name}
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {category.items.map((item: any) => (
-                  <div
-                    key={item.id}
-                    className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden flex"
-                  >
-                    {/* Item Image/Icon */}
-                    {item.image_url ? (
-                      <img
-                        src={item.image_url}
-                        alt={item.name}
-                        className="w-32 h-32 object-cover"
-                      />
-                    ) : (
-                      <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-4xl">
-                        {item.icon || '🍽️'}
-                      </div>
-                    )}
-
-                    {/* Item Details */}
-                    <div className="flex-1 p-4 flex flex-col justify-between">
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-800 mb-1">{item.name}</h3>
-                        <p className="text-sm text-gray-600 line-clamp-2">{item.description}</p>
-                      </div>
-
-                      <div className="flex items-center justify-between mt-3">
-                        <span className="text-2xl font-bold text-emerald-600">
-                          {data.template.currency} {item.price}
-                        </span>
-
-                        <button
-                          onClick={() => addToCart(item)}
-                          className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors"
-                        >
-                          Add
-                        </button>
-                      </div>
+      {/* Menu Sections — Uber Eats style */}
+      <section className="max-w-6xl mx-auto px-4 py-8 pb-24">
+        {searchQuery.trim() ? (
+          /* Search results */
+          <div>
+            <p className="text-sm text-gray-500 mb-6">
+              {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for &ldquo;{searchQuery}&rdquo;
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {searchResults.map((item: any) => (
+                <div key={item.id} className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden flex">
+                  {item.image_url ? (
+                    <img src={item.image_url} alt={item.name} className="w-32 h-32 object-cover" />
+                  ) : (
+                    <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-4xl">{item.icon || '🍽️'}</div>
+                  )}
+                  <div className="flex-1 p-4 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-800 mb-1">{item.name}</h3>
+                      <p className="text-sm text-gray-600 line-clamp-2">{item.description}</p>
+                    </div>
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="text-2xl font-bold text-emerald-600">{data.template.currency} {item.price}</span>
+                      <button onClick={() => addToCart(item)} className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors">Add</button>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          )
-        ))}
+          </div>
+        ) : (
+          /* All sections stacked */
+          <div className="space-y-14">
+            {data.menu.categories?.filter((cat: any) => (cat.items || []).length > 0).map((category: any) => (
+              <div
+                key={category.id}
+                ref={(el) => { sectionRefs.current[category.id] = el; }}
+              >
+                {/* Section heading */}
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-1 h-8 rounded-full bg-emerald-600 flex-shrink-0" />
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-2">
+                    {category.icon && <span className="text-3xl">{category.icon}</span>}
+                    {category.name}
+                  </h2>
+                  <span className="text-sm text-gray-400 font-medium">{category.items.length} items</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {category.items.map((item: any) => (
+                    <div key={item.id} className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden flex">
+                      {item.image_url ? (
+                        <img src={item.image_url} alt={item.name} className="w-32 h-32 object-cover" />
+                      ) : (
+                        <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-4xl">{item.icon || '🍽️'}</div>
+                      )}
+                      <div className="flex-1 p-4 flex flex-col justify-between">
+                        <div>
+                          <h3 className="text-xl font-bold text-gray-800 mb-1">{item.name}</h3>
+                          <p className="text-sm text-gray-600 line-clamp-2">{item.description}</p>
+                        </div>
+                        <div className="flex items-center justify-between mt-3">
+                          <span className="text-2xl font-bold text-emerald-600">{data.template.currency} {item.price}</span>
+                          <button onClick={() => addToCart(item)} className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors">Add</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Cart Sidebar */}

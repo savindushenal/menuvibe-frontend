@@ -135,6 +135,8 @@ export default function IssoMenuView() {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [checkoutPhase, setCheckoutPhase] = useState<'idle' | 'processing' | 'success'>('idle');
   const cartSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sectionRefs = useRef<Record<number, HTMLElement | null>>({});
+  const navRef = useRef<HTMLDivElement>(null);
 
   // Slide-to-confirm state
   const sliderRef = useRef<HTMLDivElement>(null);
@@ -165,6 +167,40 @@ export default function IssoMenuView() {
   useEffect(() => {
     if (!isProductSheetOpen) { setIsAdding(false); setIsAdded(false); }
   }, [isProductSheetOpen]);
+
+  // Uber Eats-style: observe which section is in viewport → highlight nav pill
+  useEffect(() => {
+    if (!data) return;
+    const cats: Category[] = data.menu?.categories || [];
+    const observers: IntersectionObserver[] = [];
+    cats.forEach((cat) => {
+      const el = sectionRefs.current[cat.id];
+      if (!el) return;
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setActiveCategory(cat.id);
+            const btn = navRef.current?.querySelector(`[data-cat="${cat.id}"]`) as HTMLElement;
+            btn?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+          }
+        },
+        { rootMargin: '-38% 0px -55% 0px', threshold: 0 }
+      );
+      observer.observe(el);
+      observers.push(observer);
+    });
+    return () => observers.forEach((obs) => obs.disconnect());
+  }, [data]);
+
+  const scrollToSection = (categoryId: number) => {
+    setActiveCategory(categoryId);
+    const el = sectionRefs.current[categoryId];
+    if (el) {
+      const offset = 145;
+      const top = el.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+  };
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -862,25 +898,18 @@ export default function IssoMenuView() {
 
       {/* Category Navigation */}
       <div className="sticky top-[73px] md:top-[82px] z-40 bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-12 py-4">
-        <div className="max-w-7xl mx-auto overflow-x-auto scrollbar-hide">
+        <div className="max-w-7xl mx-auto overflow-x-auto scrollbar-hide" ref={navRef}>
           <div className="flex gap-3 min-w-max">
             {/* All Items Button */}
             <motion.button
               onClick={() => {
-                setActiveCategory(null);
-                setSearchQuery(''); // Clear search when selecting All
+                setSearchQuery('');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all ${
-                activeCategory === null
-                  ? 'text-white shadow-lg'
-                  : 'bg-[#F5F5F5] hover:bg-gray-200'
-              }`}
-              style={{
-                backgroundColor: activeCategory === null ? colors.primary : undefined,
-                color: activeCategory === null ? 'white' : colors.text
-              }}
+              className="flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all bg-[#F5F5F5] hover:bg-gray-200"
+              style={{ color: colors.text }}
             >
               <Sparkles className="w-5 h-5" />
               <span>All Items</span>
@@ -891,9 +920,10 @@ export default function IssoMenuView() {
               return (
                 <motion.button
                   key={category.id}
+                  data-cat={category.id}
                   onClick={() => {
-                    setActiveCategory(category.id);
-                    setSearchQuery(''); // Clear search when selecting category
+                    setSearchQuery('');
+                    scrollToSection(category.id);
                   }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -916,59 +946,111 @@ export default function IssoMenuView() {
         </div>
       </div>
 
-      {/* Menu List */}
-      <section className="px-4 sm:px-6 lg:px-12 py-10">
+      {/* Menu Sections — Uber Eats style: all categories stacked */}
+      <section className="px-4 sm:px-6 lg:px-12 py-6 pb-24">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {activeItems.map((item, index) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + index * 0.05 }}
-                whileHover={{ y: -2 }}
-                onClick={() => handleItemClick(item)}
-                className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden group"
-              >
-                <div className="flex gap-4 p-4">
-                  {item.image_url && (
-                    <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
-                      <Image
-                        src={item.image_url}
-                        alt={item.name}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <h3 className="font-bold text-[#1A1A1A] line-clamp-1 flex-1">
-                        {item.name}
-                      </h3>
-                      <ChevronRight className="hidden md:block w-5 h-5 text-gray-400 flex-shrink-0 transition-colors" style={{ 
-                        color: 'inherit' 
-                      }} />
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-gray-600 mb-2">
-                      <Star className="w-3 h-3" style={{ fill: colors.accent, color: colors.accent }} />
-                      <span>4.7</span>
-                    </div>
-                    {item.description && (
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                        {item.description}
-                      </p>
-                    )}
-                    {parseFloat(item.price as any) !== 0 && (
-                      <div className="text-lg md:text-xl font-bold" style={{ color: colors.primary }}>
-                        {data.menu?.currency || 'LKR'} {formatPrice(item.price)}
+          {searchQuery.trim() ? (
+            /* Search results flat list */
+            <div>
+              <p className="text-sm text-gray-500 mb-4">
+                {activeItems.length} result{activeItems.length !== 1 ? 's' : ''} for &ldquo;{searchQuery}&rdquo;
+              </p>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                {activeItems.map((item, index) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.04 }}
+                    whileHover={{ y: -2 }}
+                    onClick={() => handleItemClick(item)}
+                    className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden group"
+                  >
+                    <div className="flex gap-4 p-4">
+                      {item.image_url && (
+                        <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                          <Image src={item.image_url} alt={item.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <h3 className="font-bold text-[#1A1A1A] line-clamp-1 flex-1">{item.name}</h3>
+                          <ChevronRight className="hidden md:block w-5 h-5 text-gray-400 flex-shrink-0" />
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-gray-600 mb-2">
+                          <Star className="w-3 h-3" style={{ fill: colors.accent, color: colors.accent }} />
+                          <span>4.7</span>
+                        </div>
+                        {item.description && <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.description}</p>}
+                        {parseFloat(item.price as any) !== 0 && (
+                          <div className="text-lg md:text-xl font-bold" style={{ color: colors.primary }}>
+                            {data.menu?.currency || 'LKR'} {formatPrice(item.price)}
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* All sections stacked */
+            <div className="space-y-12">
+              {categories.filter(cat => cat.items.some(i => i.is_available)).map((category) => (
+                <div
+                  key={category.id}
+                  ref={(el) => { sectionRefs.current[category.id] = el; }}
+                >
+                  {/* Section heading */}
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-1 h-7 rounded-full flex-shrink-0" style={{ backgroundColor: colors.primary }} />
+                    <h2 className="text-xl md:text-2xl font-bold text-[#1A1A1A]">{category.name}</h2>
+                    <span className="text-sm text-gray-400 font-medium">
+                      {category.items.filter(i => i.is_available).length} items
+                    </span>
+                  </div>
+                  {/* Items grid */}
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                    {category.items.filter(i => i.is_available).map((item, index) => (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.04 }}
+                        whileHover={{ y: -2 }}
+                        onClick={() => handleItemClick(item)}
+                        className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden group"
+                      >
+                        <div className="flex gap-4 p-4">
+                          {item.image_url && (
+                            <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                              <Image src={item.image_url} alt={item.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <h3 className="font-bold text-[#1A1A1A] line-clamp-1 flex-1">{item.name}</h3>
+                              <ChevronRight className="hidden md:block w-5 h-5 text-gray-400 flex-shrink-0" />
+                            </div>
+                            <div className="flex items-center gap-1 text-xs text-gray-600 mb-2">
+                              <Star className="w-3 h-3" style={{ fill: colors.accent, color: colors.accent }} />
+                              <span>4.7</span>
+                            </div>
+                            {item.description && <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.description}</p>}
+                            {parseFloat(item.price as any) !== 0 && (
+                              <div className="text-lg md:text-xl font-bold" style={{ color: colors.primary }}>
+                                {data.menu?.currency || 'LKR'} {formatPrice(item.price)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
                   </div>
                 </div>
-              </motion.div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
