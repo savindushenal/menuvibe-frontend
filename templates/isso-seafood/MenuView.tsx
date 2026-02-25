@@ -448,11 +448,13 @@ export default function IssoMenuView() {
     });
   };
 
-  const handleUpdateQuantity = (itemId: number, delta: number) => {
+  const handleUpdateQuantity = (cartKey: string, delta: number) => {
     setCartItems(prev => {
-      const updated = prev.map(ci => 
-        ci.item.id === itemId ? { ...ci, quantity: Math.max(0, ci.quantity + delta) } : ci
-      );
+      const updated = prev.map(ci => {
+        const key = `${ci.item.id}-${JSON.stringify(ci.selectedOptions)}`;
+        if (key !== cartKey) return ci;
+        return { ...ci, quantity: Math.max(0, ci.quantity + delta) };
+      });
       return updated.filter(ci => ci.quantity > 0);
     });
   };
@@ -1308,7 +1310,7 @@ export default function IssoMenuView() {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <button
-                            onClick={() => handleUpdateQuantity(ci.item.id, -1)}
+                            onClick={() => handleUpdateQuantity(`${ci.item.id}-${JSON.stringify(ci.selectedOptions)}`, -1)}
                             className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
                           >
                             <Minus className="w-4 h-4" />
@@ -1317,7 +1319,7 @@ export default function IssoMenuView() {
                             {ci.quantity}
                           </span>
                           <button
-                            onClick={() => handleUpdateQuantity(ci.item.id, 1)}
+                            onClick={() => handleUpdateQuantity(`${ci.item.id}-${JSON.stringify(ci.selectedOptions)}`, 1)}
                             className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
                             style={{ backgroundColor: colors.primary }}
                           >
