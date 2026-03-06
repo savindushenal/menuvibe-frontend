@@ -58,6 +58,23 @@ import {
 } from '@/components/ui/collapsible';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { CategoryDialog, ItemDialog, OfferDialog, SyncDialog } from '@/components/franchise/master-menu';
 
 interface Category {
@@ -137,6 +154,29 @@ interface MasterMenu {
   offers?: Offer[];
 }
 
+// Render-prop sortable wrapper — avoids extracting all complex JSX into separate components
+function SortableWrapper({
+  id,
+  children,
+}: {
+  id: number;
+  children: (dragHandleListeners: Record<string, unknown> | undefined) => React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    position: 'relative',
+    zIndex: isDragging ? 10 : undefined,
+  };
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      {children(listeners)}
+    </div>
+  );
+}
+
 export default function MasterMenuEditorPage() {
   const params = useParams();
   const router = useRouter();
@@ -157,6 +197,11 @@ export default function MasterMenuEditorPage() {
   const [offerDialog, setOfferDialog] = useState<{ open: boolean; offer: Offer | null }>({ open: false, offer: null });
   const [syncDialog, setSyncDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; type: 'category' | 'item' | 'offer'; id: number; name: string } | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const fetchMenu = useCallback(async () => {
     try {
@@ -295,6 +340,48 @@ export default function MasterMenuEditorPage() {
       return newSet;
     });
   };
+
+  const handleCategoryDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !menu || !franchiseId) return;
+    const oldIndex = menu.categories.findIndex((c) => c.id === active.id);
+    const newIndex = menu.categories.findIndex((c) => c.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(menu.categories, oldIndex, newIndex);
+    setMenu((prev) => prev ? { ...prev, categories: reordered } : prev);
+    try {
+      await api.post(`/franchises/${franchiseId}/master-menus/${menu.id}/categories/reorder`, {
+        orders: reordered.map((c, i) => ({ id: c.id, sort_order: i })),
+      });
+    } catch {
+      toast.error('Failed to save category order');
+      fetchMenu();
+    }
+  }, [menu, franchiseId, fetchMenu]);
+
+  const handleItemsDragEnd = useCallback(async (categoryId: number, event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !menu || !franchiseId) return;
+    const catIndex = menu.categories.findIndex((c) => c.id === categoryId);
+    if (catIndex === -1) return;
+    const items = menu.categories[catIndex].items || [];
+    const oldIndex = items.findIndex((i) => i.id === active.id);
+    const newIndex = items.findIndex((i) => i.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reorderedItems = arrayMove(items, oldIndex, newIndex);
+    const newCategories = menu.categories.map((c, idx) =>
+      idx === catIndex ? { ...c, items: reorderedItems } : c
+    );
+    setMenu((prev) => prev ? { ...prev, categories: newCategories } : prev);
+    try {
+      await api.post(`/franchises/${franchiseId}/master-menus/${menu.id}/items/reorder`, {
+        orders: reorderedItems.map((item, i) => ({ id: item.id, sort_order: i })),
+      });
+    } catch {
+      toast.error('Failed to save item order');
+      fetchMenu();
+    }
+  }, [menu, franchiseId, fetchMenu]);
 
   const getOfferTypeIcon = (type: Offer['offer_type']) => {
     switch (type) {
@@ -452,10 +539,20 @@ export default function MasterMenuEditorPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
-              {filteredCategories.map((category) => (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleCategoryDragEnd}
+            >
+              <SortableContext
+                items={menu.categories.map((c) => c.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-3">
+                  {filteredCategories.map((category) => (
+                    <SortableWrapper key={category.id} id={category.id}>
+                      {(dragListeners) => (
                 <Collapsible
-                  key={category.id}
                   open={expandedCategories.has(category.id)}
                   onOpenChange={() => toggleCategory(category.id)}
                 >
@@ -464,7 +561,9 @@ export default function MasterMenuEditorPage() {
                       <CardHeader className="cursor-pointer hover:bg-neutral-50 transition-colors">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <GripVertical className="h-5 w-5 text-neutral-400 cursor-grab" />
+                            <span {...dragListeners} className="touch-none">
+                              <GripVertical className="h-5 w-5 text-neutral-400 cursor-grab" />
+                            </span>
                             {expandedCategories.has(category.id) ? (
                               <ChevronDown className="h-5 w-5 text-neutral-500" />
                             ) : (
@@ -538,14 +637,26 @@ export default function MasterMenuEditorPage() {
                             </Button>
                           </div>
                         ) : (
-                          <div className="border-t divide-y">
-                            {(category.items || []).map((item) => (
-                              <div 
-                                key={item.id} 
+                          <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={(e) => handleItemsDragEnd(category.id, e)}
+                          >
+                            <SortableContext
+                              items={(category.items || []).map((i) => i.id)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              <div className="border-t divide-y">
+                                {(category.items || []).map((item) => (
+                                  <SortableWrapper key={item.id} id={item.id}>
+                                    {(dragListeners) => (
+                              <div
                                 className="py-3 px-2 flex items-center justify-between hover:bg-neutral-50 transition-colors"
                               >
                                 <div className="flex items-center gap-3">
-                                  <GripVertical className="h-4 w-4 text-neutral-300 cursor-grab" />
+                                  <span {...dragListeners} className="touch-none">
+                                    <GripVertical className="h-4 w-4 text-neutral-300 cursor-grab" />
+                                  </span>
                                   {item.image_url ? (
                                     <img 
                                       src={item.image_url} 
@@ -640,8 +751,12 @@ export default function MasterMenuEditorPage() {
                                   </DropdownMenu>
                                 </div>
                               </div>
-                            ))}
-                          </div>
+                                    )}
+                                  </SortableWrapper>
+                                ))}
+                              </div>
+                            </SortableContext>
+                          </DndContext>
                         )}
                         <div className="pt-3 border-t">
                           <Button 
@@ -658,8 +773,12 @@ export default function MasterMenuEditorPage() {
                     </CollapsibleContent>
                   </Card>
                 </Collapsible>
-              ))}
-            </div>
+                      )}
+                    </SortableWrapper>
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
         </TabsContent>
 
