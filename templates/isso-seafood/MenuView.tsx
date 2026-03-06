@@ -308,7 +308,33 @@ export default function IssoMenuView() {
   };
 
   const handleItemClick = (item: MenuItem) => {
-    setSelectedItem(item);
+    // Normalize flat size variants [{name, price}] into a rich section [{id, name, options:[{id,name,price_modifier}]}]
+    // so the variation UI (which expects sections with options) works correctly.
+    const normalizedItem: MenuItem = (() => {
+      if (!item.variations?.length) return item;
+      const first = item.variations[0] as any;
+      // Rich format already has options array — use as-is
+      if ('options' in first) return item;
+      // Flat format: convert to a single "Size" section
+      const basePrice = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
+      return {
+        ...item,
+        variations: [{
+          id: '__size__',
+          name: 'Size',
+          type: 'single',
+          required: false,
+          max_selections: 1,
+          min_selections: 0,
+          options: item.variations.map((v: any) => ({
+            id: String(v.id ?? v.name),
+            name: v.name,
+            price_modifier: (parseFloat(String(v.price)) || 0) - basePrice,
+          })),
+        }] as any,
+      };
+    })();
+    setSelectedItem(normalizedItem);
     setSelectedVariations({}); // Reset variations for new item
     setIsProductSheetOpen(true);
   };
