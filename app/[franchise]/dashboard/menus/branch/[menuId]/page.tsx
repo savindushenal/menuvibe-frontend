@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -19,18 +18,30 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   ArrowLeft,
   Eye,
+  EyeOff,
   Save,
   RefreshCw,
   QrCode,
   DollarSign,
   Package,
   AlertCircle,
-  CheckCircle,
   Clock,
   Plus,
   Edit3,
+  MoreVertical,
+  ChevronDown,
+  ChevronRight,
+  Check,
+  X,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
@@ -87,12 +98,19 @@ export default function BranchMenuEditPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isItemFormOpen, setIsItemFormOpen] = useState(false);
   const [addItemLoading, setAddItemLoading] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
+
+  // Variants / customizations dialogs
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [variantsDialogOpen, setVariantsDialogOpen] = useState(false);
   const [customizationsDialogOpen, setCustomizationsDialogOpen] = useState(false);
   const [editingVariants, setEditingVariants] = useState<ItemVariant[]>([]);
   const [editingCustomizations, setEditingCustomizations] = useState<CustomizationSection[]>([]);
   const [savingVariants, setSavingVariants] = useState(false);
+
+  // Inline price edit dialog
+  const [editPriceDialog, setEditPriceDialog] = useState<{ open: boolean; item: MenuItem | null }>({ open: false, item: null });
+  const [editPriceValue, setEditPriceValue] = useState('');
 
   const fetchMenu = useCallback(async () => {
     try {
@@ -114,6 +132,13 @@ export default function BranchMenuEditPage() {
     fetchMenu();
   }, [fetchMenu]);
 
+  // Expand all categories on load
+  useEffect(() => {
+    if (menu) {
+      setExpandedCategories(new Set(menu.categories.map(c => c.id)));
+    }
+  }, [menu?.id]);
+
   const handlePriceChange = (itemId: number, price: string) => {
     const numPrice = parseFloat(price) || 0;
     setChanges(prev => {
@@ -129,6 +154,66 @@ export default function BranchMenuEditPage() {
       const newChanges = new Map(prev);
       const existing = newChanges.get(itemId) || {};
       newChanges.set(itemId, { ...existing, is_available: available });
+      return newChanges;
+    });
+  };
+
+  const toggleCategory = (categoryId: number) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(categoryId)) next.delete(categoryId);
+      else next.add(categoryId);
+      return next;
+    });
+  };
+
+  // Hide/show ALL items in a category
+  const handleHideCategory = (category: Category, hide: boolean) => {
+    setChanges(prev => {
+      const newChanges = new Map(prev);
+      (category.items || []).forEach(item => {
+        const existing = newChanges.get(item.id) || {};
+        newChanges.set(item.id, { ...existing, is_available: !hide });
+      });
+      return newChanges;
+    });
+  };
+
+  // True if ALL current items in a category are marked unavailable (either overridden or base)
+  const isCategoryHidden = (category: Category) => {
+    const items = category.items || [];
+    if (items.length === 0) return false;
+    return items.every(item => {
+      const change = changes.get(item.id);
+      const avail = change?.is_available !== undefined ? change.is_available : item.is_available;
+      return !avail;
+    });
+  };
+
+  // Open inline price edit dialog
+  const openEditPrice = (item: MenuItem) => {
+    const currentPrice = changes.get(item.id)?.price ?? item.price;
+    setEditPriceValue(String(currentPrice));
+    setEditPriceDialog({ open: true, item });
+  };
+
+  const handleConfirmEditPrice = () => {
+    if (!editPriceDialog.item) return;
+    const num = parseFloat(editPriceValue);
+    if (isNaN(num) || num < 0) { toast.error('Enter a valid price'); return; }
+    setChanges(prev => {
+      const newChanges = new Map(prev);
+      const existing = newChanges.get(editPriceDialog.item!.id) || {};
+      newChanges.set(editPriceDialog.item!.id, { ...existing, price: num });
+      return newChanges;
+    });
+    setEditPriceDialog({ open: false, item: null });
+  };
+
+  const handleResetItem = (itemId: number) => {
+    setChanges(prev => {
+      const newChanges = new Map(prev);
+      newChanges.delete(itemId);
       return newChanges;
     });
   };
@@ -184,14 +269,6 @@ export default function BranchMenuEditPage() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleResetItem = (itemId: number) => {
-    setChanges(prev => {
-      const newChanges = new Map(prev);
-      newChanges.delete(itemId);
-      return newChanges;
-    });
   };
 
   const openVariantsDialog = useCallback((item: MenuItem) => {
@@ -401,20 +478,16 @@ export default function BranchMenuEditPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {changes.size > 0 && (
             <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
               {changes.size} unsaved change{changes.size !== 1 ? 's' : ''}
             </Badge>
           )}
-          <Button 
+          <Button
             variant="outline"
-            onClick={() => setIsItemFormOpen(true)}
+            onClick={() => router.push(`/${franchiseSlug}/dashboard/tables-qr`)}
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Item
-          </Button>
-          <Button variant="outline" onClick={() => router.push(`/${franchiseSlug}/dashboard/tables-qr`)}>
             <QrCode className="h-4 w-4 mr-2" />
             QR Codes
           </Button>
@@ -437,175 +510,261 @@ export default function BranchMenuEditPage() {
         <CardContent className="pt-4 flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-blue-700">
-            <strong>Branch Menu Customization:</strong> Adjust prices and availability for this location. 
-            Changes are saved as overrides and won't affect other branches or the master menu.
+            <strong>Branch Menu Customization:</strong> Hide/show categories and items, override prices, or manage sizes and customizations for this location only. Changes don't affect the master menu.
           </div>
         </CardContent>
       </Card>
 
       {/* Search */}
       <Input
-        placeholder="Search items..."
+        placeholder="Search categories or items..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         className="max-w-md"
       />
 
       {/* Categories & Items */}
-      <div className="space-y-6">
-        {filteredCategories.map((category) => (
-          <Card key={category.id}>
-            <CardHeader>
-              <CardTitle className="text-lg">{category.name}</CardTitle>
-              <CardDescription>{category.items?.length || 0} items</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {(category.items || []).map((item) => {
-                  const currentPrice = getItemPrice(item);
-                  const currentAvailability = getItemAvailability(item);
-                  const isChanged = hasChanges(item.id);
-
-                  return (
-                    <div
-                      key={item.id}
-                      className={`flex items-center justify-between p-4 rounded-lg border ${
-                        isChanged ? 'border-amber-300 bg-amber-50' : 'border-neutral-200 bg-white'
-                      }`}
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="font-medium">{item.name}</h4>
-                          {item.has_override && (
-                            <Badge variant="secondary" className="text-xs">
-                              <Package className="h-3 w-3 mr-1" />
-                              Custom
-                            </Badge>
-                          )}
-                          {isChanged && (
-                            <Badge variant="outline" className="text-xs bg-amber-100 border-amber-300 text-amber-700">
-                              <Clock className="h-3 w-3 mr-1" />
-                              Unsaved
-                            </Badge>
-                          )}
-                          {item.variations && item.variations.length > 0 && (
-                            <Badge
-                              variant="outline"
-                              className="text-xs cursor-pointer hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-colors"
-                              onClick={() => openVariantsDialog(item)}
-                            >
-                              <Edit3 className="h-3 w-3 mr-1" />
-                              {item.variations.length} sizes
-                            </Badge>
-                          )}
-                          {(!item.variations || item.variations.length === 0) && (
-                            <Badge
-                              variant="outline"
-                              className="text-xs cursor-pointer hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-colors"
-                              onClick={() => openVariantsDialog(item)}
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Add Sizes
-                            </Badge>
-                          )}
-                          {item.customizations && item.customizations.length > 0 ? (
-                            <Badge
-                              variant="outline"
-                              className="text-xs cursor-pointer hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 transition-colors"
-                              onClick={() => openCustomizationsDialog(item)}
-                            >
-                              <Edit3 className="h-3 w-3 mr-1" />
-                              {item.customizations.length} customization{item.customizations.length !== 1 ? 's' : ''}
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className="text-xs cursor-pointer hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 transition-colors"
-                              onClick={() => openCustomizationsDialog(item)}
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Add Customizations
-                            </Badge>
-                          )}
-                        </div>
-                        {item.description && (
-                          <p className="text-sm text-neutral-600 mt-1">{item.description}</p>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        {/* Price Input */}
-                        <div className="w-32">
-                          <Label className="text-xs text-neutral-500">Price</Label>
-                          <div className="relative">
-                            <DollarSign className="absolute left-2 top-2.5 h-4 w-4 text-neutral-400" />
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={currentPrice}
-                              onChange={(e) => handlePriceChange(item.id, e.target.value)}
-                              className="pl-7"
-                            />
-                          </div>
-                          {item.original_price && currentPrice !== item.original_price && (
-                            <p className="text-xs text-neutral-500 mt-1">
-                              Master: ${item.original_price.toFixed(2)}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Availability Switch */}
-                        <div className="flex flex-col items-center gap-1">
-                          <Label className="text-xs text-neutral-500">Available</Label>
-                          <Switch
-                            checked={currentAvailability}
-                            onCheckedChange={(checked) => handleAvailabilityChange(item.id, checked)}
-                          />
-                        </div>
-
-                        {/* Reset Button */}
-                        {isChanged && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleResetItem(item.id)}
-                          >
-                            <RefreshCw className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+      <div className="space-y-3">
+        {filteredCategories.length === 0 && (
+          <Card>
+            <CardContent className="py-12 text-center text-neutral-500">
+              {searchQuery ? 'No results found.' : 'No categories yet.'}
             </CardContent>
           </Card>
-        ))}
+        )}
+
+        {filteredCategories.map((category) => {
+          const isExpanded = expandedCategories.has(category.id);
+          const catHidden = isCategoryHidden(category);
+          const itemCount = (category.items || []).length;
+          const hiddenCount = (category.items || []).filter(item => {
+            const change = changes.get(item.id);
+            const avail = change?.is_available !== undefined ? change.is_available : item.is_available;
+            return !avail;
+          }).length;
+
+          return (
+            <Card
+              key={category.id}
+              className={`transition-all ${catHidden ? 'opacity-60 border-neutral-200' : ''}`}
+            >
+              {/* Category header */}
+              <CardHeader className="py-3 px-4">
+                <div className="flex items-center gap-3">
+                  {/* Expand/Collapse */}
+                  <button
+                    onClick={() => toggleCategory(category.id)}
+                    className="p-1 rounded hover:bg-neutral-100 text-neutral-500"
+                  >
+                    {isExpanded
+                      ? <ChevronDown className="h-4 w-4" />
+                      : <ChevronRight className="h-4 w-4" />}
+                  </button>
+
+                  {/* Category name + badges */}
+                  <div className="flex-1 flex items-center gap-2 flex-wrap cursor-pointer" onClick={() => toggleCategory(category.id)}>
+                    <span className="font-semibold text-base">{category.name}</span>
+                    <Badge variant="secondary" className="text-xs">{itemCount} items</Badge>
+                    {catHidden && (
+                      <Badge variant="outline" className="text-xs text-neutral-500 border-neutral-300">
+                        <EyeOff className="h-3 w-3 mr-1" /> Hidden from customers
+                      </Badge>
+                    )}
+                    {!catHidden && hiddenCount > 0 && (
+                      <Badge variant="outline" className="text-xs text-amber-600 border-amber-300 bg-amber-50">
+                        {hiddenCount} hidden item{hiddenCount !== 1 ? 's' : ''}
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Category actions */}
+                  <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleHideCategory(category, !catHidden)}
+                      className={catHidden
+                        ? 'text-emerald-600 border-emerald-300 hover:bg-emerald-50'
+                        : 'text-neutral-600 hover:bg-neutral-100'}
+                    >
+                      {catHidden
+                        ? <><Eye className="h-3.5 w-3.5 mr-1.5" />Show Category</>
+                        : <><EyeOff className="h-3.5 w-3.5 mr-1.5" />Hide Category</>}
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+
+              {/* Items list - collapsible */}
+              {isExpanded && (
+                <CardContent className="pt-0 px-4 pb-4">
+                  {itemCount === 0 ? (
+                    <p className="text-sm text-neutral-400 py-3 text-center">No items in this category.</p>
+                  ) : (
+                    <div className="divide-y border rounded-lg overflow-hidden">
+                      {(category.items || []).map((item) => {
+                        const currentPrice = getItemPrice(item);
+                        const currentAvailability = getItemAvailability(item);
+                        const isChanged = hasChanges(item.id);
+                        const priceChanged = changes.get(item.id)?.price !== undefined;
+
+                        return (
+                          <div
+                            key={item.id}
+                            className={`flex items-center justify-between px-4 py-3 transition-colors ${
+                              !currentAvailability
+                                ? 'bg-neutral-50 opacity-70'
+                                : isChanged
+                                ? 'bg-amber-50'
+                                : 'bg-white'
+                            }`}
+                          >
+                            {/* Left: name + badges */}
+                            <div className="flex-1 min-w-0 mr-4">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`font-medium ${!currentAvailability ? 'line-through text-neutral-400' : ''}`}>
+                                  {item.name}
+                                </span>
+                                {!currentAvailability && (
+                                  <Badge variant="outline" className="text-xs text-neutral-500 border-neutral-300">
+                                    <EyeOff className="h-3 w-3 mr-1" />Hidden
+                                  </Badge>
+                                )}
+                                {item.has_override && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    <Package className="h-3 w-3 mr-1" />Overridden
+                                  </Badge>
+                                )}
+                                {isChanged && (
+                                  <Badge variant="outline" className="text-xs bg-amber-100 border-amber-300 text-amber-700">
+                                    <Clock className="h-3 w-3 mr-1" />Unsaved
+                                  </Badge>
+                                )}
+                              </div>
+                              {item.description && (
+                                <p className="text-xs text-neutral-500 mt-0.5 truncate">{item.description}</p>
+                              )}
+                            </div>
+
+                            {/* Right: price + actions */}
+                            <div className="flex items-center gap-3 flex-shrink-0">
+                              {/* Price display */}
+                              <div className="text-right">
+                                <div className="font-semibold text-sm">
+                                  {Number(currentPrice).toFixed(2)}
+                                </div>
+                                {priceChanged && item.original_price !== undefined && (
+                                  <div className="text-xs text-neutral-400 line-through">
+                                    {Number(item.original_price).toFixed(2)}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Availability quick toggle */}
+                              <Switch
+                                checked={currentAvailability}
+                                onCheckedChange={(checked) => handleAvailabilityChange(item.id, checked)}
+                                title={currentAvailability ? 'Hide this item' : 'Show this item'}
+                              />
+
+                              {/* Actions dropdown */}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {currentAvailability ? (
+                                    <DropdownMenuItem onClick={() => handleAvailabilityChange(item.id, false)}>
+                                      <EyeOff className="h-4 w-4 mr-2 text-neutral-500" />
+                                      Hide from customers
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem onClick={() => handleAvailabilityChange(item.id, true)}>
+                                      <Eye className="h-4 w-4 mr-2 text-emerald-600" />
+                                      Show to customers
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem onClick={() => openEditPrice(item)}>
+                                    <DollarSign className="h-4 w-4 mr-2 text-blue-600" />
+                                    Edit price override
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => openVariantsDialog(item)}>
+                                    <Edit3 className="h-4 w-4 mr-2 text-indigo-600" />
+                                    Edit sizes / variants
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => openCustomizationsDialog(item)}>
+                                    <Plus className="h-4 w-4 mr-2 text-purple-600" />
+                                    Edit customizations
+                                  </DropdownMenuItem>
+                                  {isChanged && (
+                                    <>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        onClick={() => handleResetItem(item.id)}
+                                        className="text-red-600"
+                                      >
+                                        <RefreshCw className="h-4 w-4 mr-2" />
+                                        Reset to master values
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+          );
+        })}
       </div>
 
-      {/* QR Code Dialog */}
-      <Dialog open={qrDialog} onOpenChange={setQrDialog}>
-        <DialogContent>
+      {/* Edit Price Dialog */}
+      <Dialog open={editPriceDialog.open} onOpenChange={(open) => setEditPriceDialog({ open, item: editPriceDialog.item })}>
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>QR Codes for {menu.location.name}</DialogTitle>
+            <DialogTitle>Edit Price Override</DialogTitle>
             <DialogDescription>
-              Manage QR codes for this branch location
+              Set a custom price for <strong>{editPriceDialog.item?.name}</strong> at {menu.location.name}.
+              This won't affect other branches.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-neutral-600 mb-4">
-              Generate and manage QR codes for tables at {menu.location.name}.
-            </p>
-            <Button 
-              onClick={() => {
-                setQrDialog(false);
-                router.push(`/${franchiseSlug}/dashboard`);
-              }}
-              className="w-full"
-            >
-              Go to Branch Dashboard
-            </Button>
+          <div className="py-4 space-y-3">
+            <Label>Override Price</Label>
+            <div className="relative">
+              <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                className="pl-9"
+                value={editPriceValue}
+                onChange={(e) => setEditPriceValue(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleConfirmEditPrice()}
+                autoFocus
+              />
+            </div>
+            {editPriceDialog.item?.original_price !== undefined && (
+              <p className="text-xs text-neutral-500">
+                Master price: {Number(editPriceDialog.item.original_price).toFixed(2)}
+              </p>
+            )}
           </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditPriceDialog({ open: false, item: null })}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmEditPrice}>
+              <Check className="h-4 w-4 mr-2" />
+              Apply Override
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -629,14 +788,14 @@ export default function BranchMenuEditPage() {
           <DialogHeader>
             <DialogTitle>Size Variants</DialogTitle>
             <DialogDescription>
-              Manage size options with different prices. Customers choose one size when ordering.
+              Manage size options with different prices.
             </DialogDescription>
           </DialogHeader>
           <div className="py-2">
             <ItemVariantsForm
               variants={editingVariants}
               onChange={handleVariantsChange}
-              currency={menu?.categories?.[0]?.items?.[0] ? 'LKR' : 'LKR'}
+              currency="LKR"
               basePrice={0}
             />
           </div>
@@ -655,7 +814,7 @@ export default function BranchMenuEditPage() {
           <DialogHeader>
             <DialogTitle>Item Customizations</DialogTitle>
             <DialogDescription>
-              Define customization sections (e.g. base, sides, extras). Mark sections as required or optional.
+              Define customization sections (e.g. base, sides, extras).
             </DialogDescription>
           </DialogHeader>
           <div className="py-2">
