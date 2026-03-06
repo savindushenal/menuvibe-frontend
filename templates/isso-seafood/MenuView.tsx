@@ -503,9 +503,9 @@ export default function IssoMenuView() {
     
     // Add modifiers from variations
     item.variations?.forEach((section: any) => {
-      const selectedIds = variations[section.id] || [];
+      const selectedIds = variations[String(section.id)] || [];
       selectedIds.forEach((optionId: string) => {
-        const option = section.options?.find((opt: any) => opt.id === optionId);
+        const option = section.options?.find((opt: any) => String(opt.id) === optionId);
         if (option && option.price_modifier) {
           totalModifier += option.price_modifier;
         }
@@ -514,9 +514,9 @@ export default function IssoMenuView() {
 
     // Add modifiers from customizations
     item.customizations?.forEach((section: any) => {
-      const selectedIds = variations[section.id] || [];
+      const selectedIds = variations[String(section.id)] || [];
       selectedIds.forEach((optionId: string) => {
-        const option = section.options?.find((opt: any) => opt.id === optionId);
+        const option = section.options?.find((opt: any) => String(opt.id) === optionId);
         if (option && option.price_modifier) {
           totalModifier += option.price_modifier;
         }
@@ -551,7 +551,7 @@ export default function IssoMenuView() {
     // Check required variations
     const variationsValid = selectedItem?.variations?.every((section: any) => {
       if (section.required) {
-        return (selectedVariations[section.id] || []).length > 0;
+        return (selectedVariations[String(section.id)] || []).length > 0;
       }
       return true;
     }) ?? true;
@@ -559,7 +559,7 @@ export default function IssoMenuView() {
     // Check required customizations
     const customizationsValid = selectedItem?.customizations?.every((section: any) => {
       if (section.required) {
-        return (selectedVariations[section.id] || []).length > 0;
+        return (selectedVariations[String(section.id)] || []).length > 0;
       }
       return true;
     }) ?? true;
@@ -1127,7 +1127,7 @@ export default function IssoMenuView() {
                   <div className="mb-8 space-y-6 pb-6 border-b border-gray-200">
                     {selectedItem.variations.map((section: any) => {
                       const isMultiSelect = section.max_selections !== 1;
-                      const selected = selectedVariations[section.id] || [];
+                      const selected = selectedVariations[String(section.id)] || [];
                       const isRequired = section.required;
                       const isValidSelection = !isRequired || selected.length > 0;
                       
@@ -1152,16 +1152,16 @@ export default function IssoMenuView() {
                                 key={option.id}
                                 className="flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all"
                                 style={{
-                                  borderColor: selected.includes(option.id) ? colors.primary : '#E5E5E5',
-                                  backgroundColor: selected.includes(option.id) ? `${colors.primary}08` : 'transparent'
+                                  borderColor: selected.includes(String(option.id)) ? colors.primary : '#E5E5E5',
+                                  backgroundColor: selected.includes(String(option.id)) ? `${colors.primary}08` : 'transparent'
                                 }}
                               >
                                 <input
                                   type={isMultiSelect ? "checkbox" : "radio"}
-                                  name={section.id}
-                                  value={option.id}
-                                  checked={selected.includes(option.id)}
-                                  onChange={() => handleVariationSelect(section.id, option.id, isMultiSelect)}
+                                  name={String(section.id)}
+                                  value={String(option.id)}
+                                  checked={selected.includes(String(option.id))}
+                                  onChange={() => handleVariationSelect(String(section.id), String(option.id), isMultiSelect)}
                                   className="w-5 h-5 rounded cursor-pointer"
                                   style={{
                                     accentColor: colors.primary
@@ -1190,7 +1190,7 @@ export default function IssoMenuView() {
                   <div className="mb-8 space-y-6 pb-6 border-b border-gray-200">
                     {selectedItem.customizations.map((section: any) => {
                       const isMultiSelect = section.max_selections !== 1;
-                      const selected = selectedVariations[section.id] || [];
+                      const selected = selectedVariations[String(section.id)] || [];
                       const isRequired = section.required;
                       const isValidSelection = !isRequired || selected.length > 0;
                       
@@ -1215,16 +1215,16 @@ export default function IssoMenuView() {
                                 key={option.id}
                                 className="flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all"
                                 style={{
-                                  borderColor: selected.includes(option.id) ? colors.primary : '#E5E5E5',
-                                  backgroundColor: selected.includes(option.id) ? `${colors.primary}08` : 'transparent'
+                                  borderColor: selected.includes(String(option.id)) ? colors.primary : '#E5E5E5',
+                                  backgroundColor: selected.includes(String(option.id)) ? `${colors.primary}08` : 'transparent'
                                 }}
                               >
                                 <input
                                   type={isMultiSelect ? "checkbox" : "radio"}
-                                  name={section.id}
-                                  value={option.id}
-                                  checked={selected.includes(option.id)}
-                                  onChange={() => handleVariationSelect(section.id, option.id, isMultiSelect)}
+                                  name={String(section.id)}
+                                  value={String(option.id)}
+                                  checked={selected.includes(String(option.id))}
+                                  onChange={() => handleVariationSelect(String(section.id), String(option.id), isMultiSelect)}
                                   className="w-5 h-5 rounded cursor-pointer"
                                   style={{
                                     accentColor: colors.primary
