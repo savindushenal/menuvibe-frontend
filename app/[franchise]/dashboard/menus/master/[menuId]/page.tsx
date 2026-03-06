@@ -191,15 +191,16 @@ export default function MasterMenuEditorPage() {
       
       const updatedCategories = prevMenu.categories.map(cat => {
         if (cat.id === updatedItem.category_id) {
-          const itemIndex = cat.items.findIndex(item => item.id === updatedItem.id);
+          const existingItems = cat.items || [];
+          const itemIndex = existingItems.findIndex(item => item.id === updatedItem.id);
           if (itemIndex >= 0) {
             // Update existing item
-            const newItems = [...cat.items];
+            const newItems = [...existingItems];
             newItems[itemIndex] = updatedItem;
             return { ...cat, items: newItems };
           } else {
             // Add new item
-            return { ...cat, items: [...cat.items, updatedItem] };
+            return { ...cat, items: [...existingItems, updatedItem] };
           }
         }
         return cat;
@@ -215,13 +216,17 @@ export default function MasterMenuEditorPage() {
       
       const categoryIndex = prevMenu.categories.findIndex(cat => cat.id === updatedCategory.id);
       if (categoryIndex >= 0) {
-        // Update existing category
+        // Update existing category - preserve existing items from state
         const newCategories = [...prevMenu.categories];
-        newCategories[categoryIndex] = { ...newCategories[categoryIndex], ...updatedCategory };
+        newCategories[categoryIndex] = {
+          ...newCategories[categoryIndex],
+          ...updatedCategory,
+          items: newCategories[categoryIndex].items || [],
+        };
         return { ...prevMenu, categories: newCategories };
       } else {
-        // Add new category
-        return { ...prevMenu, categories: [...prevMenu.categories, updatedCategory] };
+        // Add new category - ensure items array exists
+        return { ...prevMenu, categories: [...prevMenu.categories, { ...updatedCategory, items: updatedCategory.items || [] }] };
       }
     });
   }, []);
@@ -322,7 +327,7 @@ export default function MasterMenuEditorPage() {
 
   const filteredCategories = menu?.categories?.filter(cat => 
     cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cat.items.some(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    (cat.items || []).some(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
   ) || [];
 
   if (loading) {
@@ -519,7 +524,7 @@ export default function MasterMenuEditorPage() {
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <CardContent className="pt-0">
-                        {category.items?.length === 0 ? (
+                        {!category.items?.length ? (
                           <div className="py-6 text-center border-t">
                             <p className="text-neutral-500 text-sm">No items in this category</p>
                             <Button 
@@ -534,7 +539,7 @@ export default function MasterMenuEditorPage() {
                           </div>
                         ) : (
                           <div className="border-t divide-y">
-                            {category.items.map((item) => (
+                            {(category.items || []).map((item) => (
                               <div 
                                 key={item.id} 
                                 className="py-3 px-2 flex items-center justify-between hover:bg-neutral-50 transition-colors"

@@ -161,7 +161,7 @@ export default function BranchMenuEditPage() {
             ...prevMenu,
             categories: prevMenu.categories.map(cat => ({
               ...cat,
-              items: cat.items.map(item => {
+              items: (cat.items || []).map(item => {
                 const change = changes.get(item.id);
                 if (change) {
                   return {
@@ -229,7 +229,7 @@ export default function BranchMenuEditPage() {
             ...prevMenu,
             categories: prevMenu.categories.map(cat => ({
               ...cat,
-              items: cat.items.map(item => 
+              items: (cat.items || []).map(item => 
                 item.id === editingItemId 
                   ? { ...item, variations: editingVariants }
                   : item
@@ -263,7 +263,7 @@ export default function BranchMenuEditPage() {
             ...prevMenu,
             categories: prevMenu.categories.map(cat => ({
               ...cat,
-              items: cat.items.map(item => 
+              items: (cat.items || []).map(item => 
                 item.id === editingItemId 
                   ? { ...item, customizations: editingCustomizations }
                   : item
@@ -341,7 +341,7 @@ export default function BranchMenuEditPage() {
 
   const filteredCategories = menu?.categories?.filter(cat =>
     cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cat.items.some(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    (cat.items || []).some(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
   ) || [];
 
   if (loading) {
@@ -457,11 +457,11 @@ export default function BranchMenuEditPage() {
           <Card key={category.id}>
             <CardHeader>
               <CardTitle className="text-lg">{category.name}</CardTitle>
-              <CardDescription>{category.items.length} items</CardDescription>
+              <CardDescription>{category.items?.length || 0} items</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {category.items.map((item) => {
+                {(category.items || []).map((item) => {
                   const currentPrice = getItemPrice(item);
                   const currentAvailability = getItemAvailability(item);
                   const isChanged = hasChanges(item.id);
