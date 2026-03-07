@@ -6,11 +6,12 @@ import { useParams } from 'next/navigation';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { 
   ShoppingBag, X, MapPin, Star, ChevronRight,
-  Fish, UtensilsCrossed, Salad, Sparkles, Plus, Minus, Gift, Loader2, Check, ClipboardList, Tag
+  UtensilsCrossed, Sparkles, Plus, Minus, Gift, Loader2, Check, ClipboardList, Tag
 } from 'lucide-react';
 import Image from 'next/image';
 import Pusher from 'pusher-js';
 import { OrderTracker } from '@/components/menu/OrderTracker';
+import { CategoryIcon } from '@/components/menu/CategoryIcon';
 import { getDeviceId } from '@/lib/deviceId';
 
 // Cookie helpers — more reliable than localStorage for session tokens
@@ -652,13 +653,6 @@ export default function IssoMenuView() {
     ? (categories.find(cat => cat.id === activeCategory)?.items.filter(item => item.is_available) || [])
     : searchFilteredItems;
 
-  const categoryIcons: Record<string, any> = {
-    'Appetizers': Fish,
-    'Mains': UtensilsCrossed,
-    'Salads': Salad,
-    'default': Fish
-  };
-
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -938,7 +932,6 @@ export default function IssoMenuView() {
             </motion.button>
             
             {categories.map((category) => {
-              const IconComponent = categoryIcons[category.name] || categoryIcons.default;
               return (
                 <motion.button
                   key={category.id}
@@ -958,7 +951,10 @@ export default function IssoMenuView() {
                     color: activeCategory === category.id ? 'white' : colors.text
                   }}
                 >
-                  <IconComponent className="w-5 h-5" />
+                  {category.icon
+                    ? <CategoryIcon icon={category.icon} className="w-5 h-5" />
+                    : <UtensilsCrossed className="w-5 h-5" />
+                  }
                   <span>{category.name}</span>
                 </motion.button>
               );
