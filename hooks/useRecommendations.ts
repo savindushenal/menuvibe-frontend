@@ -258,12 +258,21 @@ function buildGuideLocalFallback(mood: GuideMood, menuData: PublicMenuData): Rec
   }
 
   const keywords = MOOD_KEYWORDS[mood];
-  const matched = available.filter(item =>
-    keywords.some(kw =>
-      item.category_name.toLowerCase().includes(kw) ||
-      (item.name?.toLowerCase() ?? '').includes(kw)
-    )
-  );
+  const matched = available.filter(item => {
+    // Build a rich haystack: category + name + description + dietary labels + allergens
+    // so "grilled salmon with garlic butter" matches 'hearty' even if category is just "Specials"
+    const haystack = [
+      item.category_name,
+      item.name,
+      item.description,
+      ...(Array.isArray(item.dietary_info) ? item.dietary_info : []),
+      ...(Array.isArray(item.allergens)    ? item.allergens    : []),
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    return keywords.some(kw => haystack.includes(kw));
+  });
 
   return matched.length > 0 ? matched.slice(0, 6) : available.filter(i => i.is_featured).slice(0, 6);
 }
