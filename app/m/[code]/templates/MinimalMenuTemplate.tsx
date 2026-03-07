@@ -28,6 +28,10 @@ import {
 import { useParams } from 'next/navigation';
 import { useMenuSession } from '@/hooks/useMenuSession';
 import { OrderTracker } from '@/components/menu/OrderTracker';
+import { useRecommendations } from '@/hooks/useRecommendations';
+import type { RecommendedItem } from '@/hooks/useRecommendations';
+import RecommendationGuide from '@/components/menu/RecommendationGuide';
+import CartUpsellStrip from '@/components/menu/CartUpsellStrip';
 
 // Default icon
 const DEFAULT_ITEM_ICON = '🍽️';
@@ -49,7 +53,26 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
   const symbol = getCurrencySymbol(menuData.template.currency);
 
   const params = useParams();
-  const { orders, isPlacingOrder, placeOrder } = useMenuSession(params?.code as string ?? '');
+  const shortCode = params?.code as string ?? '';
+  const { orders, isPlacingOrder, placeOrder } = useMenuSession(shortCode);
+
+  // Recommendation engine
+  const cartItemIds = useMemo(() => cart.map(c => c.item.id), [cart]);
+  const { data: recData } = useRecommendations({
+    shortCode,
+    menuData,
+    focusedItemId: selectedItem?.id ?? null,
+    cartItemIds,
+  });
+  const hasOrdered = orders.some(o => ['pending', 'preparing', 'ready', 'delivered', 'completed'].includes(o.status));
+  const handleGuideAdd = (item: RecommendedItem) => {
+    if (item.variations && item.variations.length > 0) {
+      setSelectedItem(item as unknown as PublicMenuItem);
+      setSelectedVariation(null);
+    } else {
+      addToCartWithVariation(item as unknown as PublicMenuItem, null);
+    }
+  };
 
   const handlePlaceOrder = async () => {
     const items = cart.map(ci => ({
@@ -473,6 +496,14 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
                 )}
               </div>
 
+              {/* Upsell strip */}
+              <CartUpsellStrip
+                menuData={menuData}
+                cart={cart}
+                cartGaps={recData.cart_gaps}
+                onAdd={handleGuideAdd}
+              />
+
               {cart.length > 0 && (
                 <div className="p-4 border-t">
                   <div className="flex items-center justify-between mb-4">
@@ -619,7 +650,6 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
         )}
       </AnimatePresence>
 
-      {/* Scrollbar styles */}
       <style jsx global>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
@@ -629,6 +659,14 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
           scrollbar-width: none;
         }
       `}</style>
+      {/* Zero-force recommendation guide */}
+      <RecommendationGuide
+        shortCode={shortCode}
+        menuData={menuData}
+        onAddToCart={handleGuideAdd}
+        hasOrdered={hasOrdered}
+        bottomOffset={cart.length > 0 ? 88 : 16}
+      />
       <OrderTracker orders={orders} />
     </div>
   );

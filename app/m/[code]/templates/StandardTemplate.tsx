@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronRight,
@@ -34,6 +34,10 @@ import {
 import { useParams } from 'next/navigation';
 import { useMenuSession } from '@/hooks/useMenuSession';
 import { OrderTracker } from '@/components/menu/OrderTracker';
+import { useRecommendations } from '@/hooks/useRecommendations';
+import type { RecommendedItem } from '@/hooks/useRecommendations';
+import RecommendationGuide from '@/components/menu/RecommendationGuide';
+import CartUpsellStrip from '@/components/menu/CartUpsellStrip';
 
 // Default icons
 const DEFAULT_ITEM_ICON = '🍽️';
@@ -57,7 +61,18 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
   const symbol = getCurrencySymbol(menuData.template.currency);
 
   const params = useParams();
-  const { orders, isPlacingOrder, placeOrder } = useMenuSession(params?.code as string ?? '');
+  const shortCode = params?.code as string ?? '';
+  const { orders, isPlacingOrder, placeOrder } = useMenuSession(shortCode);
+
+  // Recommendation engine
+  const cartItemIds = useMemo(() => cart.map(c => c.item.id), [cart]);
+  const { data: recData } = useRecommendations({
+    shortCode,
+    menuData,
+    cartItemIds,
+  });
+  const hasOrdered = orders.some(o => ['pending', 'preparing', 'ready', 'delivered', 'completed'].includes(o.status));
+  const handleGuideAdd = (item: RecommendedItem) => addToCart(item as unknown as PublicMenuItem);
 
   const handlePlaceOrder = async () => {
     const items = cart.map(ci => ({
@@ -544,6 +559,14 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
                 )}
               </div>
 
+              {/* Upsell strip */}
+              <CartUpsellStrip
+                menuData={menuData}
+                cart={cart}
+                cartGaps={recData.cart_gaps}
+                onAdd={handleGuideAdd}
+              />
+
               {cart.length > 0 && (
                 <div className="p-4 border-t bg-neutral-50">
                   <div className="flex items-center justify-between mb-4">
@@ -577,6 +600,14 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
           scrollbar-width: none;
         }
       `}</style>
+      {/* Zero-force recommendation guide */}
+      <RecommendationGuide
+        shortCode={shortCode}
+        menuData={menuData}
+        onAddToCart={handleGuideAdd}
+        hasOrdered={hasOrdered}
+        bottomOffset={cart.length > 0 ? 88 : 16}
+      />
       <OrderTracker orders={orders} />
     </div>
   );
