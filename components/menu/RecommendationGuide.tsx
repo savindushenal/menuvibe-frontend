@@ -125,6 +125,10 @@ export default function RecommendationGuide({
   const handleAdd = (item: RecommendedItem) => {
     onAddToCart(item);
     setAddedIds(prev => new Set(prev).add(item.id));
+    // If item needs variation selection the modal takes over — close the guide to prevent overlap
+    if (item.variations && item.variations.length > 0) {
+      handleClose();
+    }
   };
 
   const handleClose = () => {

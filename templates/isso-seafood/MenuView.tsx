@@ -326,6 +326,7 @@ export default function IssoMenuView() {
     const menuItem = item as unknown as MenuItem;
     // If item has configurable options, open the product sheet so user can choose
     if ((menuItem.variations?.length ?? 0) > 0 || (menuItem.customizations?.length ?? 0) > 0) {
+      setIsCartOpen(false); // close cart first so product sheet isn't hidden behind it
       handleItemClick(menuItem);
       return;
     }

@@ -67,6 +67,7 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
   const hasOrdered = orders.some(o => ['pending', 'preparing', 'ready', 'delivered', 'completed'].includes(o.status));
   const handleGuideAdd = (item: RecommendedItem) => {
     if (item.variations && item.variations.length > 0) {
+      setIsCartOpen(false); // close cart first so item modal isn't hidden behind it
       setSelectedItem(item as unknown as PublicMenuItem);
       setSelectedVariation(null);
     } else {

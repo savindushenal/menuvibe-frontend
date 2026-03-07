@@ -73,6 +73,7 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
 
   const handleGuideAdd = (item: RecommendedItem) => {
     if (item.variations && item.variations.length > 0) {
+      setIsCartOpen(false); // close cart first so item modal isn't hidden behind it
       setSelectedItem(item as unknown as PublicMenuItem);
     } else {
       addToCart(item as unknown as PublicMenuItem);
