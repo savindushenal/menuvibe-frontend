@@ -107,10 +107,11 @@ export function useRecommendationGuide(shortCode: string) {
       const res = await fetch(`${API_BASE}/menu/${shortCode}/recommendations/guide?mood=${selectedMood}&limit=6`);
       if (!res.ok) throw new Error('fetch failed');
       const json = await res.json();
-      if (json.success && json.data?.items) {
+      if (json.success && json.data?.items?.length > 0) {
         setResults(json.data.items);
         return;
       }
+      // Backend returned success but empty items — fall through to local fallback
     } catch {
       // fallback to local if backend unreachable
     } finally {

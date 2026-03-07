@@ -70,16 +70,12 @@ export default function CartUpsellStrip({
   const symbol = getCurrencySymbol(menuData.template.currency);
 
   // Track recently-added item IDs — keeps the card visible for 1.5 s so the ✓ feedback is seen
-  const [lockedItemIds, setLockedItemIds] = useState<Set<number>>(new Set());
+  const [lockedItemIds, setLockedItemIds] = useState<number[]>([]);
 
   const handleItemAdd = useCallback((item: RecommendedItem) => {
-    setLockedItemIds(prev => new Set([...prev, item.id]));
+    setLockedItemIds(prev => prev.includes(item.id) ? prev : [...prev, item.id]);
     setTimeout(() => {
-      setLockedItemIds(prev => {
-        const next = new Set(prev);
-        next.delete(item.id);
-        return next;
-      });
+      setLockedItemIds(prev => prev.filter(id => id !== item.id));
     }, 1500);
     onAdd(item);
   }, [onAdd]);
@@ -118,8 +114,8 @@ export default function CartUpsellStrip({
 
   // Display list = active suggestions PLUS any locked items that just left the list
   const displaySuggestions = useMemo(() => {
-    const suggestionIds = new Set(suggestions.map(i => i.id));
-    const locked = allAvailableItems.filter(i => lockedItemIds.has(i.id) && !suggestionIds.has(i.id));
+    const suggestionIds = suggestions.map(i => i.id);
+    const locked = allAvailableItems.filter(i => lockedItemIds.includes(i.id) && !suggestionIds.includes(i.id));
     return [...suggestions, ...locked].slice(0, 6);
   }, [suggestions, lockedItemIds, allAvailableItems]);
 
@@ -153,7 +149,7 @@ export default function CartUpsellStrip({
               item={item}
               symbol={symbol}
               design={design}
-              isAdded={lockedItemIds.has(item.id)}
+              isAdded={lockedItemIds.includes(item.id)}
               onAdd={() => handleItemAdd(item)}
             />
           ))}
