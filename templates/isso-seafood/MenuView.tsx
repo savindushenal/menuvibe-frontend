@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
@@ -13,6 +13,11 @@ import Pusher from 'pusher-js';
 import { OrderTracker } from '@/components/menu/OrderTracker';
 import { CategoryIcon } from '@/components/menu/CategoryIcon';
 import { getDeviceId } from '@/lib/deviceId';
+import { useRecommendations } from '@/hooks/useRecommendations';
+import type { RecommendedItem } from '@/hooks/useRecommendations';
+import RecommendationGuide from '@/components/menu/RecommendationGuide';
+import CartUpsellStrip from '@/components/menu/CartUpsellStrip';
+import type { PublicMenuData } from '@/app/m/[code]/templates/types';
 
 // Cookie helpers — more reliable than localStorage for session tokens
 const setCookie = (name: string, value: string, days = 7) => {
@@ -249,7 +254,71 @@ export default function IssoMenuView() {
     return () => { if (cartSaveTimerRef.current) clearTimeout(cartSaveTimerRef.current); };
   }, [cartItems, sessionToken]);
 
-  // Subscribe to Pusher for real-time order status — runs whenever active order set changes
+  // ── Recommendation engine adapter ────────────────────────────────────────
+  // Convert the isso data shape to the standard PublicMenuData format so we
+  // can reuse the shared engine hooks and components.
+  const menuDataForEngine = useMemo<PublicMenuData | null>(() => {
+    if (!data?.menu) return null;
+    return {
+      endpoint: data.endpoint || { id: 0, name: '', type: '', identifier: '' },
+      template: {
+        id: data.template?.id ?? 0,
+        name: data.template?.name ?? 'isso',
+        currency: data.menu?.currency ?? 'LKR',
+        image_url: data.template?.image_url ?? null,
+        settings: data.template?.settings ?? {},
+      },
+      business: data.business ?? null,
+      categories: (data.menu.categories ?? []).map((cat: any) => ({
+        id: cat.id,
+        name: cat.name,
+        description: cat.description ?? null,
+        icon: cat.icon ?? null,
+        items: (cat.items ?? []).map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          description: item.description ?? null,
+          price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
+          compare_at_price: null,
+          image_url: item.image_url ?? null,
+          icon: null,
+          is_available: item.is_available !== false,
+          is_featured: item.is_featured ?? false,
+          is_spicy: item.is_spicy ?? false,
+          spice_level: item.spice_level ?? null,
+          allergens: null,
+          dietary_info: null,
+          preparation_time: null,
+          variations: item.variations ?? null,
+        })),
+      })),
+      offers: (data.offers ?? []).map((o: any) => ({
+        id: o.id,
+        name: o.title ?? o.name ?? '',
+        description: o.description ?? null,
+        type: o.type ?? '',
+        discount_type: o.discount_type ?? '',
+        discount_value: o.discount_value ?? 0,
+        image_url: o.image_url ?? null,
+      })),
+      overrides: {},
+    };
+  }, [data]);
+
+  const cartItemIds = useMemo(() => cartItems.map(c => c.item.id), [cartItems]);
+  const { data: recData } = useRecommendations({
+    shortCode: code,
+    menuData: menuDataForEngine as PublicMenuData,
+    cartItemIds,
+    enabled: !!menuDataForEngine,
+  });
+  const hasOrdered = sessionOrders.some(o =>
+    ['pending', 'preparing', 'ready', 'delivered', 'completed'].includes(o.status)
+  );
+  const handleGuideAdd = (item: RecommendedItem) => {
+    handleItemClick(item as unknown as MenuItem);
+  };
+  // ── End recommendation engine setup ───────────────────────────────────── — runs whenever active order set changes
   const activeOrderKey = sessionOrders
     .filter(o => ['pending', 'preparing', 'ready'].includes(o.status))
     .map(o => o.id)
@@ -1389,6 +1458,16 @@ export default function IssoMenuView() {
                 )}
               </div>
 
+              {/* Upsell strip — show items from categories not yet in cart */}
+              {menuDataForEngine && (
+                <CartUpsellStrip
+                  menuData={menuDataForEngine}
+                  cart={cartItems}
+                  cartGaps={recData.cart_gaps}
+                  onAdd={handleGuideAdd}
+                />
+              )}
+
               {cartItems.length > 0 && (
                 <div className="border-t border-gray-200 p-6" style={{ backgroundColor: `${colors.background}dd` || '#FFF8F0' }}>
                   {/* Offer Chips */}
@@ -1609,6 +1688,17 @@ export default function IssoMenuView() {
           </>
         )}
       </AnimatePresence>
+
+      {/* Zero-force recommendation guide — appears after 10s idle */}
+      {menuDataForEngine && (
+        <RecommendationGuide
+          shortCode={code}
+          menuData={menuDataForEngine}
+          onAddToCart={handleGuideAdd}
+          hasOrdered={hasOrdered}
+          bottomOffset={cartItems.length > 0 ? 88 : 16}
+        />
+      )}
 
       {/* Floating order tracker — visible whenever session has orders, even after page refresh */}
       {!showOrderStatus && <OrderTracker orders={sessionOrders} />}
