@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { 
   ShoppingBag, X, MapPin, Star, ChevronRight,
-  UtensilsCrossed, Sparkles, Plus, Minus, Gift, Loader2, Check, ClipboardList, Tag
+  Sparkles, Plus, Minus, Gift, Loader2, Check, ClipboardList, Tag
 } from 'lucide-react';
 import Image from 'next/image';
 import Pusher from 'pusher-js';
@@ -951,10 +951,7 @@ export default function IssoMenuView() {
                     color: activeCategory === category.id ? 'white' : colors.text
                   }}
                 >
-                  {category.icon
-                    ? <CategoryIcon icon={category.icon} className="w-5 h-5" />
-                    : <UtensilsCrossed className="w-5 h-5" />
-                  }
+                  <CategoryIcon icon={category.icon} className="w-5 h-5" />
                   <span>{category.name}</span>
                 </motion.button>
               );

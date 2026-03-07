@@ -155,7 +155,7 @@ interface CategoryIconProps extends LucideProps {
  * - If `icon` is an emoji/unknown string → renders it as plain text (backward compat).
  */
 export function CategoryIcon({ icon, className, ...props }: CategoryIconProps) {
-  if (!icon) return null;
+  if (!icon) return <UtensilsCrossed className={className} {...props} />;
 
   const LucideIcon = ICON_MAP[icon];
   if (LucideIcon) {
