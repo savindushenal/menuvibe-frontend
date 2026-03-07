@@ -17,6 +17,7 @@ import {
   MapPin,
   UtensilsCrossed,
 } from 'lucide-react';
+import { CategoryIcon } from '@/components/menu/CategoryIcon';
 import {
   PublicMenuData,
   PublicMenuItem,
@@ -273,7 +274,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                   color: activeCategory === category.id ? 'white' : design.text,
                 }}
               >
-                {category.icon && <span className="mr-1.5">{category.icon}</span>}
+                <CategoryIcon icon={category.icon} className="h-4 w-4 mr-1.5 shrink-0" />
                 {category.name}
               </button>
             ))}
@@ -300,7 +301,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
                 }}
               >
                 <div className="flex items-center gap-2">
-                  {category.icon && <span>{category.icon}</span>}
+                  <CategoryIcon icon={category.icon} className="h-4 w-4 shrink-0" />
                   <span>{category.name}</span>
                 </div>
                 <span className="text-xs opacity-50 mt-0.5 block">

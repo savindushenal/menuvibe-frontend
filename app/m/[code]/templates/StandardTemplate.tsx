@@ -20,6 +20,7 @@ import {
   MapPin,
   UtensilsCrossed,
 } from 'lucide-react';
+import { CategoryIcon } from '@/components/menu/CategoryIcon';
 import {
   PublicMenuData,
   PublicMenuItem,
@@ -264,7 +265,7 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
                     : undefined
                 }
               >
-                {category.icon && <span className="mr-1">{category.icon}</span>}
+                <CategoryIcon icon={category.icon} className="h-4 w-4 mr-1 shrink-0" />
                 {category.name}
               </button>
             ))}
@@ -286,7 +287,7 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
               className="w-full flex items-center justify-between py-3 border-b"
             >
               <div className="flex items-center gap-2">
-                {category.icon && <span className="text-xl">{category.icon}</span>}
+                <CategoryIcon icon={category.icon} className="h-5 w-5 shrink-0" />
                 <h2 className="text-lg font-bold">{category.name}</h2>
                 <span className="text-sm text-neutral-400">
                   ({category.items.length})

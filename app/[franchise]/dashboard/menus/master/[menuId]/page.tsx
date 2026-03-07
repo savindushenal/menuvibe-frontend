@@ -58,6 +58,7 @@ import {
 } from '@/components/ui/collapsible';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { CategoryIcon } from '@/components/menu/CategoryIcon';
 import {
   DndContext,
   closestCenter,
@@ -570,7 +571,9 @@ export default function MasterMenuEditorPage() {
                               <ChevronRight className="h-5 w-5 text-neutral-500" />
                             )}
                             {category.icon ? (
-                              <span className="text-2xl w-10 h-10 flex items-center justify-center">{category.icon}</span>
+                              <span className="w-10 h-10 flex items-center justify-center text-neutral-600">
+                                <CategoryIcon icon={category.icon} className="h-6 w-6" />
+                              </span>
                             ) : category.image_url ? (
                               <img 
                                 src={category.image_url} 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { CategoryIcon } from '@/components/menu/CategoryIcon';
 
 /**
  * API-Driven Menu Configuration Types
@@ -379,7 +380,7 @@ function MenuListComponent({ menu, config, currency, showImages, showDescription
         {menu?.categories?.map((category: any) => (
           <div key={category.id} className="mb-8">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              {category.icon && <span>{category.icon}</span>}
+              <CategoryIcon icon={category.icon} className="h-5 w-5 shrink-0" />
               {category.name}
             </h2>
             

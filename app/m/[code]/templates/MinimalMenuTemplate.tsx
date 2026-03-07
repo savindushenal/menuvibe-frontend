@@ -14,6 +14,7 @@ import {
   Globe,
   UtensilsCrossed,
 } from 'lucide-react';
+import { CategoryIcon } from '@/components/menu/CategoryIcon';
 import {
   PublicMenuData,
   PublicMenuItem,
@@ -231,7 +232,7 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
                   : { backgroundColor: design.card, color: design.text }
               }
             >
-              {category.icon && <span className="mr-1">{category.icon}</span>}
+              <CategoryIcon icon={category.icon} className="h-4 w-4 mr-1 shrink-0" />
               {category.name}
             </button>
           ))}

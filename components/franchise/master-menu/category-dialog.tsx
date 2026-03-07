@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, ImageIcon } from 'lucide-react';
+import { Loader2, ImageIcon, X } from 'lucide-react';
+import { CategoryIcon, CATEGORY_ICONS } from '@/components/menu/CategoryIcon';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -174,36 +175,45 @@ export function CategoryDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="icon">Icon (optional)</Label>
-              <div className="flex gap-2 items-center">
-                <Input
-                  id="icon"
-                  placeholder="Paste an emoji, e.g. 🍔"
-                  value={formData.icon}
-                  onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+              <Label>Icon (optional)</Label>
+              <p className="text-xs text-neutral-500">SVG icons — render the same on every device</p>
+              <div className="grid grid-cols-7 gap-1 p-2 border rounded-lg bg-neutral-50 max-h-52 overflow-y-auto">
+                <button
+                  type="button"
+                  title="No icon"
                   disabled={loading}
-                  className="flex-1"
-                />
-                {formData.icon && (
-                  <span className="text-2xl w-10 h-10 flex items-center justify-center border rounded bg-neutral-50">
-                    {formData.icon}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-neutral-500">Use any emoji as the category icon</p>
-              <div className="flex flex-wrap gap-1 pt-1">
-                {['🍔','🍕','🍣','🍜','🥗','🍰','☕','🍹','🥩','🌮','🍗','🥪','🍝','🍱','🥤','🍺','🥞','🍦'].map((emoji) => (
+                  onClick={() => setFormData({ ...formData, icon: '' })}
+                  className={`flex flex-col items-center justify-center rounded p-1.5 transition-colors gap-0.5 ${
+                    !formData.icon ? 'bg-primary text-white' : 'hover:bg-neutral-200 text-neutral-400'
+                  }`}
+                >
+                  <X className="h-4 w-4" />
+                  <span className="text-[9px]">None</span>
+                </button>
+                {CATEGORY_ICONS.map(({ name, label }) => (
                   <button
-                    key={emoji}
+                    key={name}
                     type="button"
-                    className="text-xl w-8 h-8 flex items-center justify-center rounded hover:bg-neutral-100 transition-colors"
-                    onClick={() => setFormData({ ...formData, icon: emoji })}
+                    title={label}
                     disabled={loading}
+                    onClick={() => setFormData({ ...formData, icon: name })}
+                    className={`flex flex-col items-center justify-center rounded p-1.5 transition-colors gap-0.5 ${
+                      formData.icon === name
+                        ? 'bg-primary text-white'
+                        : 'hover:bg-neutral-200 text-neutral-600'
+                    }`}
                   >
-                    {emoji}
+                    <CategoryIcon icon={name} className="h-4 w-4" />
+                    <span className="text-[9px] leading-none text-center">{label}</span>
                   </button>
                 ))}
               </div>
+              {formData.icon && (
+                <div className="flex items-center gap-2 text-sm text-neutral-600">
+                  <CategoryIcon icon={formData.icon} className="h-5 w-5 text-primary" />
+                  <span>{CATEGORY_ICONS.find(i => i.name === formData.icon)?.label ?? formData.icon}</span>
+                </div>
+              )}
             </div>
             
             <div className="flex items-center justify-between">
