@@ -50,6 +50,8 @@ interface StandardTemplateProps {
 export function StandardTemplate({ menuData }: StandardTemplateProps) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<PublicMenuItem | null>(null);
+  const [selectedVariation, setSelectedVariation] = useState<{ name: string; price: number } | null>(null);
   const [activeCategory, setActiveCategory] = useState<number | null>(
     menuData.categories[0]?.id || null
   );
@@ -72,7 +74,17 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
     cartItemIds,
   });
   const hasOrdered = orders.some(o => ['pending', 'preparing', 'ready', 'delivered', 'completed'].includes(o.status));
-  const handleGuideAdd = (item: RecommendedItem) => addToCart(item as unknown as PublicMenuItem);
+  const handleGuideAdd = (item: RecommendedItem) => {
+    const hasVariations = (item.variations?.length ?? 0) > 0;
+    const hasCustomizations = ((item as any).customizations?.length ?? 0) > 0;
+    if (hasVariations || hasCustomizations) {
+      setIsCartOpen(false);
+      setSelectedItem(item as unknown as PublicMenuItem);
+      setSelectedVariation(null);
+    } else {
+      addToCartWithVariation(item as unknown as PublicMenuItem, null);
+    }
+  };
 
   const handlePlaceOrder = async () => {
     const items = cart.map(ci => ({
@@ -86,18 +98,26 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
     if (result) { setCart([]); setIsCartOpen(false); }
   };
 
-  const addToCart = (item: PublicMenuItem) => {
+  const addToCartWithVariation = (item: PublicMenuItem, variation: { name: string; price: number } | null) => {
     if (!isItemAvailable(item, menuData.overrides)) return;
     setCart((prev) => {
-      const existing = prev.find((i) => i.item.id === item.id);
+      const existing = prev.find((i) =>
+        i.item.id === item.id &&
+        ((!i.selectedVariation && !variation) || i.selectedVariation?.name === variation?.name)
+      );
       if (existing) {
         return prev.map((i) =>
-          i.item.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+          i.item.id === item.id && ((!i.selectedVariation && !variation) || i.selectedVariation?.name === variation?.name)
+            ? { ...i, quantity: i.quantity + 1 } : i
         );
       }
-      return [...prev, { item, quantity: 1, selectedVariation: null }];
+      return [...prev, { item, quantity: 1, selectedVariation: variation }];
     });
+    setSelectedItem(null);
+    setSelectedVariation(null);
   };
+
+  const addToCart = (item: PublicMenuItem) => addToCartWithVariation(item, null);
 
   const removeFromCart = (itemId: number) => {
     setCart((prev) => {
@@ -590,6 +610,85 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
         )}
       </AnimatePresence>
 
+      {/* Item Variation Sheet — opens when guide/upsell taps an item with variations */}
+      <AnimatePresence>
+        {selectedItem && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-50"
+              onClick={() => { setSelectedItem(null); setSelectedVariation(null); }}
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 z-50 max-h-[90vh] overflow-y-auto rounded-t-3xl bg-white"
+              style={{ backgroundColor: design.card }}
+            >
+              <div className="p-4 border-b flex items-center justify-between sticky top-0 z-10" style={{ backgroundColor: design.card }}>
+                <h2 className="text-xl font-bold" style={{ color: design.text }}>{selectedItem.name}</h2>
+                <button
+                  onClick={() => { setSelectedItem(null); setSelectedVariation(null); }}
+                  className="p-2 rounded-full hover:bg-neutral-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-4">
+                {selectedItem.image_url && (
+                  <img src={selectedItem.image_url} alt={selectedItem.name} className="w-full h-44 object-cover rounded-xl mb-4" />
+                )}
+                {selectedItem.description && (
+                  <p className="text-sm opacity-70 mb-4" style={{ color: design.text }}>{selectedItem.description}</p>
+                )}
+                {selectedItem.variations && selectedItem.variations.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="font-semibold mb-3" style={{ color: design.text }}>Choose Your Option</h3>
+                    <div className="space-y-2">
+                      {selectedItem.variations.map((variation, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setSelectedVariation(variation)}
+                          disabled={variation.is_available === false}
+                          className="w-full p-3 rounded-xl border-2 transition-all text-left disabled:opacity-50"
+                          style={{
+                            borderColor: selectedVariation?.name === variation.name ? design.accent : design.bg,
+                            backgroundColor: selectedVariation?.name === variation.name ? design.accent + '15' : design.bg,
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium" style={{ color: design.text }}>{variation.name}</span>
+                            <span className="font-bold" style={{ color: design.accent }}>
+                              {symbol}{formatPrice(variation.price)}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="sticky bottom-0 pt-4 border-t" style={{ backgroundColor: design.card }}>
+                  <button
+                    onClick={() => addToCartWithVariation(selectedItem, selectedVariation)}
+                    disabled={!!(selectedItem.variations && selectedItem.variations.length > 0 && !selectedVariation)}
+                    className="w-full py-4 rounded-xl text-white font-semibold disabled:opacity-50"
+                    style={{ backgroundColor: design.accent }}
+                  >
+                    {selectedItem.variations && selectedItem.variations.length > 0 && !selectedVariation
+                      ? 'Select an option'
+                      : `Add to Cart — ${symbol}${formatPrice(selectedVariation?.price ?? getItemPrice(selectedItem, menuData.overrides))}`}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Custom scrollbar styles */}
       <style jsx global>{`
         .scrollbar-hide::-webkit-scrollbar {
@@ -607,6 +706,7 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
         onAddToCart={handleGuideAdd}
         hasOrdered={hasOrdered}
         bottomOffset={cart.length > 0 ? 88 : 16}
+        cartItemIds={cartItemIds}
       />
       <OrderTracker orders={orders} />
     </div>

@@ -72,8 +72,10 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
   const hasOrdered = orders.some(o => ['pending', 'preparing', 'ready', 'delivered', 'completed'].includes(o.status));
 
   const handleGuideAdd = (item: RecommendedItem) => {
-    if (item.variations && item.variations.length > 0) {
-      setIsCartOpen(false); // close cart first so item modal isn't hidden behind it
+    const hasVariations = (item.variations?.length ?? 0) > 0;
+    const hasCustomizations = ((item as any).customizations?.length ?? 0) > 0;
+    if (hasVariations || hasCustomizations) {
+      setIsCartOpen(false);
       setSelectedItem(item as unknown as PublicMenuItem);
     } else {
       addToCart(item as unknown as PublicMenuItem);
@@ -701,6 +703,7 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
         onAddToCart={handleGuideAdd}
         hasOrdered={hasOrdered}
         bottomOffset={cart.length > 0 ? 88 : 16}
+        cartItemIds={cartItemIds}
       />
       <OrderTracker orders={orders} />
     </div>

@@ -72,8 +72,10 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
 
   // Handler for guide/upsell item adds (opens variation modal if needed)
   const handleGuideAdd = (item: RecommendedItem) => {
-    if (item.variations && item.variations.length > 0) {
-      setIsCartOpen(false); // close cart first so item modal isn't hidden behind it
+    const hasVariations = (item.variations?.length ?? 0) > 0;
+    const hasCustomizations = ((item as any).customizations?.length ?? 0) > 0;
+    if (hasVariations || hasCustomizations) {
+      setIsCartOpen(false);
       setSelectedItem(item as unknown as PublicMenuItem);
       setSelectedVariation(null);
     } else {
@@ -860,6 +862,7 @@ export function ClassicMenuTemplate({ menuData }: ClassicMenuTemplateProps) {
         onAddToCart={handleGuideAdd}
         hasOrdered={hasOrdered}
         bottomOffset={cart.length > 0 ? 88 : 16}
+        cartItemIds={cartItemIds}
       />
       <OrderTracker orders={orders} />
     </div>

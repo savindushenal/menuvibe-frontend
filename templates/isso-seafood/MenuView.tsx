@@ -1725,6 +1725,7 @@ export default function IssoMenuView() {
           hasOrdered={hasOrdered}
           bottomOffset={cartItems.length > 0 ? 88 : 16}
           side="right"
+          cartItemIds={cartItemIds}
         />
       )}
 

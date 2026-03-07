@@ -43,6 +43,8 @@ interface RecommendationGuideProps {
   bottomOffset?: number;
   /** Which side of the screen the trigger button sits on */
   side?: 'left' | 'right';
+  /** Live cart item IDs — used as source of truth for ✓ Added state */
+  cartItemIds?: number[];
 }
 
 // ── Mood config ───────────────────────────────────────────────────────────── //
@@ -68,6 +70,7 @@ export default function RecommendationGuide({
   hasOrdered = false,
   bottomOffset = 72,
   side = 'left',
+  cartItemIds,
 }: RecommendationGuideProps) {
   const flags = useRecommendationFeatureFlags();
   const { results, mood, loading, fetchGuide, reset } = useRecommendationGuide(shortCode);
@@ -275,7 +278,8 @@ export default function RecommendationGuide({
 
                   <div className="flex flex-col gap-2 px-4">
                     {results.map(item => {
-                      const added = addedIds.has(item.id);
+                      // Use live cart as source of truth; fall back to local addedIds if cartItemIds not provided
+                      const added = cartItemIds ? cartItemIds.includes(item.id) : addedIds.has(item.id);
                       const available = isItemAvailable(item, menuData.overrides);
                       return (
                         <motion.div
