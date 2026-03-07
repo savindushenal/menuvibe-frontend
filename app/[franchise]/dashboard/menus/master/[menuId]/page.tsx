@@ -569,13 +569,15 @@ export default function MasterMenuEditorPage() {
                             ) : (
                               <ChevronRight className="h-5 w-5 text-neutral-500" />
                             )}
-                            {category.image_url && (
+                            {category.icon ? (
+                              <span className="text-2xl w-10 h-10 flex items-center justify-center">{category.icon}</span>
+                            ) : category.image_url ? (
                               <img 
                                 src={category.image_url} 
                                 alt={category.name}
                                 className="h-10 w-10 rounded object-cover"
                               />
-                            )}
+                            ) : null}
                             <div>
                               <CardTitle className="text-base">{category.name}</CardTitle>
                               <CardDescription className="text-sm">

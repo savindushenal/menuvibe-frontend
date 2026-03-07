@@ -175,13 +175,35 @@ export function CategoryDialog({
 
             <div className="space-y-2">
               <Label htmlFor="icon">Icon (optional)</Label>
-              <Input
-                id="icon"
-                placeholder="e.g., 🍔 or icon class name"
-                value={formData.icon}
-                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                disabled={loading}
-              />
+              <div className="flex gap-2 items-center">
+                <Input
+                  id="icon"
+                  placeholder="Paste an emoji, e.g. 🍔"
+                  value={formData.icon}
+                  onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                  disabled={loading}
+                  className="flex-1"
+                />
+                {formData.icon && (
+                  <span className="text-2xl w-10 h-10 flex items-center justify-center border rounded bg-neutral-50">
+                    {formData.icon}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-neutral-500">Use any emoji as the category icon</p>
+              <div className="flex flex-wrap gap-1 pt-1">
+                {['🍔','🍕','🍣','🍜','🥗','🍰','☕','🍹','🥩','🌮','🍗','🥪','🍝','🍱','🥤','🍺','🥞','🍦'].map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    className="text-xl w-8 h-8 flex items-center justify-center rounded hover:bg-neutral-100 transition-colors"
+                    onClick={() => setFormData({ ...formData, icon: emoji })}
+                    disabled={loading}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </div>
             
             <div className="flex items-center justify-between">
