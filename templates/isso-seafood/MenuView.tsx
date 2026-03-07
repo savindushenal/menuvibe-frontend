@@ -932,7 +932,7 @@ export default function IssoMenuView() {
               <span>All Items</span>
             </motion.button>
             
-            {categories.map((category) => {
+            {categories.filter(cat => cat.items.some(i => i.is_available)).map((category) => {
               return (
                 <motion.button
                   key={category.id}
