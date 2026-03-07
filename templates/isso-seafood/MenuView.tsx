@@ -1010,14 +1010,14 @@ export default function IssoMenuView() {
             </div>
           ) : (
             /* Category filter active → single section; null → all sections stacked */
-            <div className="space-y-12">
+            <div className="space-y-16">
               {categories
                 .filter(cat =>
                   (activeCategory === null || cat.id === activeCategory) &&
                   cat.items.some(i => i.is_available)
                 )
                 .map((category) => (
-                <div key={category.id}>
+                <div key={category.id} className="pt-4">
                   {/* Section heading */}
                   <div className="mb-5">
                     <div className="flex items-center gap-3">
