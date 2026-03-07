@@ -323,7 +323,26 @@ export default function IssoMenuView() {
     ['pending', 'preparing', 'ready', 'delivered', 'completed'].includes(o.status)
   );
   const handleGuideAdd = (item: RecommendedItem) => {
-    handleItemClick(item as unknown as MenuItem);
+    const menuItem = item as unknown as MenuItem;
+    // If item has configurable options, open the product sheet so user can choose
+    if ((menuItem.variations?.length ?? 0) > 0 || (menuItem.customizations?.length ?? 0) > 0) {
+      handleItemClick(menuItem);
+      return;
+    }
+    // Simple item — add directly to cart without forcing the product sheet open
+    const price = typeof menuItem.price === 'string' ? parseFloat(menuItem.price) : (menuItem.price ?? 0);
+    setCartItems(prev => {
+      const existingIdx = prev.findIndex(
+        ci => ci.item.id === menuItem.id && JSON.stringify(ci.selectedOptions) === '{}'
+      );
+      if (existingIdx >= 0) {
+        const updated = [...prev];
+        updated[existingIdx] = { ...updated[existingIdx], quantity: updated[existingIdx].quantity + 1 };
+        return updated;
+      }
+      return [...prev, { item: menuItem, quantity: 1, finalPrice: price, selectedOptions: {} }];
+    });
+    toast.success(`${menuItem.name} added to cart`);
   };
   // ── End recommendation engine setup ───────────────────────────────────── — runs whenever active order set changes
   const activeOrderKey = sessionOrders

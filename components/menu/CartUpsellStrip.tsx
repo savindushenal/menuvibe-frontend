@@ -13,7 +13,7 @@
  * It renders nothing if there are no meaningful suggestions.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Plus } from 'lucide-react';
 import type { PublicMenuData } from '@/app/m/[code]/templates/types';
@@ -69,11 +69,35 @@ export default function CartUpsellStrip({
   const design = getColorTheme(menuData.template.settings);
   const symbol = getCurrencySymbol(menuData.template.currency);
 
+  // Track recently-added item IDs — keeps the card visible for 1.5 s so the ✓ feedback is seen
+  const [lockedItemIds, setLockedItemIds] = useState<Set<number>>(new Set());
+
+  const handleItemAdd = useCallback((item: RecommendedItem) => {
+    setLockedItemIds(prev => new Set([...prev, item.id]));
+    setTimeout(() => {
+      setLockedItemIds(prev => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
+    }, 1500);
+    onAdd(item);
+  }, [onAdd]);
+
   const cartItemIds = cart.map(c => c.item.id);
   const cartCategoryIds = useMemo(() => {
     const all = menuData.categories.flatMap(cat => cat.items.map(i => ({ id: i.id, catId: cat.id })));
     return all.filter(i => cartItemIds.includes(i.id)).map(i => i.catId);
   }, [cart, menuData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Full catalogue of available items (used to restore locked cards after they leave suggestions)
+  const allAvailableItems = useMemo<RecommendedItem[]>(() =>
+    menuData.categories.flatMap(cat =>
+      cat.items
+        .filter(i => isItemAvailable(i, menuData.overrides))
+        .map(i => ({ ...i, category_id: cat.id, category_name: cat.name } as RecommendedItem))
+    ),
+  [menuData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Merge server gaps with a local fallback
   const suggestions = useMemo(() => {
@@ -92,7 +116,14 @@ export default function CartUpsellStrip({
       .slice(0, 5);
   }, [cartGaps, cart, menuData]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (cart.length === 0 || suggestions.length === 0) return null;
+  // Display list = active suggestions PLUS any locked items that just left the list
+  const displaySuggestions = useMemo(() => {
+    const suggestionIds = new Set(suggestions.map(i => i.id));
+    const locked = allAvailableItems.filter(i => lockedItemIds.has(i.id) && !suggestionIds.has(i.id));
+    return [...suggestions, ...locked].slice(0, 6);
+  }, [suggestions, lockedItemIds, allAvailableItems]);
+
+  if (cart.length === 0 || displaySuggestions.length === 0) return null;
 
   const label = getStripLabel(cart, menuData);
 
@@ -116,13 +147,14 @@ export default function CartUpsellStrip({
 
         {/* Horizontal scroll cards */}
         <div className="flex gap-2.5 overflow-x-auto px-4 pb-4 no-scrollbar">
-          {suggestions.map(item => (
+          {displaySuggestions.map(item => (
             <UpsellCard
               key={item.id}
               item={item}
               symbol={symbol}
               design={design}
-              onAdd={() => onAdd(item)}
+              isAdded={lockedItemIds.has(item.id)}
+              onAdd={() => handleItemAdd(item)}
             />
           ))}
         </div>
@@ -138,10 +170,13 @@ interface UpsellCardProps {
   symbol: string;
   design: { bg: string; text: string; accent: string; card: string };
   onAdd: () => void;
+  /** Externally controlled — true while the parent is keeping this card locked (1.5 s after add) */
+  isAdded?: boolean;
 }
 
-function UpsellCard({ item, symbol, design, onAdd }: UpsellCardProps) {
+function UpsellCard({ item, symbol, design, onAdd, isAdded: isAddedProp = false }: UpsellCardProps) {
   const [added, setAdded] = React.useState(false);
+  const showAdded = added || isAddedProp;
 
   const handleAdd = () => {
     setAdded(true);
@@ -174,11 +209,11 @@ function UpsellCard({ item, symbol, design, onAdd }: UpsellCardProps) {
           </span>
           <button
             onClick={handleAdd}
-            disabled={added}
+            disabled={showAdded}
             className="w-6 h-6 rounded-full flex items-center justify-center text-white transition-all disabled:opacity-60"
-            style={{ backgroundColor: added ? '#10b981' : design.accent }}
+            style={{ backgroundColor: showAdded ? '#10b981' : design.accent }}
           >
-            {added ? <span className="text-xs">✓</span> : <Plus className="w-3 h-3" />}
+            {showAdded ? <span className="text-xs">✓</span> : <Plus className="w-3 h-3" />}
           </button>
         </div>
       </div>
