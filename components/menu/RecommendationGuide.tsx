@@ -41,6 +41,8 @@ interface RecommendationGuideProps {
   hasOrdered?: boolean;
   /** Optional bottom offset in px (to clear floating cart bar) */
   bottomOffset?: number;
+  /** Which side of the screen the trigger button sits on */
+  side?: 'left' | 'right';
 }
 
 // ── Mood config ───────────────────────────────────────────────────────────── //
@@ -65,6 +67,7 @@ export default function RecommendationGuide({
   onAddToCart,
   hasOrdered = false,
   bottomOffset = 72,
+  side = 'left',
 }: RecommendationGuideProps) {
   const flags = useRecommendationFeatureFlags();
   const { results, mood, loading, fetchGuide, reset } = useRecommendationGuide(shortCode);
@@ -143,9 +146,10 @@ export default function RecommendationGuide({
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
             onClick={handleOpenPanel}
-            className="fixed left-4 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg text-sm font-medium"
+            className="fixed z-40 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg text-sm font-medium"
             style={{
               bottom: bottomOffset,
+              [side]: '1rem',
               backgroundColor: design.card,
               color: design.text,
               border: `1.5px solid ${design.accent}22`,

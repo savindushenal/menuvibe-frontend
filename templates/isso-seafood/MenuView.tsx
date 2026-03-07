@@ -238,11 +238,12 @@ export default function IssoMenuView() {
     })();
   }, [code]);
 
-  // Debounced cart save to server
+  // Debounced cart save to server — save immediately when cart is emptied
+  // to prevent stale cart restoring on refresh
   useEffect(() => {
     if (!sessionToken) return;
     if (cartSaveTimerRef.current) clearTimeout(cartSaveTimerRef.current);
-    cartSaveTimerRef.current = setTimeout(async () => {
+    const save = async () => {
       try {
         await fetch(`https://api.menuvire.com/api/menu-session/${sessionToken}/cart`, {
           method: 'PUT',
@@ -250,7 +251,13 @@ export default function IssoMenuView() {
           body: JSON.stringify({ cart: cartItems }),
         });
       } catch (e) {}
-    }, 800);
+    };
+    if (cartItems.length === 0) {
+      // Cart was cleared — save immediately, no debounce
+      save();
+    } else {
+      cartSaveTimerRef.current = setTimeout(save, 800);
+    }
     return () => { if (cartSaveTimerRef.current) clearTimeout(cartSaveTimerRef.current); };
   }, [cartItems, sessionToken]);
 
@@ -1697,6 +1704,7 @@ export default function IssoMenuView() {
           onAddToCart={handleGuideAdd}
           hasOrdered={hasOrdered}
           bottomOffset={cartItems.length > 0 ? 88 : 16}
+          side="right"
         />
       )}
 
