@@ -34,6 +34,8 @@ interface CartUpsellStripProps {
   cartGaps?: RecommendedItem[];
   /** Called when customer taps add on a suggestion */
   onAdd: (item: RecommendedItem) => void;
+  /** If false, renders nothing (admin on/off toggle) */
+  enabled?: boolean;
 }
 
 // ── Helper: build label for the strip ─────────────────────────────────────── //
@@ -65,6 +67,7 @@ export default function CartUpsellStrip({
   cart,
   cartGaps = [],
   onAdd,
+  enabled,
 }: CartUpsellStripProps) {
   const design = getColorTheme(menuData.template.settings);
   const symbol = getCurrencySymbol(menuData.template.currency);
@@ -119,7 +122,7 @@ export default function CartUpsellStrip({
     return [...suggestions, ...locked].slice(0, 6);
   }, [suggestions, lockedItemIds, allAvailableItems]);
 
-  if (cart.length === 0 || displaySuggestions.length === 0) return null;
+  if (enabled === false || cart.length === 0 || displaySuggestions.length === 0) return null;
 
   const label = getStripLabel(cart, menuData);
 

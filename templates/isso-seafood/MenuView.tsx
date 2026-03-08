@@ -1492,6 +1492,7 @@ export default function IssoMenuView() {
                   cart={cartItems}
                   cartGaps={recData.cart_gaps}
                   onAdd={handleGuideAdd}
+                  enabled={(data.template?.settings as any)?.enable_upsell_strip !== false}
                 />
               )}
 
@@ -1726,6 +1727,8 @@ export default function IssoMenuView() {
           bottomOffset={cartItems.length > 0 ? 88 : 16}
           side="right"
           cartItemIds={cartItemIds}
+          enabled={(data.template?.settings as any)?.enable_recommendation_guide !== false}
+          idleDelay={((data.template?.settings as any)?.recommendation_idle_delay ?? 10) * 1000}
         />
       )}
 

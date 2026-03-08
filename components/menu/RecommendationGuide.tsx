@@ -45,6 +45,10 @@ interface RecommendationGuideProps {
   side?: 'left' | 'right';
   /** Live cart item IDs — used as source of truth for ✓ Added state */
   cartItemIds?: number[];
+  /** If false, component renders nothing (admin on/off toggle) */
+  enabled?: boolean;
+  /** Idle delay in ms before the trigger button appears (default: 10000) */
+  idleDelay?: number;
 }
 
 // ── Mood config ───────────────────────────────────────────────────────────── //
@@ -71,6 +75,8 @@ export default function RecommendationGuide({
   bottomOffset = 72,
   side = 'left',
   cartItemIds,
+  enabled,
+  idleDelay,
 }: RecommendationGuideProps) {
   const flags = useRecommendationFeatureFlags();
   const { results, mood, loading, fetchGuide, reset } = useRecommendationGuide(shortCode);
@@ -93,7 +99,7 @@ export default function RecommendationGuide({
     idleTimerRef.current = setTimeout(() => {
       setIsVisible(true);
       hasShownRef.current = true;
-    }, IDLE_DELAY_MS);
+    }, idleDelay ?? IDLE_DELAY_MS);
   }, [hasOrdered, flags.recommendationGuideEnabled]);
 
   useEffect(() => {
@@ -115,7 +121,7 @@ export default function RecommendationGuide({
     }
   }, [hasOrdered]);
 
-  if (!flags.recommendationGuideEnabled) return null;
+  if (enabled === false || !flags.recommendationGuideEnabled) return null;
 
   // ── Handlers ──────────────────────────────────────────────────────────── //
 

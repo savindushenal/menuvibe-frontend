@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import {
   Table,
   TableBody,
@@ -65,6 +66,9 @@ interface Template {
     show_prices?: boolean;
     show_images?: boolean;
     currency_symbol?: string;
+    enable_recommendation_guide?: boolean;
+    enable_upsell_strip?: boolean;
+    recommendation_idle_delay?: number;
   };
   categories_count?: number;
   items_count?: number;
@@ -138,6 +142,11 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
   const [showDesignTokens, setShowDesignTokens] = useState(false);
   const [showCreateEndpoint, setShowCreateEndpoint] = useState(false);
   const [showBulkEndpoints, setShowBulkEndpoints] = useState(false);
+  const [designForm, setDesignForm] = useState({
+    enable_recommendation_guide: true,
+    enable_upsell_strip: true,
+    recommendation_idle_delay: 10,
+  });
 
   // Form states
   const [templateForm, setTemplateForm] = useState({
@@ -645,6 +654,29 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
+  const handleSaveDesignSettings = async () => {
+    if (!selectedTemplate) return;
+    try {
+      const response = await apiClient.updateFranchiseMenu(franchiseId, selectedTemplate.id, {
+        settings: {
+          ...selectedTemplate.settings,
+          enable_recommendation_guide: designForm.enable_recommendation_guide,
+          enable_upsell_strip: designForm.enable_upsell_strip,
+          recommendation_idle_delay: designForm.recommendation_idle_delay,
+        },
+      });
+      if (response.success) {
+        toast({ title: 'Saved', description: 'Design settings updated successfully' });
+        setShowDesignTokens(false);
+        loadTemplates();
+      } else {
+        toast({ title: 'Error', description: 'Failed to save settings', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to save settings', variant: 'destructive' });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -707,6 +739,11 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
                           <DropdownMenuItem onClick={(e) => {
                             e.stopPropagation();
                             setSelectedTemplate(template);
+                            setDesignForm({
+                              enable_recommendation_guide: template.settings?.enable_recommendation_guide !== false,
+                              enable_upsell_strip: template.settings?.enable_upsell_strip !== false,
+                              recommendation_idle_delay: template.settings?.recommendation_idle_delay ?? 10,
+                            });
                             setShowDesignTokens(true);
                           }}>
                             <Palette className="h-4 w-4 mr-2" />
@@ -945,6 +982,69 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
           </CardContent>
         </Card>
       )}
+
+      {/* Design Settings Dialog */}
+      <Dialog open={showDesignTokens} onOpenChange={setShowDesignTokens}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Menu Design Settings</DialogTitle>
+            <DialogDescription>
+              Configure AI recommendations and upselling for this menu
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-2">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label className="font-semibold">Recommendation Guide</Label>
+                <p className="text-sm text-muted-foreground">
+                  Show a floating &quot;Not sure what to get?&quot; helper after idle time
+                </p>
+              </div>
+              <Switch
+                checked={designForm.enable_recommendation_guide}
+                onCheckedChange={(v) => setDesignForm({ ...designForm, enable_recommendation_guide: v })}
+              />
+            </div>
+            {designForm.enable_recommendation_guide && (
+              <div className="space-y-2 pl-3 border-l-2 border-muted ml-1">
+                <Label htmlFor="idle-delay">Idle delay (seconds)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Inactivity time before the guide button appears (default: 10)
+                </p>
+                <Input
+                  id="idle-delay"
+                  type="number"
+                  min="5"
+                  max="120"
+                  value={designForm.recommendation_idle_delay}
+                  onChange={(e) =>
+                    setDesignForm({ ...designForm, recommendation_idle_delay: parseInt(e.target.value) || 10 })
+                  }
+                  className="w-28"
+                />
+              </div>
+            )}
+            <div className="border-t pt-4 flex items-center justify-between">
+              <div className="space-y-1">
+                <Label className="font-semibold">Cart Upsell Strip</Label>
+                <p className="text-sm text-muted-foreground">
+                  Show &quot;complete your meal&quot; suggestions inside the cart drawer
+                </p>
+              </div>
+              <Switch
+                checked={designForm.enable_upsell_strip}
+                onCheckedChange={(v) => setDesignForm({ ...designForm, enable_upsell_strip: v })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDesignTokens(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveDesignSettings}>Save Settings</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Create Template Dialog */}
       <Dialog open={showCreateTemplate} onOpenChange={setShowCreateTemplate}>

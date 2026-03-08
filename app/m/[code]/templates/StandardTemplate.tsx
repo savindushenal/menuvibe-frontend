@@ -585,6 +585,7 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
                 cart={cart}
                 cartGaps={recData.cart_gaps}
                 onAdd={handleGuideAdd}
+                enabled={(menuData.template.settings as any)?.enable_upsell_strip !== false}
               />
 
               {cart.length > 0 && (
@@ -707,6 +708,8 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
         hasOrdered={hasOrdered}
         bottomOffset={cart.length > 0 ? 88 : 16}
         cartItemIds={cartItemIds}
+        enabled={(menuData.template.settings as any)?.enable_recommendation_guide !== false}
+        idleDelay={((menuData.template.settings as any)?.recommendation_idle_delay ?? 10) * 1000}
       />
       <OrderTracker orders={orders} />
     </div>
