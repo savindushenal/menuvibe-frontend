@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api';
+import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -126,6 +127,9 @@ interface Location {
 
 export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  // Design Settings: only admin/super_admin/support_officer may configure it
+  const canManageDesignSettings = user && ['admin', 'super_admin', 'support_officer'].includes(user.role);
   const [loading, setLoading] = useState(true);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
@@ -736,19 +740,21 @@ export function TemplatesTab({ franchiseId }: { franchiseId: number }) {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedTemplate(template);
-                            setDesignForm({
-                              enable_recommendation_guide: template.settings?.enable_recommendation_guide !== false,
-                              enable_upsell_strip: template.settings?.enable_upsell_strip !== false,
-                              recommendation_idle_delay: template.settings?.recommendation_idle_delay ?? 10,
-                            });
-                            setShowDesignTokens(true);
-                          }}>
-                            <Palette className="h-4 w-4 mr-2" />
-                            Design Settings
-                          </DropdownMenuItem>
+                          {canManageDesignSettings && (
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTemplate(template);
+                              setDesignForm({
+                                enable_recommendation_guide: template.settings?.enable_recommendation_guide !== false,
+                                enable_upsell_strip: template.settings?.enable_upsell_strip !== false,
+                                recommendation_idle_delay: template.settings?.recommendation_idle_delay ?? 10,
+                              });
+                              setShowDesignTokens(true);
+                            }}>
+                              <Palette className="h-4 w-4 mr-2" />
+                              Design Settings
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={(e) => {
