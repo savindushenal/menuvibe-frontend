@@ -170,9 +170,16 @@ export function FranchiseProvider({ children, franchiseSlug }: FranchiseProvider
         console.log('Loaded franchise by slug:', franchiseSlug, data);
         
         if (data.success && data.data?.franchise) {
+          // Normalize backend role names (franchise_owner → owner, franchise_manager → manager)
+          const roleMap: Record<string, string> = {
+            'franchise_owner': 'owner',
+            'franchise_manager': 'manager',
+          };
+          const rawRole = data.data.user_role as string;
+          const normalizedRole = roleMap[rawRole] ?? rawRole;
           const franchiseData = {
             ...data.data.franchise,
-            my_role: data.data.user_role, // Map user_role to my_role
+            my_role: normalizedRole, // Map user_role to my_role
           };
           console.log('Setting currentFranchise with my_role:', franchiseData);
           setCurrentFranchise(franchiseData);

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { UtensilsCrossed, Eye, Edit, ExternalLink, MoreVertical, Trash2 } from 'lucide-react';
+import { UtensilsCrossed, Eye, Edit, ExternalLink, MoreVertical, Trash2, Settings } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { useFranchise } from '@/contexts/franchise-context';
 
 interface Menu {
   id: number;
@@ -46,6 +47,9 @@ interface Menu {
 export default function FranchiseMenusPage() {
   const params = useParams();
   const franchiseSlug = params?.franchise as string;
+  const { myRole } = useFranchise();
+  const isBranchManager = myRole === 'branch_manager';
+  const canDeleteMenus = ['owner', 'admin'].includes(myRole || '');
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,28 +144,41 @@ export default function FranchiseMenusPage() {
       </div>
 
       {/* Info Card */}
-      <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="pt-4">
-          <p className="text-sm text-blue-700">
-            <strong>Tip:</strong> Branch menus are derived from your Master Menu. 
-            Use the <a href={`/${franchiseSlug}/dashboard/menus/master`} className="underline font-medium">Master Menu</a> to 
-            add items, then sync them to branches. Each branch can customize availability and prices.
-          </p>
-        </CardContent>
-      </Card>
+      {!isBranchManager && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="pt-4">
+            <p className="text-sm text-blue-700">
+              <strong>Tip:</strong> Branch menus are derived from your Master Menu. 
+              Use the <a href={`/${franchiseSlug}/dashboard/menus/master`} className="underline font-medium">Master Menu</a> to 
+              add items, then sync them to branches. Each branch can customize availability and prices.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Menus Grid */}
       {menus.length === 0 ? (
         <Card>
           <CardContent className="pt-6 text-center">
             <UtensilsCrossed className="w-12 h-12 mx-auto text-neutral-400 mb-4" />
-            <h3 className="text-lg font-medium text-neutral-900 mb-2">No branch menus yet</h3>
-            <p className="text-neutral-600 mb-4">
-              Create your Master Menu first, then sync it to your branches.
-            </p>
-            <Button onClick={() => window.location.href = `/${franchiseSlug}/dashboard/menus/master`}>
-              Go to Master Menu
-            </Button>
+            {isBranchManager ? (
+              <>
+                <h3 className="text-lg font-medium text-neutral-900 mb-2">No menu assigned yet</h3>
+                <p className="text-neutral-600">
+                  No menu has been synced to your branch yet. Please contact your franchise manager.
+                </p>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-medium text-neutral-900 mb-2">No branch menus yet</h3>
+                <p className="text-neutral-600 mb-4">
+                  Create your Master Menu first, then sync it to your branches.
+                </p>
+                <Button onClick={() => window.location.href = `/${franchiseSlug}/dashboard/menus/master`}>
+                  Go to Master Menu
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -203,14 +220,18 @@ export default function FranchiseMenusPage() {
                           <Eye className="w-4 h-4 mr-2" />
                           Preview
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={() => setDeleteDialog({ open: true, menu })}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete Menu
-                        </DropdownMenuItem>
+                        {canDeleteMenus && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={() => setDeleteDialog({ open: true, menu })}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete Menu
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -221,6 +242,14 @@ export default function FranchiseMenusPage() {
                   <span>{menu.categories?.length || 0} categories</span>
                   <span>{getTotalItems(menu)} items</span>
                 </div>
+                <Button
+                  className="w-full mt-3"
+                  size="sm"
+                  onClick={() => window.location.href = `/${franchiseSlug}/dashboard/menus/branch/${menu.id}`}
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Manage Menu
+                </Button>
               </CardContent>
             </Card>
           ))}
