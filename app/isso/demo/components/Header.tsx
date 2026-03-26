@@ -55,6 +55,7 @@ export default function Header({ cartCount, onCartClick, tableInfo, locationName
               <a href="#" className="text-isso-dark hover:text-isso-coral font-medium transition-colors">Menu</a>
               <a href="#" className="text-gray-500 hover:text-isso-coral transition-colors">Specials</a>
               <a href="#" className="text-gray-500 hover:text-isso-coral transition-colors">About</a>
+              <a href="/isso/stats" className="text-gray-400 hover:text-isso-coral text-xs border border-gray-200 px-2 py-1 rounded-lg transition-colors">Analytics</a>
             </nav>
             
             {/* Logo */}
