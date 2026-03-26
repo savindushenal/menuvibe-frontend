@@ -5,14 +5,14 @@ import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area,
 } from 'recharts';
 import {
-  TrendingUp, TrendingDown, ShoppingCart, DollarSign, Clock,
-  Star, Sparkles, Zap, Target, ArrowUpRight, ArrowDownRight, ChefHat,
+  TrendingUp, ShoppingCart, DollarSign, Clock,
+  Star, Sparkles, Zap, Target, ArrowUpRight, ArrowDownRight,
   Activity, CheckCircle2, Timer, Flame,
   Brain, ThumbsUp, Layers, Globe, MapPin, Crown, Shield, Store,
-  RefreshCw, Info,
+  RefreshCw, Info, Eye, MousePointerClick, Search, TrendingDown,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,11 +27,30 @@ const ROLES: { id: Role; label: string; icon: React.ElementType; color: string }
   { id: 'super_admin',    label: 'Super Admin',    icon: Shield, color: '#8b5cf6' },
 ];
 
-// ─── API helper ──────────────────────────────────────────────────────────── //
+// ─── API helpers ─────────────────────────────────────────────────────────── //
 async function fetchStats(franchiseSlug: string, endpoint: string, token?: string): Promise<any | null> {
   try {
     const res = await fetch(
       `/api/franchise/${franchiseSlug}/stats/${endpoint}`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      }
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.success ? json.data : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchBehaviour(franchiseSlug: string, endpoint: string, token?: string): Promise<any | null> {
+  try {
+    const res = await fetch(
+      `/api/franchise/${franchiseSlug}/behaviour/${endpoint}`,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -97,6 +116,36 @@ const demoRecommendations = [
   { pair: 'Signature Prawns + Garlic Butter King Crab', lift: 2.4, orders: 68 },
   { pair: 'Prawn Cocktail + Seafood Platter',           lift: 1.9, orders: 41 },
   { pair: 'Calamari Rings + Grilled Lobster',           lift: 1.7, orders: 29 },
+];
+
+// ─── Demo behaviour data ──────────────────────────────────────────────────── //
+const demoBehaviourItems = [
+  { item_name: 'Signature Prawns',           category_name: 'Mains',          views: 284, cart_adds: 168, cart_removes: 18, conversion_rate: 59.2, avg_view_ms: 12400 },
+  { item_name: 'Garlic Butter King Crab',    category_name: 'Mains',          views: 241, cart_adds: 121, cart_removes: 22, conversion_rate: 50.2, avg_view_ms: 15800 },
+  { item_name: 'Seafood Platter',            category_name: 'Special Combos', views: 198, cart_adds: 72,  cart_removes: 30, conversion_rate: 36.4, avg_view_ms: 18200 },
+  { item_name: 'Prawn Cocktail',             category_name: 'Appetizers',     views: 176, cart_adds: 110, cart_removes: 8,  conversion_rate: 62.5, avg_view_ms: 9800  },
+  { item_name: 'Grilled Lobster',            category_name: 'Mains',          views: 162, cart_adds: 44,  cart_removes: 34, conversion_rate: 27.2, avg_view_ms: 21600 },
+  { item_name: 'Calamari Rings',             category_name: 'Appetizers',     views: 138, cart_adds: 92,  cart_removes: 6,  conversion_rate: 66.7, avg_view_ms: 8200  },
+];
+const demoBehaviourFunnel = [
+  { stage: 'Menu Opened',  count: 524, pct: 100 },
+  { stage: 'Item Viewed',  count: 412, pct: 79 },
+  { stage: 'Added to Cart', count: 284, pct: 54 },
+  { stage: 'Order Placed', count: 218, pct: 42 },
+];
+const demoBehaviourHeatmap = Array.from({ length: 24 }, (_, h) => ({
+  hour: h,
+  label: `${String(h).padStart(2, '0')}:00`,
+  views: h < 9 || h > 22 ? Math.floor(Math.random() * 4) : Math.floor(Math.random() * 40) + (h >= 11 && h <= 14 || h >= 18 && h <= 21 ? 30 : 5),
+  cart_adds: h < 9 || h > 22 ? 0 : Math.floor(Math.random() * 20) + (h >= 11 && h <= 14 || h >= 18 && h <= 21 ? 15 : 2),
+}));
+const demoBehaviourSearches = [
+  { query: 'prawn', count: 48 },
+  { query: 'crab', count: 31 },
+  { query: 'veg', count: 27 },
+  { query: 'lobster', count: 19 },
+  { query: 'dessert', count: 14 },
+  { query: 'kids', count: 11 },
 ];
 
 // ─── KPI Card ────────────────────────────────────────────────────────────── //
@@ -515,6 +564,163 @@ function SuperAdminView({ overview, locations, brandColor }: any) {
   );
 }
 
+// ─── Behaviour View ───────────────────────────────────────────────────────── //
+function BehaviourView({ behaviourOverview, behaviourItems, behaviourFunnel, behaviourHeatmap, behaviourSearches, brandColor }: any) {
+  const ov       = behaviourOverview;
+  const items    = behaviourItems?.items   ?? demoBehaviourItems;
+  const funnel   = behaviourFunnel?.stages ?? demoBehaviourFunnel;
+  const heatmap  = behaviourHeatmap?.hours ?? demoBehaviourHeatmap;
+  const searches = behaviourSearches?.searches ?? demoBehaviourSearches;
+
+  const maxViews    = Math.max(...items.map((i: any) => i.views), 1);
+  const maxSearches = Math.max(...searches.map((s: any) => s.count), 1);
+  const peakHour    = heatmap.reduce((p: any, c: any) => (c.views > p.views ? c : p), heatmap[0]);
+
+  return (
+    <div className="space-y-6">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard icon={Eye}             label="Total Item Views"    value={String(ov?.total_views    ?? items.reduce((s: number, i: any) => s + i.views, 0))}     color={brandColor} />
+        <KpiCard icon={MousePointerClick} label="Cart Adds"         value={String(ov?.total_cart_adds  ?? items.reduce((s: number, i: any) => s + i.cart_adds, 0))} color="#10b981" />
+        <KpiCard icon={Target}          label="View→Cart Rate"      value={`${ov?.conversion_rate ?? (items.reduce((s: number, i: any) => s + i.cart_adds, 0) / Math.max(items.reduce((s: number, i: any) => s + i.views, 0), 1) * 100).toFixed(1)}%`} color="#f59e0b" />
+        <KpiCard icon={Search}          label="Searches"            value={String(ov?.total_searches ?? searches.reduce((s: number, r: any) => s + r.count, 0))}   color="#8b5cf6" />
+      </div>
+
+      {/* Browse-to-order funnel */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Target className="w-4 h-4 text-blue-500" />
+            Customer Browse-to-Order Funnel
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {funnel.map((s: any, i: number) => (
+              <div key={i}>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-neutral-600">{s.stage}</span>
+                  <span className="font-medium">{s.count.toLocaleString()} <span className="text-neutral-400 font-normal">({s.pct}%)</span></span>
+                </div>
+                <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${s.pct}%` }}
+                    transition={{ delay: i * 0.1, duration: 0.6 }}
+                    className="h-full rounded-full"
+                    style={{ backgroundColor: brandColor, opacity: 1 - i * 0.18 }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-neutral-400 mt-3">
+            {funnel[3]?.pct ?? 42}% of visitors who open the menu place an order
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Per-item breakdown */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Eye className="w-4 h-4" style={{ color: brandColor }} />
+            Item View vs Cart Conversion
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {items.slice(0, 8).map((item: any, i: number) => (
+              <div key={i} className="space-y-1">
+                <div className="flex justify-between items-center text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs font-bold text-neutral-400 w-4 shrink-0">{i + 1}</span>
+                    <span className="font-medium text-neutral-700 truncate">{item.item_name}</span>
+                    <span className="text-xs bg-neutral-100 text-neutral-500 px-1.5 py-0.5 rounded shrink-0">{item.category_name}</span>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0 ml-2">
+                    <span className="text-neutral-400 text-xs">{item.views} views</span>
+                    <span className="text-emerald-600 font-semibold text-xs">{item.conversion_rate}%</span>
+                  </div>
+                </div>
+                {/* Stacked bar: views (light) + cart_adds (brand) */}
+                <div className="h-2 bg-neutral-100 rounded-full overflow-hidden relative">
+                  <div className="h-full rounded-full absolute left-0" style={{ width: `${(item.views / maxViews) * 100}%`, backgroundColor: `${brandColor}30` }} />
+                  <div className="h-full rounded-full absolute left-0" style={{ width: `${(item.cart_adds / maxViews) * 100}%`, backgroundColor: brandColor }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-4 mt-3">
+            <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+              <div className="w-3 h-2 rounded-full" style={{ backgroundColor: `${brandColor}30` }} /> Views
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+              <div className="w-3 h-2 rounded-full" style={{ backgroundColor: brandColor }} /> Cart Adds
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Browsing heatmap + searches side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Hourly heatmap */}
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="w-4 h-4 text-amber-500" />
+              Browsing Heatmap
+              <span className="text-xs font-normal text-neutral-400 ml-1">Peak: {peakHour?.label}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={heatmap.filter((_: any, i: number) => i >= 7 && i <= 23)}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="label" tick={{ fontSize: 9 }} interval={2} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Bar dataKey="views"     fill={`${brandColor}80`} name="Views"     stackId="a" />
+                <Bar dataKey="cart_adds" fill={brandColor}        name="Cart Adds" stackId="a" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Search queries */}
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Search className="w-4 h-4 text-violet-500" />
+              Top Search Queries
+              <span className="text-xs font-normal text-neutral-400 ml-1">menu gaps</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2.5">
+              {searches.slice(0, 7).map((s: any, i: number) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-neutral-400 w-4">{i + 1}</span>
+                  <div className="flex-1">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="font-medium text-neutral-700">"{s.query}"</span>
+                      <span className="text-neutral-400">{s.count}×</span>
+                    </div>
+                    <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-violet-400" style={{ width: `${(s.count / maxSearches) * 100}%` }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {searches.length === 0 && <p className="text-sm text-neutral-400 text-center py-4">No search data yet</p>}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────────── //
 export default function FranchiseStatsPage() {
   const params = useParams();
@@ -525,7 +731,7 @@ export default function FranchiseStatsPage() {
   const brandColor = (branding as any)?.colors?.primary ?? '#6366f1';
 
   const [role, setRole] = useState<Role>('owner');
-  const [tab, setTab] = useState<'main' | 'recommendations'>('main');
+  const [tab, setTab] = useState<'main' | 'recommendations' | 'behaviour'>('main');
   const [loading, setLoading] = useState(true);
 
   const [overview, setOverview]   = useState<any>(null);
@@ -537,12 +743,19 @@ export default function FranchiseStatsPage() {
   const [recommendations, setRecommendations] = useState<any>(null);
   const [locations, setLocations] = useState<any>(null);
 
+  // Behaviour state
+  const [bOverview,  setBOverview]  = useState<any>(null);
+  const [bItems,     setBItems]     = useState<any>(null);
+  const [bFunnel,    setBFunnel]    = useState<any>(null);
+  const [bHeatmap,   setBHeatmap]   = useState<any>(null);
+  const [bSearches,  setBSearches]  = useState<any>(null);
+
   const loadData = useCallback(async () => {
     if (!franchiseSlug) return;
     setLoading(true);
     const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') ?? undefined : undefined;
 
-    const [ov, wt, mp, fn, hf, lo, rec, locs] = await Promise.all([
+    const [ov, wt, mp, fn, hf, lo, rec, locs, bov, bi, bf, bh, bs] = await Promise.all([
       fetchStats(franchiseSlug, 'overview', token),
       fetchStats(franchiseSlug, 'weekly-trend', token),
       fetchStats(franchiseSlug, 'menu-performance', token),
@@ -551,16 +764,16 @@ export default function FranchiseStatsPage() {
       fetchStats(franchiseSlug, 'live-orders', token),
       fetchStats(franchiseSlug, 'recommendations', token),
       fetchStats(franchiseSlug, 'locations', token),
+      fetchBehaviour(franchiseSlug, 'overview', token),
+      fetchBehaviour(franchiseSlug, 'items', token),
+      fetchBehaviour(franchiseSlug, 'funnel', token),
+      fetchBehaviour(franchiseSlug, 'heatmap', token),
+      fetchBehaviour(franchiseSlug, 'searches', token),
     ]);
 
-    setOverview(ov);
-    setWeekly(wt);
-    setMenuPerf(mp);
-    setFunnel(fn);
-    setHourly(hf);
-    setLiveOrders(lo);
-    setRecommendations(rec);
-    setLocations(locs);
+    setOverview(ov);    setWeekly(wt);  setMenuPerf(mp); setFunnel(fn);
+    setHourly(hf);      setLiveOrders(lo); setRecommendations(rec); setLocations(locs);
+    setBOverview(bov);  setBItems(bi);  setBFunnel(bf);  setBHeatmap(bh); setBSearches(bs);
     setLoading(false);
   }, [franchiseSlug]);
 
@@ -612,9 +825,10 @@ export default function FranchiseStatsPage() {
 
       {/* Tab bar (Owner only) */}
       {role === 'owner' && (
-        <div className="flex gap-1 bg-neutral-100 p-1 rounded-xl w-fit">
+        <div className="flex gap-1 bg-neutral-100 p-1 rounded-xl w-fit flex-wrap">
           {[
-            { id: 'main', label: 'Menu & Orders' },
+            { id: 'main',            label: 'Menu & Orders' },
+            { id: 'behaviour',       label: 'User Behaviour' },
             { id: 'recommendations', label: 'AI Recommendations' },
           ].map((t) => (
             <button
@@ -641,6 +855,9 @@ export default function FranchiseStatsPage() {
         >
           {role === 'owner' && tab === 'main' && (
             <OwnerView overview={overview} weeklyTrend={weekly} menuPerf={menuPerf} funnel={funnel} locations={locations} brandColor={brandColor} />
+          )}
+          {role === 'owner' && tab === 'behaviour' && (
+            <BehaviourView behaviourOverview={bOverview} behaviourItems={bItems} behaviourFunnel={bFunnel} behaviourHeatmap={bHeatmap} behaviourSearches={bSearches} brandColor={brandColor} />
           )}
           {role === 'owner' && tab === 'recommendations' && (
             <RecommendationsPanel data={recommendations} brandColor={brandColor} />
