@@ -304,8 +304,8 @@ export default function FranchiseTeamPage() {
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
+                    <SelectItem value="franchise_admin">Admin</SelectItem>
+                    <SelectItem value="branch_manager">Manager</SelectItem>
                     <SelectItem value="staff">Staff</SelectItem>
                   </SelectContent>
                 </Select>
@@ -462,8 +462,8 @@ export default function FranchiseTeamPage() {
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="franchise_admin">Admin</SelectItem>
+                  <SelectItem value="branch_manager">Manager</SelectItem>
                   <SelectItem value="staff">Staff</SelectItem>
                 </SelectContent>
               </Select>
