@@ -14,7 +14,6 @@ import {
   LogOut,
   Menu,
   HelpCircle,
-  ShoppingCart,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -26,7 +25,6 @@ const menuItems = [
   { icon: QrCode,          label: 'Tables & QR Codes', href: '/dashboard/endpoints' },
   { icon: Building,        label: 'Restaurant Profile', href: '/dashboard/profile' },
   { icon: BarChart3,       label: 'Analytics',       href: '/dashboard/analytics' },
-  { icon: ShoppingCart,    label: 'Isso Statistics',  href: '/dashboard/isso-stats' },
   { icon: HelpCircle,      label: 'Help & Support',  href: '/dashboard/help' },
   { icon: Settings,        label: 'Settings',        href: '/dashboard/settings' },
 ];

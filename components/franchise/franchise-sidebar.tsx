@@ -17,6 +17,7 @@ import {
   HelpCircle,
   QrCode,
   Monitor,
+  BarChart3,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useParams, useRouter } from 'next/navigation';
@@ -54,6 +55,7 @@ export function FranchiseSidebar({ franchiseSlug }: FranchiseSidebarProps) {
     { icon: QrCode, label: 'Tables & QR', href: `/${franchiseSlug}/dashboard/tables-qr`, roles: ['owner', 'admin', 'manager', 'branch_manager'] },
     { icon: Building2, label: 'Branches', href: `/${franchiseSlug}/dashboard/branches`, roles: ['owner', 'admin'] },
     { icon: Users, label: 'Team', href: `/${franchiseSlug}/dashboard/team`, roles: ['owner', 'admin', 'manager', 'branch_manager'] },
+    { icon: BarChart3, label: 'Statistics', href: `/${franchiseSlug}/dashboard/stats`, roles: ['owner', 'admin', 'manager', 'branch_manager'] },
     { icon: HelpCircle, label: 'Help & Support', href: `/${franchiseSlug}/dashboard/help`, roles: ['all'] },
     { icon: Settings, label: 'Settings', href: `/${franchiseSlug}/dashboard/settings`, roles: ['owner', 'admin'] },
   ];
