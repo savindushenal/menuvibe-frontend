@@ -17,6 +17,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useFranchise } from '@/contexts/franchise-context';
+import { api } from '@/lib/api';
 
 // ─── Role definitions ────────────────────────────────────────────────────── //
 type Role = 'owner' | 'branch_manager' | 'super_admin';
@@ -27,40 +28,21 @@ const ROLES: { id: Role; label: string; icon: React.ElementType; color: string }
   { id: 'super_admin',    label: 'Super Admin',    icon: Shield, color: '#8b5cf6' },
 ];
 
-// ─── API helpers ─────────────────────────────────────────────────────────── //
-async function fetchStats(franchiseSlug: string, endpoint: string, token?: string): Promise<any | null> {
+// ─── API helpers — use the configured api client so the correct backend URL
+//                  and auth token are applied automatically ─────────────────── //
+async function fetchStats(franchiseSlug: string, endpoint: string): Promise<any | null> {
   try {
-    const res = await fetch(
-      `/api/franchise/${franchiseSlug}/stats/${endpoint}`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      }
-    );
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json.success ? json.data : null;
+    const res = await api.get(`/franchise/${franchiseSlug}/stats/${endpoint}`);
+    return res.data?.success ? res.data?.data ?? null : null;
   } catch {
     return null;
   }
 }
 
-async function fetchBehaviour(franchiseSlug: string, endpoint: string, token?: string): Promise<any | null> {
+async function fetchBehaviour(franchiseSlug: string, endpoint: string): Promise<any | null> {
   try {
-    const res = await fetch(
-      `/api/franchise/${franchiseSlug}/behaviour/${endpoint}`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      }
-    );
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json.success ? json.data : null;
+    const res = await api.get(`/franchise/${franchiseSlug}/behaviour/${endpoint}`);
+    return res.data?.success ? res.data?.data ?? null : null;
   } catch {
     return null;
   }
@@ -725,12 +707,26 @@ function BehaviourView({ behaviourOverview, behaviourItems, behaviourFunnel, beh
 export default function FranchiseStatsPage() {
   const params = useParams();
   const franchiseSlug = params?.franchise as string;
-  const { currentFranchise, branding } = useFranchise();
+  const { currentFranchise, branding, myRole } = useFranchise();
 
   // Derive brand color from franchise branding, fallback to a neutral brand color
   const brandColor = (branding as any)?.colors?.primary ?? '#6366f1';
 
-  const [role, setRole] = useState<Role>('owner');
+  // Map the logged-in user's actual role into one of the three stats views
+  function deriveStatsRole(r: string | null | undefined): Role {
+    if (!r) return 'owner';
+    if (r === 'super_admin' || r === 'platform_admin') return 'super_admin';
+    if (r === 'branch_manager' || r === 'manager') return 'branch_manager';
+    return 'owner'; // owner / admin / franchise_admin
+  }
+
+  const [role, setRole] = useState<Role>(() => deriveStatsRole(myRole));
+
+  // Sync when context resolves (e.g. page reload)
+  useEffect(() => { if (myRole) setRole(deriveStatsRole(myRole)); }, [myRole]);
+
+  // Only owners/admins/super_admins can switch views; branch managers see only their data
+  const canSwitchRoles = ['owner', 'admin', 'franchise_admin', 'super_admin', 'platform_admin'].includes(myRole ?? '');
   const [tab, setTab] = useState<'main' | 'recommendations' | 'behaviour'>('main');
   const [loading, setLoading] = useState(true);
 
@@ -753,22 +749,21 @@ export default function FranchiseStatsPage() {
   const loadData = useCallback(async () => {
     if (!franchiseSlug) return;
     setLoading(true);
-    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') ?? undefined : undefined;
 
     const [ov, wt, mp, fn, hf, lo, rec, locs, bov, bi, bf, bh, bs] = await Promise.all([
-      fetchStats(franchiseSlug, 'overview', token),
-      fetchStats(franchiseSlug, 'weekly-trend', token),
-      fetchStats(franchiseSlug, 'menu-performance', token),
-      fetchStats(franchiseSlug, 'order-funnel', token),
-      fetchStats(franchiseSlug, 'hourly-flow', token),
-      fetchStats(franchiseSlug, 'live-orders', token),
-      fetchStats(franchiseSlug, 'recommendations', token),
-      fetchStats(franchiseSlug, 'locations', token),
-      fetchBehaviour(franchiseSlug, 'overview', token),
-      fetchBehaviour(franchiseSlug, 'items', token),
-      fetchBehaviour(franchiseSlug, 'funnel', token),
-      fetchBehaviour(franchiseSlug, 'heatmap', token),
-      fetchBehaviour(franchiseSlug, 'searches', token),
+      fetchStats(franchiseSlug, 'overview'),
+      fetchStats(franchiseSlug, 'weekly-trend'),
+      fetchStats(franchiseSlug, 'menu-performance'),
+      fetchStats(franchiseSlug, 'order-funnel'),
+      fetchStats(franchiseSlug, 'hourly-flow'),
+      fetchStats(franchiseSlug, 'live-orders'),
+      fetchStats(franchiseSlug, 'recommendations'),
+      fetchStats(franchiseSlug, 'locations'),
+      fetchBehaviour(franchiseSlug, 'overview'),
+      fetchBehaviour(franchiseSlug, 'items'),
+      fetchBehaviour(franchiseSlug, 'funnel'),
+      fetchBehaviour(franchiseSlug, 'heatmap'),
+      fetchBehaviour(franchiseSlug, 'searches'),
     ]);
 
     setOverview(ov);    setWeekly(wt);  setMenuPerf(mp); setFunnel(fn);
@@ -804,24 +799,26 @@ export default function FranchiseStatsPage() {
         </div>
       )}
 
-      {/* Role switcher */}
-      <div className="flex gap-2 flex-wrap">
-        {ROLES.map((r) => (
-          <button
-            key={r.id}
-            onClick={() => { setRole(r.id); setTab('main'); }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-              role === r.id
-                ? 'text-white shadow-md'
-                : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-            }`}
-            style={role === r.id ? { backgroundColor: r.color } : {}}
-          >
-            <r.icon className="w-4 h-4" />
-            {r.label}
-          </button>
-        ))}
-      </div>
+      {/* Role switcher — only shown to owners / admins / super_admins */}
+      {canSwitchRoles && (
+        <div className="flex gap-2 flex-wrap">
+          {ROLES.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => { setRole(r.id); setTab('main'); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                role === r.id
+                  ? 'text-white shadow-md'
+                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+              }`}
+              style={role === r.id ? { backgroundColor: r.color } : {}}
+            >
+              <r.icon className="w-4 h-4" />
+              {r.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Tab bar (Owner only) */}
       {role === 'owner' && (
