@@ -750,6 +750,10 @@ export default function FranchiseStatsPage() {
     if (!franchiseSlug) return;
     setLoading(true);
 
+    // Skip location-scorecard for branch managers — they have single-location scope
+    // and the endpoint would return an empty response anyway.
+    const isBranchManager = deriveStatsRole(myRole) === 'branch_manager';
+
     const [ov, wt, mp, fn, hf, lo, rec, locs, bov, bi, bf, bh, bs] = await Promise.all([
       fetchStats(franchiseSlug, 'overview'),
       fetchStats(franchiseSlug, 'weekly-trend'),
@@ -758,7 +762,7 @@ export default function FranchiseStatsPage() {
       fetchStats(franchiseSlug, 'hourly-flow'),
       fetchStats(franchiseSlug, 'live-orders'),
       fetchStats(franchiseSlug, 'recommendations'),
-      fetchStats(franchiseSlug, 'locations'),
+      isBranchManager ? Promise.resolve(null) : fetchStats(franchiseSlug, 'locations'),
       fetchBehaviour(franchiseSlug, 'overview'),
       fetchBehaviour(franchiseSlug, 'items'),
       fetchBehaviour(franchiseSlug, 'funnel'),
@@ -770,7 +774,7 @@ export default function FranchiseStatsPage() {
     setHourly(hf);      setLiveOrders(lo); setRecommendations(rec); setLocations(locs);
     setBOverview(bov);  setBItems(bi);  setBFunnel(bf);  setBHeatmap(bh); setBSearches(bs);
     setLoading(false);
-  }, [franchiseSlug]);
+  }, [franchiseSlug, myRole]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
