@@ -13,12 +13,13 @@
  * It renders nothing if there are no meaningful suggestions.
  */
 
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Plus } from 'lucide-react';
 import type { PublicMenuData } from '@/app/m/[code]/templates/types';
 import { getCurrencySymbol, formatPrice, getColorTheme, isItemAvailable } from '@/app/m/[code]/templates/types';
 import type { RecommendedItem } from '@/hooks/useRecommendations';
+import { useMenuTracking } from '@/hooks/useMenuTracking';
 
 // ── Types ─────────────────────────────────────────────────────────────────── //
 
@@ -36,6 +37,8 @@ interface CartUpsellStripProps {
   onAdd: (item: RecommendedItem) => void;
   /** If false, renders nothing (admin on/off toggle) */
   enabled?: boolean;
+  /** Menu short-code — used for recommendation impression/click tracking */
+  shortCode?: string;
 }
 
 // ── Helper: build label for the strip ─────────────────────────────────────── //
@@ -68,20 +71,29 @@ export default function CartUpsellStrip({
   cartGaps = [],
   onAdd,
   enabled,
+  shortCode,
 }: CartUpsellStripProps) {
   const design = getColorTheme(menuData.template.settings);
   const symbol = getCurrencySymbol(menuData.template.currency);
+  const { trackRecShown, trackRecClicked } = useMenuTracking(shortCode ?? null);
 
   // Track recently-added item IDs — keeps the card visible for 1.5 s so the ✓ feedback is seen
   const [lockedItemIds, setLockedItemIds] = useState<number[]>([]);
 
   const handleItemAdd = useCallback((item: RecommendedItem) => {
+    trackRecClicked({
+      itemId: item.id,
+      itemName: item.name,
+      categoryName: item.category_name,
+      itemPrice: Number(item.price),
+      signalType: 'cart_gap',
+    });
     setLockedItemIds(prev => prev.includes(item.id) ? prev : [...prev, item.id]);
     setTimeout(() => {
       setLockedItemIds(prev => prev.filter(id => id !== item.id));
     }, 1500);
     onAdd(item);
-  }, [onAdd]);
+  }, [onAdd, trackRecClicked]);
 
   const cartItemIds = cart.map(c => c.item.id);
   const cartCategoryIds = useMemo(() => {
@@ -121,6 +133,19 @@ export default function CartUpsellStrip({
     const locked = allAvailableItems.filter(i => lockedItemIds.includes(i.id) && !suggestionIds.includes(i.id));
     return [...suggestions, ...locked].slice(0, 6);
   }, [suggestions, lockedItemIds, allAvailableItems]);
+
+  // Fire rec_shown for each visible suggestion card
+  useEffect(() => {
+    displaySuggestions.forEach(item => {
+      trackRecShown({
+        itemId: item.id,
+        itemName: item.name,
+        categoryName: item.category_name,
+        itemPrice: Number(item.price),
+        signalType: 'cart_gap',
+      });
+    });
+  }, [displaySuggestions.map(i => i.id).join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (enabled === false || cart.length === 0 || displaySuggestions.length === 0) return null;
 

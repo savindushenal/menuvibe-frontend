@@ -506,6 +506,7 @@ export function MinimalMenuTemplate({ menuData }: MinimalMenuTemplateProps) {
                 cartGaps={recData.cart_gaps}
                 onAdd={handleGuideAdd}
                 enabled={(menuData.template.settings as any)?.enable_upsell_strip !== false}
+                shortCode={shortCode}
               />
 
               {cart.length > 0 && (

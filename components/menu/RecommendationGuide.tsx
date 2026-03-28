@@ -29,6 +29,7 @@ import {
   type GuideMood,
   type RecommendedItem,
 } from '@/hooks/useRecommendations';
+import { useMenuTracking } from '@/hooks/useMenuTracking';
 
 // ── Types ─────────────────────────────────────────────────────────────────── //
 
@@ -80,6 +81,7 @@ export default function RecommendationGuide({
 }: RecommendationGuideProps) {
   const flags = useRecommendationFeatureFlags();
   const { results, mood, loading, fetchGuide, reset } = useRecommendationGuide(shortCode);
+  const { trackRecShown, trackRecClicked } = useMenuTracking(shortCode);
 
   const [isVisible, setIsVisible]     = useState(false); // button visible
   const [isPanelOpen, setIsPanelOpen] = useState(false); // full panel open
@@ -121,6 +123,21 @@ export default function RecommendationGuide({
     }
   }, [hasOrdered]);
 
+  // Fire rec_shown for each guide result when they appear
+  useEffect(() => {
+    if (results.length > 0 && mood) {
+      results.forEach(item => {
+        trackRecShown({
+          itemId: item.id,
+          itemName: item.name,
+          categoryName: item.category_name,
+          itemPrice: Number(item.price),
+          signalType: 'guide',
+        });
+      });
+    }
+  }, [results.map(i => i.id).join(','), mood]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (enabled === false || !flags.recommendationGuideEnabled) return null;
 
   // ── Handlers ──────────────────────────────────────────────────────────── //
@@ -132,6 +149,13 @@ export default function RecommendationGuide({
   };
 
   const handleAdd = (item: RecommendedItem) => {
+    trackRecClicked({
+      itemId: item.id,
+      itemName: item.name,
+      categoryName: item.category_name,
+      itemPrice: Number(item.price),
+      signalType: 'guide',
+    });
     onAddToCart(item);
     setAddedIds(prev => new Set(prev).add(item.id));
     // If item needs variation selection the modal takes over — close the guide to prevent overlap
