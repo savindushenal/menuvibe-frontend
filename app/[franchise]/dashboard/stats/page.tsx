@@ -163,20 +163,20 @@ function KpiCard({
 
 // ─── Owner View ──────────────────────────────────────────────────────────── //
 function OwnerView({ overview, weeklyTrend, menuPerf, funnel, locations, brandColor }: any) {
-  const weekly = weeklyTrend?.days ?? demoWeeklyOrders;
-  const topItems = menuPerf?.top_items ?? demoTopItems;
-  const categories = menuPerf?.categories ?? demoCategories;
-  const funnelData = funnel?.stages ?? demoFunnel;
-  const locs = locations ?? demoLocations;
+  const weekly = weeklyTrend?.days ?? [];
+  const topItems = menuPerf?.top_items ?? [];
+  const categories = menuPerf?.categories ?? [];
+  const funnelData = funnel?.stages ?? [];
+  const locs = locations ?? [];
 
   return (
     <div className="space-y-6">
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard icon={DollarSign} label="Today's Revenue" value={`LKR ${(overview?.today?.revenue ?? 38400).toLocaleString()}`} delta={overview?.today?.revenue_delta_pct} color={brandColor} />
-        <KpiCard icon={ShoppingCart} label="Today's Orders" value={String(overview?.today?.orders ?? 88)} delta={overview?.today?.orders_delta_pct} color="#8b5cf6" />
-        <KpiCard icon={Target} label="Avg Order Value" value={`LKR ${(overview?.today?.avg_order_value ?? 436).toFixed(0)}`} color="#f59e0b" />
-        <KpiCard icon={Activity} label="Week Revenue" value={`LKR ${((overview?.week?.revenue ?? 204200) / 1000).toFixed(0)}k`} subtitle="Last 7 days" color="#10b981" />
+        <KpiCard icon={DollarSign} label="Today's Revenue" value={overview?.today?.revenue != null ? `LKR ${Math.round(overview.today.revenue).toLocaleString()}` : '—'} delta={overview?.today?.revenue_delta_pct} color={brandColor} />
+        <KpiCard icon={ShoppingCart} label="Today's Orders" value={overview?.today?.orders != null ? String(overview.today.orders) : '—'} delta={overview?.today?.orders_delta_pct} color="#8b5cf6" />
+        <KpiCard icon={Target} label="Avg Order Value" value={overview?.today?.avg_order_value != null ? `LKR ${Math.round(overview.today.avg_order_value)}` : '—'} color="#f59e0b" />
+        <KpiCard icon={Activity} label="Week Revenue" value={overview?.week?.revenue != null ? `LKR ${(overview.week.revenue / 1000).toFixed(0)}k` : '—'} subtitle="Last 7 days" color="#10b981" />
       </div>
 
       {/* Weekly Trend */}
@@ -218,25 +218,29 @@ function OwnerView({ overview, weeklyTrend, menuPerf, funnel, locations, brandCo
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {topItems.slice(0, 6).map((item: any, i: number) => (
-                <div key={i} className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-neutral-400 w-4">{i + 1}</span>
-                  <div className="flex-1">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="font-medium text-neutral-700">{item.name}</span>
-                      <span className="text-neutral-500">{item.orders ?? item.qty} orders</span>
-                    </div>
-                    <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full"
-                        style={{ width: `${((item.orders ?? item.qty) / (topItems[0].orders ?? topItems[0].qty)) * 100}%`, backgroundColor: brandColor }}
-                      />
+            {topItems.length === 0 ? (
+              <p className="text-sm text-neutral-400 text-center py-6">No orders yet</p>
+            ) : (
+              <div className="space-y-3">
+                {topItems.slice(0, 6).map((item: any, i: number) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-neutral-400 w-4">{i + 1}</span>
+                    <div className="flex-1">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="font-medium text-neutral-700">{item.name}</span>
+                        <span className="text-neutral-500">{item.orders ?? item.qty} orders</span>
+                      </div>
+                      <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${((item.orders ?? item.qty) / (topItems[0].orders ?? topItems[0].qty)) * 100}%`, backgroundColor: brandColor }}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -282,28 +286,32 @@ function OwnerView({ overview, weeklyTrend, menuPerf, funnel, locations, brandCo
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            {funnelData.map((s: any, i: number) => {
-              const pct = Math.round((s.count / funnelData[0].count) * 100);
-              return (
-                <div key={i}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-neutral-600">{s.stage}</span>
-                    <span className="font-medium">{s.count} <span className="text-neutral-400 font-normal">({pct}%)</span></span>
+          {funnelData.length === 0 ? (
+            <p className="text-sm text-neutral-400 text-center py-6">No order data yet</p>
+          ) : (
+            <div className="space-y-2">
+              {funnelData.map((s: any, i: number) => {
+                const pct = Math.round((s.count / funnelData[0].count) * 100);
+                return (
+                  <div key={i}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-neutral-600">{s.stage}</span>
+                      <span className="font-medium">{s.count} <span className="text-neutral-400 font-normal">({pct}%)</span></span>
+                    </div>
+                    <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ delay: i * 0.1, duration: 0.6 }}
+                        className="h-full rounded-full"
+                        style={{ backgroundColor: brandColor, opacity: 1 - i * 0.12 }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
-                      transition={{ delay: i * 0.1, duration: 0.6 }}
-                      className="h-full rounded-full"
-                      style={{ backgroundColor: brandColor, opacity: 1 - i * 0.12 }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -343,10 +351,14 @@ function OwnerView({ overview, weeklyTrend, menuPerf, funnel, locations, brandCo
 }
 
 // ─── Branch Manager View ─────────────────────────────────────────────────── //
-function BranchManagerView({ hourly, liveOrders, menuPerf, brandColor }: any) {
-  const hours = hourly?.hours ?? demoHourly;
+function BranchManagerView({ hourly, liveOrders, menuPerf, overview, brandColor }: any) {
+  const hours = hourly?.hours ?? [];
   const live = liveOrders?.orders ?? [];
-  const topItems = menuPerf?.top_items ?? demoTopItems.slice(0, 4);
+  const topItems = menuPerf?.top_items ?? [];
+
+  const peakHour = hours.length > 0
+    ? hours.reduce((a: any, b: any) => b.orders > a.orders ? b : a, hours[0])
+    : null;
 
   const statusColors: Record<string, string> = {
     pending: '#f59e0b', preparing: '#3b82f6', ready: '#10b981', delivered: '#6366f1', completed: '#a3a3a3',
@@ -355,10 +367,10 @@ function BranchManagerView({ hourly, liveOrders, menuPerf, brandColor }: any) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard icon={Clock}    label="Active Orders" value={String(live.length || 12)} color={brandColor} />
-        <KpiCard icon={Timer}    label="Avg Wait Time" value="14 min" color="#f59e0b" />
-        <KpiCard icon={CheckCircle2} label="Completed Today" value="88" color="#10b981" />
-        <KpiCard icon={Flame}    label="Peak Hour" value="7:00 PM" color="#ef4444" />
+        <KpiCard icon={Clock}    label="Active Orders" value={String(live.length)} color={brandColor} />
+        <KpiCard icon={Timer}    label="Avg Wait Time" value="—" color="#f59e0b" />
+        <KpiCard icon={CheckCircle2} label="Orders Today" value={overview?.today?.orders != null ? String(overview.today.orders) : '—'} color="#10b981" />
+        <KpiCard icon={Flame}    label="Peak Hour" value={peakHour ? peakHour.hour : '—'} color="#ef4444" />
       </div>
 
       {/* Hourly flow */}
@@ -416,22 +428,26 @@ function BranchManagerView({ hourly, liveOrders, menuPerf, brandColor }: any) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {topItems.slice(0, 4).map((item: any, i: number) => (
-              <div key={i} className="flex items-center gap-3">
-                <span className="text-xs font-bold text-neutral-400 w-4">{i + 1}</span>
-                <div className="flex-1">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="font-medium">{item.name}</span>
-                    <span className="text-neutral-500">{item.orders ?? item.qty} orders</span>
-                  </div>
-                  <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${((item.orders ?? item.qty) / (topItems[0].orders ?? topItems[0].qty)) * 100}%`, backgroundColor: brandColor }} />
+          {topItems.length === 0 ? (
+            <p className="text-sm text-neutral-400 text-center py-6">No orders yet</p>
+          ) : (
+            <div className="space-y-3">
+              {topItems.slice(0, 4).map((item: any, i: number) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-neutral-400 w-4">{i + 1}</span>
+                  <div className="flex-1">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="font-medium">{item.name}</span>
+                      <span className="text-neutral-500">{item.orders ?? item.qty} orders</span>
+                    </div>
+                    <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${((item.orders ?? item.qty) / (topItems[0].orders ?? topItems[0].qty)) * 100}%`, backgroundColor: brandColor }} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -440,50 +456,89 @@ function BranchManagerView({ hourly, liveOrders, menuPerf, brandColor }: any) {
 
 // ─── Recommendations Panel ───────────────────────────────────────────────── //
 function RecommendationsPanel({ data, brandColor }: any) {
-  const recs = data?.pairs ?? demoRecommendations;
+  const signals  = data?.signals  ?? [];
+  const topRecs  = data?.top_recommended ?? [];
+  const totalOrders = data?.total_orders ?? 0;
+
+  const avgCtr = signals.length > 0
+    ? Math.round(signals.reduce((s: number, sig: any) => s + (sig.ctr ?? 0), 0) / signals.length)
+    : 0;
+  const totalClicks = signals.reduce((s: number, sig: any) => s + (sig.clicked ?? 0), 0);
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <KpiCard icon={Brain}    label="Rec Engine Status" value="Active" color="#8b5cf6" />
-        <KpiCard icon={ThumbsUp} label="Upsell Accepted"   value="34%" color={brandColor} />
-        <KpiCard icon={Sparkles} label="Avg Uplift"        value="+18% AOV" color="#f59e0b" />
+        <KpiCard icon={ShoppingCart}      label="Orders (Period)"   value={totalOrders > 0 ? String(totalOrders) : '—'} color={brandColor} />
+        <KpiCard icon={MousePointerClick} label="Avg Click Rate"    value={signals.length > 0 ? `${avgCtr}%` : '—'} color="#8b5cf6" />
+        <KpiCard icon={ThumbsUp}          label="Total Rec Clicks"  value={totalClicks > 0 ? String(totalClicks) : '—'} color="#f59e0b" />
       </div>
 
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-violet-500" />
-            AI-Powered Item Pairings
+            Recommendation Signal Performance
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {recs.map((r: any, i: number) => (
-              <div key={i} className="p-4 bg-gradient-to-r from-violet-50 to-violet-50/0 rounded-xl border border-violet-100">
-                <div className="flex justify-between items-start mb-2">
-                  <p className="text-sm font-medium text-neutral-800">{r.pair}</p>
-                  <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full shrink-0 ml-2">
-                    {r.orders} orders
-                  </span>
+          {signals.length === 0 ? (
+            <p className="text-sm text-neutral-400 text-center py-6">No recommendation data yet</p>
+          ) : (
+            <div className="space-y-3">
+              {signals.map((sig: any, i: number) => (
+                <div key={i} className="p-4 bg-gradient-to-r from-violet-50 to-violet-50/0 rounded-xl border border-violet-100">
+                  <div className="flex justify-between items-center mb-2">
+                    <p className="text-sm font-medium text-neutral-800">{sig.signal}</p>
+                    <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">{sig.shown} shown</span>
+                  </div>
+                  <div className="flex gap-4 text-xs text-neutral-500">
+                    <span><span className="font-semibold text-neutral-800">{sig.clicked}</span> clicks</span>
+                    <span><span className="font-semibold text-neutral-800">{sig.ctr}%</span> CTR</span>
+                    <span><span className="font-semibold text-neutral-800">{sig.converted}</span> converted</span>
+                    <span><span className="font-semibold text-neutral-800">{sig.cvr}%</span> CVR</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-                  <span className="text-xs text-emerald-600 font-medium">{r.lift}× lift</span>
-                  <span className="text-xs text-neutral-400">vs. independent purchase probability</span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {topRecs.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Star className="w-4 h-4 text-amber-400" />
+              Top Recommended Items
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {topRecs.slice(0, 5).map((item: any, i: number) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-neutral-400 w-4">{i + 1}</span>
+                  <div className="flex-1">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="font-medium text-neutral-700">{item.name}</span>
+                      <span className="text-neutral-500">{item.qty} ordered</span>
+                    </div>
+                    <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${(item.qty / (topRecs[0].qty || 1)) * 100}%`, backgroundColor: brandColor }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
 
 // ─── Super Admin View ────────────────────────────────────────────────────── //
 function SuperAdminView({ overview, locations, brandColor }: any) {
-  const locs = locations ?? demoLocations;
+  const locs = locations ?? [];
 
   return (
     <div className="space-y-6">
@@ -937,7 +992,7 @@ export default function FranchiseStatsPage() {
             <RecommendationsPanel data={recommendations} brandColor={brandColor} />
           )}
           {role === 'branch_manager' && (
-            <BranchManagerView hourly={hourly} liveOrders={liveOrders} menuPerf={menuPerf} brandColor={brandColor} />
+            <BranchManagerView hourly={hourly} liveOrders={liveOrders} menuPerf={menuPerf} overview={overview} brandColor={brandColor} />
           )}
           {role === 'super_admin' && (
             <SuperAdminView overview={overview} locations={locations} brandColor={brandColor} />
