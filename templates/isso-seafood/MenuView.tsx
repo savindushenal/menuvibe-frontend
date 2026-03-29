@@ -18,6 +18,7 @@ import type { RecommendedItem } from '@/hooks/useRecommendations';
 import RecommendationGuide from '@/components/menu/RecommendationGuide';
 import CartUpsellStrip from '@/components/menu/CartUpsellStrip';
 import type { PublicMenuData } from '@/app/m/[code]/templates/types';
+import { useMenuTracking } from '@/hooks/useMenuTracking';
 
 // Cookie helpers — more reliable than localStorage for session tokens
 const setCookie = (name: string, value: string, days = 7) => {
@@ -312,6 +313,18 @@ export default function IssoMenuView() {
     };
   }, [data]);
 
+  // ── Behaviour tracking ─────────────────────────────────────────────────
+  const { trackView, trackCartAdd, trackCartRemove, trackSearch } = useMenuTracking(code);
+
+  // Track search queries — debounced 800 ms
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!searchQuery.trim()) return;
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => trackSearch(searchQuery), 800);
+    return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); };
+  }, [searchQuery, trackSearch]);
+
   const cartItemIds = useMemo(() => cartItems.map(c => c.item.id), [cartItems]);
   const { data: recData } = useRecommendations({
     shortCode: code,
@@ -435,6 +448,15 @@ export default function IssoMenuView() {
     setSelectedItem(normalizedItem);
     setSelectedVariations({}); // Reset variations for new item
     setIsProductSheetOpen(true);
+
+    // Track item view
+    const cat = categories.find(c => c.id === item.category_id);
+    trackView({
+      itemId: item.id,
+      itemName: item.name,
+      categoryName: cat?.name,
+      itemPrice: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
+    });
   };
 
   const handleAddToCartWithAnimation = async (item: MenuItem) => {
@@ -574,6 +596,16 @@ export default function IssoMenuView() {
       }
       return [...prev, { item, quantity, finalPrice, selectedOptions: { ...selectedVariations } }];
     });
+
+    // Track cart add
+    const cat = categories.find(c => c.id === item.category_id);
+    trackCartAdd({
+      itemId: item.id,
+      itemName: item.name,
+      categoryName: cat?.name,
+      itemPrice: finalPrice,
+    });
+
     setIsProductSheetOpen(false);
     toast.success(`${item.name} added to cart`, {
       description: finalPrice !== (typeof item.price === 'string' ? parseFloat(item.price) : item.price)
@@ -588,7 +620,12 @@ export default function IssoMenuView() {
       const updated = prev.map(ci => {
         const key = `${ci.item.id}-${JSON.stringify(ci.selectedOptions)}`;
         if (key !== cartKey) return ci;
-        return { ...ci, quantity: Math.max(0, ci.quantity + delta) };
+        const newQty = Math.max(0, ci.quantity + delta);
+        // Track removal when quantity reaches zero
+        if (newQty === 0 && delta < 0) {
+          trackCartRemove({ itemId: ci.item.id, itemName: ci.item.name });
+        }
+        return { ...ci, quantity: newQty };
       });
       return updated.filter(ci => ci.quantity > 0);
     });
@@ -1493,6 +1530,7 @@ export default function IssoMenuView() {
                   cartGaps={recData.cart_gaps}
                   onAdd={handleGuideAdd}
                   enabled={(data.template?.settings as any)?.enable_upsell_strip !== false}
+                  shortCode={code}
                 />
               )}
 
