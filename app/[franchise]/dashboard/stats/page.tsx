@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -547,12 +547,50 @@ function SuperAdminView({ overview, locations, brandColor }: any) {
 }
 
 // ─── Behaviour View ───────────────────────────────────────────────────────── //
-function BehaviourView({ behaviourOverview, behaviourItems, behaviourFunnel, behaviourHeatmap, behaviourSearches, brandColor }: any) {
+// ─── Behaviour empty state ────────────────────────────────────────────────── //
+function BehaviourEmpty() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
+      <Eye className="w-10 h-10 text-neutral-300" />
+      <p className="font-semibold text-neutral-500">No behaviour data yet</p>
+      <p className="text-sm text-neutral-400 max-w-xs">
+        Data appears once customers start browsing your live menu. Check back after your first sessions.
+      </p>
+    </div>
+  );
+}
+
+// ─── Behaviour loading skeleton ───────────────────────────────────────────── //
+function BehaviourSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => <div key={i} className="h-28 rounded-2xl bg-neutral-100" />)}
+      </div>
+      <div className="h-48 rounded-2xl bg-neutral-100" />
+      <div className="h-64 rounded-2xl bg-neutral-100" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="h-52 rounded-2xl bg-neutral-100" />
+        <div className="h-52 rounded-2xl bg-neutral-100" />
+      </div>
+    </div>
+  );
+}
+
+function BehaviourView({ behaviourOverview, behaviourItems, behaviourFunnel, behaviourHeatmap, behaviourSearches, brandColor, loading }: any) {
+  // Strict real-data check: only use real data, never fall back to demo arrays
+  const hasData = behaviourItems?.items?.length > 0 ||
+                  behaviourOverview?.total_views > 0 ||
+                  behaviourFunnel?.stages?.some((s: any) => s.count > 0);
+
+  if (loading) return <BehaviourSkeleton />;
+  if (!hasData) return <BehaviourEmpty />;
+
   const ov       = behaviourOverview;
-  const items    = behaviourItems?.items   ?? demoBehaviourItems;
-  const funnel   = behaviourFunnel?.stages ?? demoBehaviourFunnel;
-  const heatmap  = behaviourHeatmap?.hours ?? demoBehaviourHeatmap;
-  const searches = behaviourSearches?.searches ?? demoBehaviourSearches;
+  const items    = behaviourItems?.items    ?? [];
+  const funnel   = behaviourFunnel?.stages  ?? [];
+  const heatmap  = behaviourHeatmap?.hours  ?? [];
+  const searches = behaviourSearches?.searches ?? [];
 
   const maxViews    = Math.max(...items.map((i: any) => i.views), 1);
   const maxSearches = Math.max(...searches.map((s: any) => s.count), 1);
@@ -746,15 +784,18 @@ export default function FranchiseStatsPage() {
   const [bHeatmap,   setBHeatmap]   = useState<any>(null);
   const [bSearches,  setBSearches]  = useState<any>(null);
 
-  const loadData = useCallback(async () => {
+  const [bLoading, setBLoading] = useState(false);
+
+  // Stats load on mount; behaviour loads lazily when the tab first opens
+  const behaviourLoadedRef = useRef(false);
+
+  const loadStats = useCallback(async () => {
     if (!franchiseSlug) return;
     setLoading(true);
 
-    // Skip location-scorecard for branch managers — they have single-location scope
-    // and the endpoint would return an empty response anyway.
     const isBranchManager = deriveStatsRole(myRole) === 'branch_manager';
 
-    const [ov, wt, mp, fn, hf, lo, rec, locs, bov, bi, bf, bh, bs] = await Promise.all([
+    const [ov, wt, mp, fn, hf, lo, rec, locs] = await Promise.all([
       fetchStats(franchiseSlug, 'overview'),
       fetchStats(franchiseSlug, 'weekly-trend'),
       fetchStats(franchiseSlug, 'menu-performance'),
@@ -763,6 +804,19 @@ export default function FranchiseStatsPage() {
       fetchStats(franchiseSlug, 'live-orders'),
       fetchStats(franchiseSlug, 'recommendations'),
       isBranchManager ? Promise.resolve(null) : fetchStats(franchiseSlug, 'locations'),
+    ]);
+
+    setOverview(ov); setWeekly(wt); setMenuPerf(mp); setFunnel(fn);
+    setHourly(hf);   setLiveOrders(lo); setRecommendations(rec); setLocations(locs);
+    setLoading(false);
+  }, [franchiseSlug, myRole]);
+
+  const loadBehaviour = useCallback(async () => {
+    if (!franchiseSlug) return;
+    setBLoading(true);
+    behaviourLoadedRef.current = true;
+
+    const [bov, bi, bf, bh, bs] = await Promise.all([
       fetchBehaviour(franchiseSlug, 'overview'),
       fetchBehaviour(franchiseSlug, 'items'),
       fetchBehaviour(franchiseSlug, 'funnel'),
@@ -770,13 +824,24 @@ export default function FranchiseStatsPage() {
       fetchBehaviour(franchiseSlug, 'searches'),
     ]);
 
-    setOverview(ov);    setWeekly(wt);  setMenuPerf(mp); setFunnel(fn);
-    setHourly(hf);      setLiveOrders(lo); setRecommendations(rec); setLocations(locs);
-    setBOverview(bov);  setBItems(bi);  setBFunnel(bf);  setBHeatmap(bh); setBSearches(bs);
-    setLoading(false);
-  }, [franchiseSlug, myRole]);
+    setBOverview(bov); setBItems(bi); setBFunnel(bf); setBHeatmap(bh); setBSearches(bs);
+    setBLoading(false);
+  }, [franchiseSlug]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  // Unified refresh — reloads whatever has already been loaded
+  const loadData = useCallback(async () => {
+    await loadStats();
+    if (behaviourLoadedRef.current) await loadBehaviour();
+  }, [loadStats, loadBehaviour]);
+
+  useEffect(() => { loadStats(); }, [loadStats]);
+
+  // Lazy-load behaviour when the tab is first opened
+  useEffect(() => {
+    if (tab === 'behaviour' && !behaviourLoadedRef.current) {
+      loadBehaviour();
+    }
+  }, [tab, loadBehaviour]);
 
   const isLive = !!overview;
   const franchiseName = currentFranchise?.name ?? franchiseSlug?.toUpperCase();
@@ -858,7 +923,15 @@ export default function FranchiseStatsPage() {
             <OwnerView overview={overview} weeklyTrend={weekly} menuPerf={menuPerf} funnel={funnel} locations={locations} brandColor={brandColor} />
           )}
           {role === 'owner' && tab === 'behaviour' && (
-            <BehaviourView behaviourOverview={bOverview} behaviourItems={bItems} behaviourFunnel={bFunnel} behaviourHeatmap={bHeatmap} behaviourSearches={bSearches} brandColor={brandColor} />
+            <BehaviourView
+              behaviourOverview={bOverview}
+              behaviourItems={bItems}
+              behaviourFunnel={bFunnel}
+              behaviourHeatmap={bHeatmap}
+              behaviourSearches={bSearches}
+              brandColor={brandColor}
+              loading={bLoading}
+            />
           )}
           {role === 'owner' && tab === 'recommendations' && (
             <RecommendationsPanel data={recommendations} brandColor={brandColor} />
