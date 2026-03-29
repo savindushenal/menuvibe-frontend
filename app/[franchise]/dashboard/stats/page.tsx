@@ -456,82 +456,223 @@ function BranchManagerView({ hourly, liveOrders, menuPerf, overview, brandColor 
 
 // ─── Recommendations Panel ───────────────────────────────────────────────── //
 function RecommendationsPanel({ data, brandColor }: any) {
-  const signals  = data?.signals  ?? [];
-  const topRecs  = data?.top_recommended ?? [];
-  const totalOrders = data?.total_orders ?? 0;
+  const signals         = data?.signals          ?? [];
+  const topRecs         = data?.top_recommended  ?? [];
+  const totalOrders     = data?.total_orders      ?? 0;
+  const multiItemOrders = data?.multi_item_orders ?? 0;
+  const multiItemRate   = data?.multi_item_rate   ?? 0;
+  const totalClicks     = data?.total_rec_clicks  ?? 0;
+  const avgCtr          = data?.avg_ctr           ?? 0;
+  const hasRealData     = data?.has_real_data     ?? false;
+  const hasEstimates    = signals.some((s: any) => s.is_estimated);
+  const totalShown      = signals.reduce((s: number, sig: any) => s + (sig.shown ?? 0), 0);
 
-  const avgCtr = signals.length > 0
-    ? Math.round(signals.reduce((s: number, sig: any) => s + (sig.ctr ?? 0), 0) / signals.length)
-    : 0;
-  const totalClicks = signals.reduce((s: number, sig: any) => s + (sig.clicked ?? 0), 0);
+  const SIGNAL_META: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
+    trending: { icon: TrendingUp,        color: '#f59e0b', bg: '#fef3c7' },
+    cart_gap: { icon: ShoppingCart,      color: '#3b82f6', bg: '#dbeafe' },
+    upsell:   { icon: ArrowUpRight,      color: '#10b981', bg: '#d1fae5' },
+    pairing:  { icon: Layers,            color: '#8b5cf6', bg: '#ede9fe' },
+    guide:    { icon: Brain,             color: '#ec4899', bg: '#fce7f3' },
+  };
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <KpiCard icon={ShoppingCart}      label="Orders (Period)"   value={totalOrders > 0 ? String(totalOrders) : '—'} color={brandColor} />
-        <KpiCard icon={MousePointerClick} label="Avg Click Rate"    value={signals.length > 0 ? `${avgCtr}%` : '—'} color="#8b5cf6" />
-        <KpiCard icon={ThumbsUp}          label="Total Rec Clicks"  value={totalClicks > 0 ? String(totalClicks) : '—'} color="#f59e0b" />
+
+      {/* Estimated data notice */}
+      {hasEstimates && !hasRealData && (
+        <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+          <Info className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>
+            Showing <strong>estimated</strong> impact based on your order patterns.
+            Real click-through data will appear once customers browse your live menu with tracking active.
+          </span>
+        </div>
+      )}
+
+      {/* Hero KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard icon={ShoppingCart}      label="Orders (Period)"   value={totalOrders > 0 ? String(totalOrders) : '—'}            color={brandColor} />
+        <KpiCard icon={Layers}            label="Multi-Item Rate"   value={multiItemRate > 0 ? `${multiItemRate}%` : '—'}           subtitle="2+ items per order" color="#10b981" />
+        <KpiCard icon={MousePointerClick} label="Rec Impressions"   value={totalShown > 0 ? totalShown.toLocaleString() : '—'}     color="#8b5cf6" />
+        <KpiCard icon={ThumbsUp}          label="Rec Clicks"        value={totalClicks > 0 ? String(totalClicks) : '—'}            subtitle={avgCtr > 0 ? `${avgCtr}% avg CTR` : undefined} color="#f59e0b" />
       </div>
 
+      {/* Narrative card */}
+      {(totalOrders > 0 || signals.length > 0) && (
+        <Card className="border-0 shadow-sm" style={{ background: 'linear-gradient(135deg, #f5f3ff 0%, #eff6ff 100%)' }}>
+          <CardContent className="pt-5 pb-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 bg-white rounded-xl shadow-sm shrink-0">
+                <Sparkles className="w-5 h-5 text-violet-500" />
+              </div>
+              <div>
+                <p className="font-semibold text-neutral-800 text-sm mb-1">How AI recommendations are helping your sales</p>
+                <p className="text-sm text-neutral-600 leading-relaxed">
+                  {multiItemRate > 0
+                    ? `${multiItemRate}% of orders included 2 or more items — recommendations are prompting customers to explore more of your menu.`
+                    : 'Recommendations appear while customers browse (trending items), in the cart (complete your meal), and via the AI guide during idle sessions.'}
+                  {totalClicks > 0 && ` ${totalClicks.toLocaleString()} recommendation click${totalClicks > 1 ? 's' : ''} recorded this period.`}
+                  {!hasRealData && totalOrders === 0 && ' Numbers will populate once customers start placing orders.'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Per-signal performance */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-violet-500" />
-            Recommendation Signal Performance
+            <Activity className="w-4 h-4" style={{ color: brandColor }} />
+            AI Signal Performance
+            {hasEstimates && !hasRealData && (
+              <span className="text-xs font-normal text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full ml-1">Estimated</span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {signals.length === 0 ? (
-            <p className="text-sm text-neutral-400 text-center py-6">No recommendation data yet</p>
+            <div className="text-center py-8">
+              <Brain className="w-8 h-8 text-neutral-200 mx-auto mb-2" />
+              <p className="text-sm text-neutral-400">No recommendation data yet</p>
+              <p className="text-xs text-neutral-300 mt-1">Data appears once customers browse your live menu</p>
+            </div>
           ) : (
-            <div className="space-y-3">
-              {signals.map((sig: any, i: number) => (
-                <div key={i} className="p-4 bg-gradient-to-r from-violet-50 to-violet-50/0 rounded-xl border border-violet-100">
-                  <div className="flex justify-between items-center mb-2">
-                    <p className="text-sm font-medium text-neutral-800">{sig.signal}</p>
-                    <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">{sig.shown} shown</span>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {signals.map((sig: any, i: number) => {
+                const meta = SIGNAL_META[sig.signal_key] ?? { icon: Sparkles, color: brandColor, bg: `${brandColor}20` };
+                const Icon = meta.icon;
+                return (
+                  <div key={i} className="p-4 bg-neutral-50 rounded-xl border border-neutral-100 hover:border-neutral-200 transition-colors">
+                    <div className="flex items-center gap-2.5 mb-3">
+                      <div className="p-2 rounded-lg shrink-0" style={{ backgroundColor: meta.bg }}>
+                        <Icon className="w-4 h-4" style={{ color: meta.color }} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-sm text-neutral-800 truncate">{sig.signal}</span>
+                          {sig.is_estimated && (
+                            <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full shrink-0">est.</span>
+                          )}
+                        </div>
+                        {sig.desc && <p className="text-[11px] text-neutral-400 truncate">{sig.desc}</p>}
+                      </div>
+                    </div>
+                    {/* CTR bar */}
+                    <div className="mb-2">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-neutral-500">{sig.shown.toLocaleString()} shown</span>
+                        <span className="font-bold" style={{ color: meta.color }}>{sig.ctr}% CTR</span>
+                      </div>
+                      <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min(sig.ctr, 100)}%` }}
+                          transition={{ duration: 0.6, delay: i * 0.08 }}
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: meta.color }}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-between text-xs text-neutral-500">
+                      <span><span className="font-semibold text-neutral-700">{sig.clicked.toLocaleString()}</span> clicks</span>
+                      {sig.converted !== undefined && (
+                        <span><span className="font-semibold text-neutral-700">{sig.converted}</span> converted</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-4 text-xs text-neutral-500">
-                    <span><span className="font-semibold text-neutral-800">{sig.clicked}</span> clicks</span>
-                    <span><span className="font-semibold text-neutral-800">{sig.ctr}%</span> CTR</span>
-                    <span><span className="font-semibold text-neutral-800">{sig.converted}</span> converted</span>
-                    <span><span className="font-semibold text-neutral-800">{sig.cvr}%</span> CVR</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {topRecs.length > 0 && (
-        <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Star className="w-4 h-4 text-amber-400" />
-              Top Recommended Items
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {topRecs.slice(0, 5).map((item: any, i: number) => (
-                <div key={i} className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-neutral-400 w-4">{i + 1}</span>
-                  <div className="flex-1">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="font-medium text-neutral-700">{item.name}</span>
-                      <span className="text-neutral-500">{item.qty} ordered</span>
+      {/* Order composition + top items side by side on wide screens */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        {/* Multi-item order composition */}
+        {totalOrders > 0 && (
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Target className="w-4 h-4 text-blue-500" />
+                Order Composition
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-neutral-500">Single-item orders</span>
+                      <span className="font-medium text-neutral-700">{totalOrders - multiItemOrders}</span>
                     </div>
-                    <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${(item.qty / (topRecs[0].qty || 1)) * 100}%`, backgroundColor: brandColor }} />
+                    <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-neutral-300"
+                        style={{ width: `${totalOrders > 0 ? ((totalOrders - multiItemOrders) / totalOrders) * 100 : 0}%` }} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-neutral-500">Multi-item orders</span>
+                      <span className="font-medium text-emerald-600">{multiItemOrders}</span>
+                    </div>
+                    <div className="h-2 bg-neutral-100 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${multiItemRate}%` }}
+                        transition={{ duration: 0.7 }}
+                        className="h-full rounded-full bg-emerald-500"
+                      />
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                <div className="text-center shrink-0 w-16">
+                  <div className="text-2xl font-bold text-emerald-600">{multiItemRate}%</div>
+                  <div className="text-xs text-neutral-400">basket rate</div>
+                </div>
+              </div>
+              <p className="text-xs text-neutral-400 leading-relaxed">
+                A higher basket rate means AI recommendations are successfully prompting customers to add more items.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Top recommended items */}
+        {topRecs.length > 0 && (
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Flame className="w-4 h-4 text-orange-500" />
+                Top Selling Items
+                <span className="text-xs font-normal text-neutral-400 ml-1">upsell targets</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2.5">
+                {topRecs.slice(0, 6).map((item: any, i: number) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <span className="w-5 h-5 rounded-full bg-neutral-100 text-[10px] font-bold text-neutral-500 flex items-center justify-center shrink-0">{i + 1}</span>
+                    <div className="flex-1">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="font-medium text-neutral-700 truncate pr-2">{item.name}</span>
+                        <span className="text-neutral-400 shrink-0">{item.qty}×</span>
+                      </div>
+                      <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full"
+                          style={{ width: `${(item.qty / (topRecs[0].qty || 1)) * 100}%`, backgroundColor: brandColor }} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
