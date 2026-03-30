@@ -36,6 +36,7 @@ import { useRecommendations } from '@/hooks/useRecommendations';
 import type { RecommendedItem } from '@/hooks/useRecommendations';
 import RecommendationGuide from '@/components/menu/RecommendationGuide';
 import CartUpsellStrip from '@/components/menu/CartUpsellStrip';
+import { useMenuTracking } from '@/hooks/useMenuTracking';
 
 // Default food icon for items without image or icon
 const DEFAULT_ITEM_ICON = '🍽️';
@@ -59,6 +60,7 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
   const params = useParams();
   const shortCode = params?.code as string ?? '';
   const { orders, isPlacingOrder, placeOrder } = useMenuSession(shortCode);
+  const { trackCartAdd, trackCartRemove } = useMenuTracking(shortCode);
 
   // Recommendation engine
   const cartItemIds = useMemo(() => cart.map(c => c.item.id), [cart]);
@@ -78,7 +80,7 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
       setIsCartOpen(false);
       setSelectedItem(item as unknown as PublicMenuItem);
     } else {
-      addToCart(item as unknown as PublicMenuItem);
+      addToCart(item as unknown as PublicMenuItem, true); // rec component already tracked
     }
   };
 
@@ -122,8 +124,9 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
   // Stats
   const totalItems = menuData.categories?.reduce((sum, cat) => sum + cat.items.length, 0) || 0;
 
-  const addToCart = (item: PublicMenuItem) => {
+  const addToCart = (item: PublicMenuItem, skipTracking = false) => {
     if (!isItemAvailable(item, menuData.overrides)) return;
+    if (!skipTracking) trackCartAdd({ itemId: item.id, itemName: item.name, itemPrice: getItemPrice(item, menuData.overrides) });
     setCart((prev) => {
       const existing = prev.find((i) => i.item.id === item.id);
       if (existing) {
@@ -136,6 +139,8 @@ export function PremiumMenuTemplate({ menuData }: PremiumMenuTemplateProps) {
   };
 
   const removeFromCart = (itemId: number) => {
+    const _tr = cart.find(i => i.item.id === itemId);
+    if (_tr?.quantity === 1) trackCartRemove({ itemId, itemName: _tr.item.name });
     setCart((prev) => {
       const existing = prev.find((i) => i.item.id === itemId);
       if (existing && existing.quantity > 1) {

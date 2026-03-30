@@ -38,6 +38,7 @@ import { useRecommendations } from '@/hooks/useRecommendations';
 import type { RecommendedItem } from '@/hooks/useRecommendations';
 import RecommendationGuide from '@/components/menu/RecommendationGuide';
 import CartUpsellStrip from '@/components/menu/CartUpsellStrip';
+import { useMenuTracking } from '@/hooks/useMenuTracking';
 
 // Default icons
 const DEFAULT_ITEM_ICON = '🍽️';
@@ -65,6 +66,7 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
   const params = useParams();
   const shortCode = params?.code as string ?? '';
   const { orders, isPlacingOrder, placeOrder } = useMenuSession(shortCode);
+  const { trackCartAdd, trackCartRemove } = useMenuTracking(shortCode);
 
   // Recommendation engine
   const cartItemIds = useMemo(() => cart.map(c => c.item.id), [cart]);
@@ -82,7 +84,7 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
       setSelectedItem(item as unknown as PublicMenuItem);
       setSelectedVariation(null);
     } else {
-      addToCartWithVariation(item as unknown as PublicMenuItem, null);
+      addToCartWithVariation(item as unknown as PublicMenuItem, null, true); // rec component already tracked
     }
   };
 
@@ -98,8 +100,9 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
     if (result) { setCart([]); setIsCartOpen(false); }
   };
 
-  const addToCartWithVariation = (item: PublicMenuItem, variation: { name: string; price: number } | null) => {
+  const addToCartWithVariation = (item: PublicMenuItem, variation: { name: string; price: number } | null, skipTracking = false) => {
     if (!isItemAvailable(item, menuData.overrides)) return;
+    if (!skipTracking) trackCartAdd({ itemId: item.id, itemName: item.name, itemPrice: variation?.price ?? getItemPrice(item, menuData.overrides) });
     setCart((prev) => {
       const existing = prev.find((i) =>
         i.item.id === item.id &&
@@ -120,6 +123,8 @@ export function StandardTemplate({ menuData }: StandardTemplateProps) {
   const addToCart = (item: PublicMenuItem) => addToCartWithVariation(item, null);
 
   const removeFromCart = (itemId: number) => {
+    const _tr = cart.find(i => i.item.id === itemId);
+    if (_tr?.quantity === 1) trackCartRemove({ itemId, itemName: _tr.item.name });
     setCart((prev) => {
       const existing = prev.find((i) => i.item.id === itemId);
       if (existing && existing.quantity > 1) {
